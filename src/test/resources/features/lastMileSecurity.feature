@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
 @upstream @iris
 Feature: Last Mile Security, legacy scenario with 2 tokens
 

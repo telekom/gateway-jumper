@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package jumper.exception;
 
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;

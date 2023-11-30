@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
 FROM azul/zulu-openjdk-alpine:17
 
 RUN apk add --update \

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+
+SPDX-License-Identifier: CC0-1.0
+-->
+
 # Changelog
 
 ## [3.9.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.8.0...3.9.0) (2023-11-23)
