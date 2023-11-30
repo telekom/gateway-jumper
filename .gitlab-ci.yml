@@ -31,7 +31,7 @@ github-sync:
   rules:
     - when: manual
   script:
-    - git remote add github https://$STARGATE_GITHUB_PAT@github.com/telekom/stargate-issuer-service.git
+    - git remote add github https://$STARGATE_GITHUB_PAT@github.com/telekom/stargate-jumper.git
     - git remote -v
     - git remote update
     - git checkout -b $CI_COMMIT_BRANCH
