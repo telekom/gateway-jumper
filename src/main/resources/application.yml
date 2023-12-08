@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+server:
+  port: ${JUMPER_PORT:8080}
+  max-http-header-size: 16384
+  netty:
+    max-initial-line-length: 8192
+
+management:
+  endpoint:
+    gateway.enabled: true # having actuators endpoint for filters e.g. host/actuator/gateway/routefilters
+    loggers.enabled: true # having actuators endpoint for setting log level
+    health:
+      enabled: true # healthcheck endpoint
+      probes.enabled: true #healthcheck probes, liveness and readiness
+  endpoints:
+    web:
+      exposure.include: gateway, loggers, prometheus, health
+
+spring:
+  application:
+    name: ${JUMPER_NAME:Jumper}
+  cloud:
+    gateway:
+      metrics.enabled: true #default ## in order to "push" to prometheus a prometheus dependency is needed in the pom.xml
+      default-filters:
+        - name: Retry
+          args:
+            retries: 1
+            statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+            methods: GET,POST,PUT,DELETE,PATCH,HEAD
+      httpclient:
+        proxy:
+          host: ${FPA_PROXY_HOST:}
+          port: ${FPA_PROXY_PORT:}
+          non-proxy-hosts-pattern: ${FPA_NON_PROXY_HOSTS_REGEX:}
+        pool:
+          type: ELASTIC
+          #max-connections: 1000 #Only for type FIXED
+          #acquire-timeout: 8000 #Only for type FIXED
+          max-life-time: 300s
+          max-idle-time: 2s
+          #eviction-interval: 120s
+        connect-timeout: 10000
+        response-timeout: 61s # ingress 60s
+        #ssl:
+          #useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
+      x-forwarded:
+        for-enabled: false
+        for-append: false
+        host-enabled: false
+        host-append: false
+        port-enabled: false
+        port-append: false
+        proto-enabled: false
+        proto-append: false
+        prefix-enabled: false
+        prefix-append: false
+      forwarded:
+        enabled: false
+  zipkin:
+    baseUrl: ${TRACING_URL:https://collector-zipkin-http-drax-guardians.test.dhei.telekom.de}
+  sleuth:
+    sampler.probability: 1
+    propagation:
+      tag.enabled: false
+      type: b3
+    reactor:
+      instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
+  codec:
+    max-in-memory-size: 4194304
+
+jumper:
+  issuer:
+    url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
+  stargate:
+    url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+
+jumpercache.ttlOffset: 10
+jumpercache.cleanCacheInSeconds: 3600
+
+##############################
+# local horizon
+##############################
+horizon:
+  publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
+#logging.pattern.level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]" #https://github.com/micrometer-metrics/tracing/wiki/Spring-Cloud-Sleuth-3.1-Migration-Guide
