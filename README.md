@@ -13,7 +13,7 @@ Is based on [Spring Cloud Gateway](https://spring.io/projects/spring-cloud-gatew
 Its purpose is mainly advanced token (OAuth 2.0) handling, enables support for:
 * mesh functionality
 * external authorization
-* own Stargate tokens
+* own Gateway tokens
 * customizing headers
 * listening on given service (creates events for issued traffic) 
 
@@ -43,7 +43,7 @@ Most common scenario, request is forwarded to provider, while jumper combines in
 
 Headers expected on incoming side:
 * remote_api_url - url, to which is request forwarded
-* api_base_path - base path of Kong service from the same Stargate initially called, passed as requestPath claim
+* api_base_path - base path of Kong service from the same Gateway initially called, passed as requestPath claim
 * realm - for setting correct issuer
 * environment - passed as env claim
 * access_token_forwarding - false, used to determine scenario
@@ -81,7 +81,7 @@ Legacy scenario, request is forwarded to provider with 2 tokens, original incomi
 
 Headers expected on incoming side:
 * remote_api_url - url, to which is request forwarded
-* api_base_path - base path of Kong service from the same Stargate initially called, passed as requestPath claim
+* api_base_path - base path of Kong service from the same Gateway initially called, passed as requestPath claim
 * realm - for setting correct issuer
 * environment - passed as env claim
 * access_token_forwarding - true, used to determine scenario
@@ -116,13 +116,13 @@ Relevant headers on outgoing side:
 * X-Gateway-Token - LMS token
 
 #### Mesh token
-Scenario with multiple Stargate instances involved. Jumper fetches oauth token from other zone identity provider (aka mesh token), 
+Scenario with multiple Gateway instances involved. Jumper fetches oauth token from other zone identity provider (aka mesh token), 
 while original authorization token is passed as a <i>consumer-token</i> header. Mesh token is cached, so fetching is performed only if valid token is not available.
 
 ![mesh flow!](pictures/jumper2_mesh.png "mesh flow")  
 
 Headers expected on incoming side:
-* remote_api_url - url (including service base path) of other zone Stargate, to which is request forwarded
+* remote_api_url - url (including service base path) of other zone Gateway, to which is request forwarded
 * issuer - issuer of other zone identity provider
 * client_id - client id with dedicated client on other zone identity provider
 * client_secret - client secret with dedicated client on other zone identity provider
@@ -251,8 +251,8 @@ Request/Response events are created, if consumer/API combination matches.  Creat
 ### Header enhancement/manipulation
 * X-Spacegate-Token - if any Spacegate is involved, incoming token is copied to <i>X-Spacegate-Token</i> header
 * X-Forwarded-Host/Port/Proto - to avoid additional reporting Kong + Jumper as separate hop, these headers needs to be adapted
-* X-Origin-Stargate - shows, which Stargate host was originally called (mesh concept)
-* X-Origin-Zone - shows, which Stargate zone was originally called (mesh concept)
+* X-Origin-Stargate - shows, which Gateway host was originally called (mesh concept)
+* X-Origin-Zone - shows, which Gateway zone was originally called (mesh concept)
 
 ### Tracing support
 * [b3 zipkin propagation](https://github.com/openzipkin/b3-propagation) supported. Prerequisite is to set valid <i>spring.zipkin.baseUrl</i>
@@ -264,7 +264,7 @@ Request/Response events are created, if consumer/API combination matches.  Creat
 
 
 ### Glossary
-* <b>Stargate</b> - set of Kong + Jumper + Issuer service
-* <b>Spacegate</b> - Stargate accessible from/having access to (after firewall clearance) Internet
+* <b>Gateway</b> - set of Kong + Jumper + Issuer service
+* <b>Spacegate</b> - Gateway accessible from/having access to (after firewall clearance) Internet
 * <b>jumper_config</b> - base64 encoded structure used to pass various information
 
