@@ -10,11 +10,8 @@ include:
     file: "/pipelines/opensource-pipeline.yaml"
     ref: main
     rules:
-      - if: $CI_PROJECT_NAME == "stargate-jumper"
+      - if: $IS_OPENSOURCE == "true"
 
 variables:
   PUSH_TO_HARBOR: "true"
   MTR_TARGET_IMAGE: ${CI_PROJECT_NAME}
-  GITHUB_PROJECT_PATH: "telekom/stargate-jumper"
-  GITLAB_PROJECT_PATH: "dhei/teams/hyperion/dev/src/jumper-sse"
-  GITLAB_SOURCE_BRANCH: main
