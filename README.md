@@ -50,7 +50,7 @@ This will build the project and run all tests. The resulting artifacts will be p
 The project contains a Dockerfile that can be used to build a Docker image. To build the image, run:
 
 ```bash
-  docker build --platform linux/amd64 -t jumper.
+  docker build --platform linux/amd64 -t jumper .
 ```
 
 This will build the image and tag it as `jumper:latest`.
