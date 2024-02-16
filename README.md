@@ -33,6 +33,36 @@ By participating in this project, you agree to abide by its [Code of Conduct](./
 This project follows the [REUSE standard for software licensing](https://reuse.software/).
 Each file contains copyright and license information, and license texts can be found in the [./LICENSES](./LICENSES) folder. For more information visit https://reuse.software/.
 
+## Building
+
+### Packaging the application
+
+This project is built with [Maven](https://maven.apache.org/). It is validated to be compatible with version 3.9.x. To build the project, run:
+
+```bash
+  ./mvnw clean package
+```
+
+This will build the project and run all tests. The resulting artifacts will be placed in the `target` directory.
+
+### Building the Docker image
+
+The project contains a Dockerfile that can be used to build a Docker image. To build the image, run:
+
+```bash
+  docker build --platform linux/amd64 -t jumper .
+```
+
+This will build the image and tag it as `jumper:latest`.
+
+### Multi-stage Docker build
+
+Alternatively, you can use the multi-stage Docker build to build the image. This will build the application in a Maven container and then copy the resulting artifacts into a smaller container. To build the image, run:
+
+```bash
+  docker build --platform linux/amd64 -t jumper -f Dockerfile.multi-stage .
+```
+
 ## Scenarios
 Scenarios from various aspects of Jumper functionality perspective. <b>Scenarios from different perspective can be overlapping!</b>
 
