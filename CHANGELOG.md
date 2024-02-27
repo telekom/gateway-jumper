@@ -1,10 +1,29 @@
-<!--
-SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
-
-SPDX-License-Identifier: CC0-1.0
--->
-
 # Changelog
+
+## [3.10.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.9.0...3.10.0) (2024-02-27)
+
+
+### 🦊 CI/CD
+
+* **DHEI-14954:** improvements for docker-build and docs ([e41ea2f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/e41ea2f4ac309015491183e268820ae95d79b14a))
+* opensource condition moved to template ([1677f46](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/1677f4631e3c2b679b4e09a4a2735633c472dd49))
+* **gitlab:** added opensource pipeline ([e7c7445](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/e7c744591194f30d3e633a98f942b8fde965ccd5))
+* **reuse:** added .m2 to gitignore so reuse does not lint it ([11ac4d2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/11ac4d212c25236e3629a510b4acf81f257a6774))
+
+
+### 🚀 Features
+
+* create pre-licensed empty .gitignore ([dc53246](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/dc5324666cf5a6ff8f9e91b63474d5998d44f4b1))
+
+
+### Other
+
+* added reuse-config; removed license-info from auto-generated changelog ([8dc95a4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/8dc95a48bbd5fb136ba8493d95549f39473cf0e5))
+* initial commit for github ([#1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/issues/1)) ([2f0c495](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/2f0c495c4ec12f7fe793e1a1c02fffd10a2db646))
+* initial commit for github ([#1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/issues/1)) ([19ee3d8](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/19ee3d8d92f3d9134c4790d1f4139b5e84c782ce))
+* sync from gitlab ([d38cc08](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/d38cc08b55afa4e1a9a415e5e427d31e18be0fbd))
+* sync from gitlab ([65be9f4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/65be9f4d0b998084df7c0f8fa2f4e6257e9da9e7))
+* **release:** 3.9.0 ([b603bda](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/b603bdaf4b6b77c07094c7ff6b3c14a565ef70b3))
 
 ## [3.9.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.8.0...3.9.0) (2023-11-23)
 

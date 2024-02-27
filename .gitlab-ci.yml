@@ -9,8 +9,6 @@ include:
   - project: "dhei/teams/hyperion/dev/src/foundation-build"
     file: "/pipelines/opensource-pipeline.yaml"
     ref: main
-    rules:
-      - if: $IS_OPENSOURCE == "true"
 
 variables:
   PUSH_TO_HARBOR: "true"
