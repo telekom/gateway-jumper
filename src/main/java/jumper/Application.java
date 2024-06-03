@@ -51,6 +51,7 @@ public class Application {
         new HashSet<>(
             Arrays.asList(
                 Constants.HEADER_JUMPER_CONFIG,
+                Constants.HEADER_ROUTING_CONFIG,
                 Constants.HEADER_TOKEN_ENDPOINT,
                 Constants.HEADER_REMOTE_API_URL,
                 Constants.HEADER_ISSUER,

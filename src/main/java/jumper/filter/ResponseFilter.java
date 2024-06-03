@@ -6,6 +6,7 @@ package jumper.filter;
 
 import static net.logstash.logback.argument.StructuredArguments.value;
 
+import java.util.Objects;
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
 import lombok.AllArgsConstructor;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.cloud.gateway.support.ServerWebExchangeUtils;
 import org.springframework.cloud.sleuth.CurrentTraceContext;
 import org.springframework.cloud.sleuth.Span;
 import org.springframework.cloud.sleuth.Tracer;
@@ -54,40 +56,42 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
                                   ServerHttpResponse response = exchange.getResponse();
                                   ServerHttpRequest request = exchange.getRequest();
 
-                                  if (isLogLevelEnabled()) {
+                                  if (log.isDebugEnabled()) {
                                     JumperInfoResponse jumperInfoResponse =
                                         new JumperInfoResponse();
                                     IncomingResponse incomingResponse = new IncomingResponse();
 
-                                    incomingResponse.setPath(request.getPath().toString());
+                                    incomingResponse.setHost(
+                                        Objects.requireNonNull(
+                                                exchange.getAttribute(
+                                                    ServerWebExchangeUtils
+                                                        .GATEWAY_REQUEST_URL_ATTR))
+                                            .toString());
                                     incomingResponse.setHttpStatusCode(
-                                        response.getStatusCode().value());
-
+                                        Objects.requireNonNull(response.getStatusCode()).value());
+                                    incomingResponse.setMethod(request.getMethodValue());
+                                    incomingResponse.setRequestHeaders(
+                                        request.getHeaders().toSingleValueMap());
                                     jumperInfoResponse.setIncomingResponse(incomingResponse);
 
-                                    log.info(
+                                    log.debug(
                                         "logging response: {}",
                                         value("jumperInfo", jumperInfoResponse));
                                   }
 
-                                  Long contentLength = response.getHeaders().getContentLength();
+                                  long contentLength = response.getHeaders().getContentLength();
 
                                   Span span = tracer.currentSpan();
 
-                                  if (contentLength == null
-                                      || contentLength.toString().equals("-1")) {
+                                  if (Long.toString(contentLength).equals("-1")) {
                                     span.tag("message.size_response", "0");
                                   } else {
-                                    span.tag("message.size_response", contentLength.toString());
+                                    span.tag("message.size_response", Long.toString(contentLength));
                                   }
 
                                   span.event("jrpf");
                                 }))),
         RequestFilter.REQUEST_FILTER_ORDER);
-  }
-
-  private boolean isLogLevelEnabled() {
-    return log.isInfoEnabled();
   }
 
   @Getter

@@ -202,6 +202,10 @@ Headers expected on incoming side:
   }
 }
 ``
+
+#### X-Token-Exchange header
+Spacegate allows for more flexibility by supporting the Authorization header token exchange. A consumer can set the "X-Token-Exchange" header containing an external provider specific token while calling an exposed external API. Jumper will then store value of the X-Token-Exchange header in the Authorization header field of the external API request and forward it to the provider. Available only for Spacegate.
+``
 ### Scenarios from used route perspective
 #### Proxy route
 Default route to be used for processing majority off traffic. All scenarios described within "token perspective" are supported.
@@ -276,6 +280,13 @@ Request/Response events are created, if consumer/API combination matches.  Creat
 "payload" : <procesed request body>
 }
 }
+``
+
+### Zone failover
+If enabled, Jumper ensures that in case of a zone failure requests to that zone are re-routed to the configured failover-zone.
+Following picture depicts how Jumper processes requests in case of zone failover:
+
+![jumper request processing with failover!](pictures/jumper_request_processing_with_failover.png)
 ``
 
 ### Header enhancement/manipulation

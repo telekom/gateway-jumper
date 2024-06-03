@@ -6,16 +6,15 @@ package jumper.model.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import jumper.Constants;
 import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
@@ -33,6 +32,7 @@ public class JumperConfig {
   private HashMap<String, RouteListener> routeListener;
   private GatewayClient gatewayClient;
 
+  String targetZoneName;
   String scopes;
   String apiBasePath;
   String consumer;
@@ -40,13 +40,22 @@ public class JumperConfig {
   String consumerOriginZone;
   String consumerToken;
   String externalTokenEndpoint;
+
+  @JsonProperty("issuer")
   String internalTokenEndpoint;
+
   String clientId;
   String clientSecret;
   Boolean accessTokenForwarding;
+
+  @JsonProperty("realm")
   String realmName;
+
   String remoteApiUrl;
+
+  @JsonProperty("environment")
   String envName;
+
   String xSpacegateClientId;
   String xSpacegateClientSecret;
   String xSpacegateScope;
@@ -54,12 +63,15 @@ public class JumperConfig {
   // calculated routing stuff within requestFilter
   String requestPath;
   String routingPath;
+  String finalApiUrl;
+
+  Boolean auditLog = false;
 
   @JsonIgnore
-  public static String toBase64(JumperConfig jc) {
+  public static String toBase64(Object o) {
     String jsonConfigBase64 = null;
     try {
-      String decodedJson = new ObjectMapper().writeValueAsString(jc);
+      String decodedJson = new ObjectMapper().writeValueAsString(o);
       jsonConfigBase64 = Base64.getEncoder().encodeToString(decodedJson.getBytes());
     } catch (JsonProcessingException e) {
       e.printStackTrace();
@@ -69,38 +81,82 @@ public class JumperConfig {
   }
 
   @JsonIgnore
-  public static JumperConfig fromBase64(String jsonConfigBase64) {
+  private static <T> T fromBase64(String jsonConfigBase64, TypeReference<T> typeReference) {
     String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
     try {
       return new ObjectMapper()
           .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-          .readValue(decodedJson, JumperConfig.class);
+          .readValue(decodedJson, typeReference);
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
+      throw new RuntimeException("can not base64decode header: " + jsonConfigBase64);
+    }
+  }
+
+  private static JumperConfig fromBase64(String jsonConfigBase64) {
+    if (StringUtils.isNotBlank(jsonConfigBase64)) {
+      return JumperConfig.fromBase64(jsonConfigBase64, new TypeReference<>() {});
+    } else {
       return new JumperConfig();
     }
   }
 
   @JsonIgnore
-  public void fillWithLegacyHeaders(ServerHttpRequest request) {
+  private void fillWithLegacyHeaders(ServerHttpRequest request) {
 
-    setScopes(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES));
-    setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
-    setExternalTokenEndpoint(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT));
+    // proxy
+    setRemoteApiUrl(
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_REMOTE_API_URL)); // also real
     setInternalTokenEndpoint(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER));
-    setClientId(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_ID));
+    setClientId(
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_CLIENT_ID)); // also external
     setClientSecret(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SECRET));
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_CLIENT_SECRET)); // also external
 
+    // real
+    setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
     if (request.getHeaders().containsKey(Constants.HEADER_ACCESS_TOKEN_FORWARDING)) {
       setAccessTokenForwarding(
           Boolean.valueOf(
               HeaderUtil.getLastValueFromHeaderField(
                   request, Constants.HEADER_ACCESS_TOKEN_FORWARDING)));
     }
+    setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
+    if (StringUtils.isBlank(getRealmName())) {
+      setRealmName(Constants.DEFAULT_REALM);
+    }
+    setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
 
+    // external oauth
+    setScopes(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_CLIENT_SCOPES));
+    setExternalTokenEndpoint(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_TOKEN_ENDPOINT));
+    setXSpacegateClientId(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
+    setXSpacegateClientSecret(
+        HeaderUtil.getLastValueFromHeaderField(
+            request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
+    setXSpacegateScope(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
+
+    // processing
+    setConsumerToken(
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
+    Jwt<Header, Claims> consumerTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(
+            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    setConsumerOriginStargate(
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+    setConsumerOriginZone(
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+  }
+
+  @JsonIgnore
+  public void fillProcessingInfo(ServerHttpRequest request) {
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
     Jwt<Header, Claims> consumerTokenClaims =
@@ -112,36 +168,32 @@ public class JumperConfig {
     setConsumerOriginZone(
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
 
-    setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
-    if (StringUtils.isBlank(getRealmName())) {
-      setRealmName(Constants.DEFAULT_REALM);
+    // Spectre stuff
+    JumperConfig jc =
+        JumperConfig.fromBase64(
+            HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
+    this.setRouteListener(jc.getRouteListener());
+    this.setGatewayClient(jc.getGatewayClient());
+  }
+
+  public static List<JumperConfig> parseJumperConfigListFrom(ServerHttpRequest request) {
+
+    String routingConfigBase64 =
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ROUTING_CONFIG);
+
+    if (StringUtils.isNotBlank(routingConfigBase64)) {
+      return JumperConfig.fromBase64(routingConfigBase64, new TypeReference<>() {});
     }
 
-    setRemoteApiUrl(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
-    setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
-    setXSpacegateClientId(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_CLIENT_ID));
-    setXSpacegateClientSecret(
-        HeaderUtil.getLastValueFromHeaderField(
-            request, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET));
-    setXSpacegateScope(
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
+    throw new RuntimeException("can not base64decode header: " + routingConfigBase64);
   }
 
   @JsonIgnore
-  public static JumperConfig parseConfigFrom(ServerHttpRequest request) {
+  public static JumperConfig parseAndFillJumperConfigFrom(ServerHttpRequest request) {
 
-    JumperConfig jc;
-    String jumperConfigBase64 =
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG);
-
-    if (StringUtils.isNotBlank(jumperConfigBase64)) {
-      jc = JumperConfig.fromBase64(jumperConfigBase64);
-
-    } else {
-      jc = new JumperConfig();
-    }
+    JumperConfig jc =
+        JumperConfig.fromBase64(
+            HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
 
     jc.fillWithLegacyHeaders(
         request); // TODO: remove as soon we have completely shifted to json_config
@@ -150,13 +202,9 @@ public class JumperConfig {
   }
 
   @JsonIgnore
-  public static JumperConfig parseConfigFrom(ServerWebExchange exchange) {
-    String jumperConfigBase64 = exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG);
-    if (jumperConfigBase64 != null && !jumperConfigBase64.isEmpty()) {
-      return JumperConfig.fromBase64(jumperConfigBase64);
-    } else {
-      return new JumperConfig();
-    }
+  public static JumperConfig parseJumperConfigFrom(ServerWebExchange exchange) {
+
+    return JumperConfig.fromBase64(exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG));
   }
 
   public boolean isListenerMatched() {

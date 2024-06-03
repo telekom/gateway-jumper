@@ -1,5 +1,145 @@
 # Changelog
 
+## [3.14.3](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.2...3.14.3) (2024-05-30)
+
+
+### 🦊 CI/CD
+
+* **dhei-00000:** token span name evaluation ([0fe3506](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/0fe3506a62944c8b51eab84e6432eec6ef0ea74a))
+
+
+### 🛠 Fixes
+
+* token span name evaluation ([fbbc297](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/fbbc297ab7d78a8ab79226f92742f98fc2a1bfb0))
+
+
+### Other
+
+* **release:** 3.14.2 ([f531bd2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f531bd2c5819dc4b208729e0dbe2518e4736c266))
+
+## [3.14.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.1...3.14.2) (2024-05-28)
+
+
+### 🛠 Fixes
+
+* DHEI-15534 redis tests for zone health ([54a7e92](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/54a7e92dc443cb773dd0d6b2bd45cf141147607a))
+* redis tests for zone health ([56bbd1c](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/56bbd1c47a243b1b2cb8bb52805e3ce6ab2ca79f))
+
+
+### Other
+
+* **release:** 3.14.1 ([4036226](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/4036226b8d2cc69aac0f8e86dfd9d90e2594c132))
+
+## [3.14.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.0...3.14.1) (2024-05-21)
+
+
+### 🛠 Fixes
+
+* async subscribe to redis channel ([e7d86bd](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/e7d86bdda45cf2dfe08f68b3e91cb90c15d5b155))
+* DHEI-15534 async subscribe to redis channel ([652b07b](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/652b07b0ce8224d47a8354e35c7e272607b973f0))
+
+
+### Other
+
+* **release:** 3.14.0 ([f4841c2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f4841c2a42e74db3616962f889d0bbc4d4b1d3d1))
+
+## [3.14.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.13.0...3.14.0) (2024-05-21)
+
+
+### :scissors: Refactor
+
+* removed "Bearer " ([7c49271](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/7c492715ea8a4fbe66678eb1d6ff02fb1b407b90))
+
+
+### 🚀 Features
+
+* Added x-token-exchange header handling ([160e12f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/160e12fd071fd2cc8bad21ab5bc6163a09534d30))
+* changed from targetZone to currentZone (env variable) ([517af44](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/517af44f0ec6fb4f4990b386672d18f02658edc7))
+* DHEI-15383 Added x-token-exchange header handling ([f89a586](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f89a586a30c4517c029aaedf8e2fed3cf52e62cb))
+
+
+### Other
+
+* **release:** 3.13.0 ([7eba358](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/7eba358cd4b7ed7b9a0a7e76863172810bded0f6))
+
+## [3.13.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.12.0...3.13.0) (2024-05-16)
+
+
+### 🚀 Features
+
+* DHEI-15534 Introduce redis based zone health ([13012f1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/13012f1b279243041227bed38538377801d6a0d7))
+* DHEI-15534 Introduce redis based zone health ([8a580a0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/8a580a059c15f0ee4f11af032bcdba5c96f2797b))
+
+
+### Other
+
+* **release:** 3.12.0 ([8b675cc](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/8b675cc09935b6fcf5403b929985c30f2c4a02a3))
+
+## [3.12.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.11.0...3.12.0) (2024-05-03)
+
+
+### :scissors: Refactor
+
+* logging revised ([1d750c9](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/1d750c9a90b20a87c91b3c7fb8ea4ee004b6cdb5))
+* merge RoutingConfig to JumperConfig ([28591ef](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/28591efc6a9d460972c1892f97e1fc350768246e))
+* targetZone variable rename ([565c119](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/565c11946a905fd0a2db23c19223bd12dd42a221))
+
+
+### 💈 Style
+
+* spotless friendly ([60958ae](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/60958aeb37773b63772280899f5e5e121239b1a9))
+
+
+### 🦊 CI/CD
+
+* **dhei-15533:** provider failover (routing part) ([cb08c2e](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/cb08c2eda4e2d70c12280c31a85a1b9a419a7c14))
+
+
+### 🧪 Tests
+
+* added tests for zone failover (routing part) ([dd31ce5](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/dd31ce5cc9ecb84668e5ea6db019e30d2974b669))
+
+
+### 🚀 Features
+
+* audit log for failover, refactoring of duplicate methods ([40afd74](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/40afd740095f71758c3adcb7a6f7eb7a0e36ea18))
+* error span draft ([358f2e8](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/358f2e8f0140cdc3cf58746025c27964c4b59f2e))
+* support Spectre related jumperConfig for failover ([84eef25](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/84eef25ebc58d3363602ec033811787e3616f054))
+
+
+### 🛠 Fixes
+
+* set scope for error span ([6db6030](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/6db60303d227b2d332b808aa8d21d52b23025fe1))
+* span names adjustment ([827f398](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/827f3985c9379dbc4abf1a3b23dcb59a7447521e))
+
+
+### Other
+
+* **release:** 3.11.0 ([be70acd](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/be70acd49ef655faeb4508934368f80d1f10eddb))
+
+## [3.11.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.10.0...3.11.0) (2024-04-19)
+
+
+### 🦊 CI/CD
+
+* **dhei-12345:** graceful shutdown, enable pool metrics by default, configurable oauth pool ([28edc5e](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/28edc5e8008ccc2b3f32700332b54547c4514a1e))
+
+
+### 🚀 Features
+
+* configurable oauth, pool metrics enable by default ([5539f0f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/5539f0fb5c4d19f24d4dcd60d696261316b97e58))
+
+
+### 🛠 Fixes
+
+* increase server idle-timeout ([e6149f6](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/e6149f6332e1424c504f4a7994289d6f97f70007))
+* use graceful shutdown ([5d70e45](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/5d70e451ff79b9d2c4cc3f161a9713bdd55f35cc))
+
+
+### Other
+
+* **release:** 3.10.0 ([f9af081](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f9af0813c0b21e242a480a6b68421d8e2dedd6c8))
+
 ## [3.10.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.9.0...3.10.0) (2024-02-27)
 
 

@@ -34,6 +34,18 @@ public class HttpClientConfiguration {
   @Value("${CUSTOM_CIPHERS:}")
   List<String> customCiphers;
 
+  @Value("${spring.cloud.oauth.connect-timeout:10000}")
+  private int oauthConnectTimeout;
+
+  @Value("${spring.cloud.oauth.pool.max-life-time:300}")
+  private int oauthPoolMaxLifeTime;
+
+  @Value("${spring.cloud.oauth.pool.max-idle-time:2}")
+  private int oauthPoolMaxIdleTime;
+
+  @Value("${spring.cloud.oauth.pool.metrics:true}")
+  private boolean oauthPoolMetrics;
+
   private final HttpClientProperties properties;
 
   @Bean
@@ -53,7 +65,7 @@ public class HttpClientConfiguration {
     HttpClient httpClient =
         HttpClient.create(getProvider())
             .secure(t -> t.sslContext(sslContext))
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000);
+            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, oauthConnectTimeout);
     httpClient = configureProxy(httpClient);
 
     return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
@@ -131,9 +143,10 @@ public class HttpClientConfiguration {
   private ConnectionProvider getProvider() {
     return ConnectionProvider.builder("oauth")
         .maxConnections(100)
-        .maxIdleTime(Duration.ofSeconds(5))
-        .maxLifeTime(Duration.ofSeconds(60))
+        .maxIdleTime(Duration.ofSeconds(oauthPoolMaxIdleTime))
+        .maxLifeTime(Duration.ofSeconds(oauthPoolMaxLifeTime))
         .pendingAcquireMaxCount(-1)
+        .metrics(oauthPoolMetrics)
         .build();
   }
 }

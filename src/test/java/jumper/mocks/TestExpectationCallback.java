@@ -4,6 +4,7 @@
 
 package jumper.mocks;
 
+import static jumper.config.Config.*;
 import static org.mockserver.model.HttpResponse.notFoundResponse;
 import static org.mockserver.model.HttpResponse.response;
 
@@ -15,7 +16,9 @@ import org.mockserver.model.HttpResponse;
 public class TestExpectationCallback implements ExpectationResponseCallback {
   @Override
   public HttpResponse handle(HttpRequest httpRequest) {
-    if (httpRequest.getPath().getValue().endsWith("/callback")) {
+    if (isFailoverPath(httpRequest.getPath().getValue())) {
+      return response().withHeaders(httpRequest.getHeaders()).withStatusCode(200);
+    } else if (httpRequest.getPath().getValue().endsWith("/callback")) {
       return response()
           .withHeaders(httpRequest.getHeaders())
           .withBody(httpRequest.getBodyAsString())
@@ -27,5 +30,10 @@ public class TestExpectationCallback implements ExpectationResponseCallback {
     } else {
       return notFoundResponse();
     }
+  }
+
+  private boolean isFailoverPath(String path) {
+    return List.of(REMOTE_BASE_PATH, REMOTE_FAILOVER_BASE_PATH, REMOTE_PROVIDER_BASE_PATH)
+        .contains(path);
   }
 }

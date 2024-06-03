@@ -10,6 +10,7 @@ import static jumper.util.TokenUtil.getConsumerAccessTokenWithAud;
 
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
+import jumper.util.RoutingConfigUtil;
 import jumper.util.TokenUtil;
 import lombok.RequiredArgsConstructor;
 
@@ -23,10 +24,34 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeaders(baseSteps));
   }
 
+  @Given("ProxyRoute headers are set with x-token-exchange")
+  public void proxyRouteHeadersSetWithXtokenExchange() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithXtokenExchange(baseSteps));
+  }
+
   @Given("RealRoute headers are set")
   public void realRouteHeadersSet() {
     baseSteps.setHttpHeadersOfRequest(
         TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken()));
+  }
+
+  @Given("RealRoute headers are set with x-token-exchange")
+  public void realRouteHeadersSetWithXtokenExchange() {
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getRealRouteHeadersWithXtokenExchange(TokenUtil.getConsumerAccessToken()));
+  }
+
+  @Given("Secondary routing_config header set")
+  public void secondaryRoutingConfigHeaderSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getSecondaryRouteHeaders(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set")
+  public void proxyRoutingConfigHeaderSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getProxyRouteHeaders(baseSteps));
   }
 
   @Given("RealRoute headers without Authorization are set")
@@ -95,6 +120,15 @@ public class HeaderSteps {
               httpHeaders.add("x-anonymous-consumer", "dummy");
               httpHeaders.add("x-anonymous-groups", "dummy");
               httpHeaders.add("x-forwarded-prefix", "dummy");
+            }));
+  }
+
+  @And("skip zone header set")
+  public void setSkipZoneHeader() {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              httpHeaders.set(Constants.HEADER_X_FAILOVER_SKIP_ZONE, REMOTE_ZONE_NAME);
             }));
   }
 }

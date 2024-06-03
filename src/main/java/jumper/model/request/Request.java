@@ -4,7 +4,6 @@
 
 package jumper.model.request;
 
-import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,10 +11,9 @@ import lombok.Setter;
 @Setter
 public abstract class Request {
 
-  private String host;
+  private String finalApiUrl;
+  private String consumer;
   private String basePath;
-  private String resource;
+  private String requestPath;
   private String method;
-
-  private Map<String, String> originHeader;
 }

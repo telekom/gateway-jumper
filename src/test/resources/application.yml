@@ -68,15 +68,34 @@ spring:
       instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
     max-in-memory-size: 4194304
+  data:
+    redis:
+      repositories:
+        enabled: false
+  redis:
+    connect-timeout: 500
+    timeout: 500
+    host: localhost
+    port: 6379
+    database: 2
+    password: foobar
 
 jumper:
   issuer:
     url: ${JUMPER_ISSUER_URL:https://stargate-test.de/auth/realms}
   stargate:
-    url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+    url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de} 
   security:
     dir: src/test/resources/keypair
     file: private.json
+  zone:
+    name: ${JUMPER_ZONE_NAME:default}
+    health:
+      enabled: :true
+      defaultZoneHealth: true
+      redis:
+        channel: stargate-zone-status
+        checkConnectionInterval: 15000
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600

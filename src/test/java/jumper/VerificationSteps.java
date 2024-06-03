@@ -81,6 +81,11 @@ public class VerificationSteps {
         .doesNotExist("access_token_forwarding");
   }
 
+  @Then("API Provider receives no failover headers")
+  public void apiProvidersReceivesNoFailoverHeaders() {
+    this.baseSteps.getRequestExchange().expectHeader().doesNotExist("routing_config");
+  }
+
   @Then("API Provider receives authorization {word}")
   public void apiProviderReceivesToken(String tokenType) {
     if (tokenType.equalsIgnoreCase("OneToken")) {
@@ -88,6 +93,11 @@ public class VerificationSteps {
           .getRequestExchange()
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkOneToken);
+    } else if (tokenType.equalsIgnoreCase("OneTokenSimple")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneTokenSimple);
     } else if (tokenType.equalsIgnoreCase("OneTokenWithPubSub")) {
       this.baseSteps
           .getRequestExchange()
@@ -136,6 +146,11 @@ public class VerificationSteps {
           .getRequestExchange()
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkBasicAuthProvider);
+    } else if (tokenType.equalsIgnoreCase("XTokenExchangeHeader")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .valueMatches(HttpHeaders.AUTHORIZATION, "Bearer XTokenExchangeHeader");
     } else {
       fail("unknown authorization received");
     }
@@ -175,6 +190,23 @@ public class VerificationSteps {
     assertEquals("GET", claimsFromToken.getBody().get("operation", String.class));
     assertEquals(
         BASE_PATH + CALLBACK_SUFFIX, claimsFromToken.getBody().get("requestPath", String.class));
+    assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
+    assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
+    assertEquals(
+        localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().getIssuer());
+    assertNotNull(claimsFromToken.getBody().getExpiration());
+    assertNotNull(claimsFromToken.getBody().getIssuedAt());
+  }
+
+  private void checkOneTokenSimple(String token) {
+    Jwt<Header, Claims> claimsFromToken =
+        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+
+    assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
+    assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
+    assertEquals("stargate", claimsFromToken.getBody().get("azp", String.class));
+    assertEquals(ENVIRONMENT, claimsFromToken.getBody().get("env", String.class));
+    assertEquals("GET", claimsFromToken.getBody().get("operation", String.class));
     assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
     assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
     assertEquals(

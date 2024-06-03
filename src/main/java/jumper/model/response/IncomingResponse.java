@@ -4,7 +4,7 @@
 
 package jumper.model.response;
 
-import java.util.List;
+import java.util.Map;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,8 +13,7 @@ import lombok.Setter;
 public class IncomingResponse {
 
   private String host;
-  private String path;
   private Integer httpStatusCode;
-
-  List<String> originHeaderResponse;
+  private String method;
+  Map<String, String> requestHeaders;
 }

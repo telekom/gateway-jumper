@@ -59,6 +59,18 @@ public class TokenUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getProxyRouteHeadersWithXtokenExchange(BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
+      httpHeaders.set(Constants.HEADER_ISSUER, "http://localhost:1081/auth/realms/default");
+      httpHeaders.set(Constants.HEADER_CLIENT_ID, addIdSuffix("stargate", baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_CLIENT_SECRET, "secret");
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
+      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "Bearer XTokenExchangeHeader");
+    };
+  }
+
   public static Consumer<HttpHeaders> getRealRouteHeaders() {
     return getRealRouteHeaders(null);
   }
@@ -72,6 +84,19 @@ public class TokenUtil {
       httpHeaders.set(Constants.HEADER_REALM, REALM);
       httpHeaders.set(Constants.HEADER_ACCESS_TOKEN_FORWARDING, "false");
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
+    };
+  }
+
+  public static Consumer<HttpHeaders> getRealRouteHeadersWithXtokenExchange(String authorization) {
+    return httpHeaders -> {
+      if (authorization != null) httpHeaders.setBearerAuth(authorization);
+      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
+      httpHeaders.set(Constants.HEADER_API_BASE_PATH, BASE_PATH);
+      httpHeaders.set(Constants.HEADER_ENVIRONMENT, ENVIRONMENT);
+      httpHeaders.set(Constants.HEADER_REALM, REALM);
+      httpHeaders.set(Constants.HEADER_ACCESS_TOKEN_FORWARDING, "false");
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
+      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "Bearer XTokenExchangeHeader");
     };
   }
 

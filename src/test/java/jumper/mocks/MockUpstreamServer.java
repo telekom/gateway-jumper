@@ -4,6 +4,7 @@
 
 package jumper.mocks;
 
+import static jumper.config.Config.REMOTE_HOST_PORT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockserver.integration.ClientAndServer.startClientAndServer;
 import static org.mockserver.model.HttpClassCallback.callback;
@@ -27,9 +28,9 @@ public class MockUpstreamServer {
 
   private ClientAndServer mockServer;
   private MockServerClient mockServerClient;
+  int upstreamLocalPort = REMOTE_HOST_PORT;
 
   public void startServer() {
-    int upstreamLocalPort = 1080;
     mockServer = startClientAndServer(upstreamLocalPort);
     String upstreamLocalHost = "localhost";
     mockServerClient = new MockServerClient(upstreamLocalHost, upstreamLocalPort);
@@ -45,6 +46,12 @@ public class MockUpstreamServer {
             request()
                 .withPath("/callback")
                 .withQueryStringParameters(param("statusCode", "[0-9]+")))
+        .respond(callback().withCallbackClass("jumper.mocks.TestExpectationCallback"));
+  }
+
+  public void failoverRequest(String path) {
+    mockServerClient
+        .when(request().withPath(path), Times.exactly(1))
         .respond(callback().withCallbackClass("jumper.mocks.TestExpectationCallback"));
   }
 

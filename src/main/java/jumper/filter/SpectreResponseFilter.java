@@ -55,7 +55,7 @@ public class SpectreResponseFilter
                               responseBody);
 
                           // use jumperConfig passed with exchange
-                          JumperConfig jumperConfig = JumperConfig.parseConfigFrom(exchange);
+                          JumperConfig jumperConfig = JumperConfig.parseJumperConfigFrom(exchange);
                           if (jumperConfig.isListenerMatched()) {
                             RouteListener listener =
                                 jumperConfig.getRouteListener().get(jumperConfig.getConsumer());

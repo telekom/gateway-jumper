@@ -4,11 +4,13 @@
 
 package jumper;
 
+import static jumper.config.Config.*;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
 import java.util.function.Consumer;
+import jumper.filter.RequestFilter;
 import jumper.mocks.MockHorizonServer;
 import jumper.mocks.MockIrisServer;
 import jumper.mocks.MockUpstreamServer;
@@ -18,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -40,12 +43,23 @@ public class BaseSteps {
   private WebTestClient.ResponseSpec requestExchange;
   private String id;
 
+  @Autowired private RequestFilter rf;
+
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
   private String stargateUrl;
 
   @And("API provider set to respond with a {int} status code")
   public void apiProviderWillRespondWithAStatusCode(int statusCode) {
     responseStatusCode = String.valueOf(statusCode);
+  }
+
+  @And("API provider set to respond on {word} path")
+  public void apiProviderWillRespondWithAStatusCodeOnPath(String path_case) {
+    switch (path_case) {
+      case "real" -> mockUpstreamServer.failoverRequest(REMOTE_BASE_PATH);
+      case "failover" -> mockUpstreamServer.failoverRequest(REMOTE_FAILOVER_BASE_PATH);
+      case "provider" -> mockUpstreamServer.failoverRequest(REMOTE_PROVIDER_BASE_PATH);
+    }
   }
 
   @And("Event provider set to respond with a {int} status code")
@@ -173,6 +187,11 @@ public class BaseSteps {
             .uri("/proxy/callback?statusCode=" + responseStatusCode)
             .headers(httpHeadersOfRequest)
             .exchange();
+  }
+
+  @When("consumer calls the proxy route without base path")
+  public void consumerCallsProxy() {
+    requestExchange = webTestClient.get().uri("/proxy").headers(httpHeadersOfRequest).exchange();
   }
 
   @When("consumer calls the proxy route and runs into timeout")
@@ -343,6 +362,11 @@ public class BaseSteps {
   @And("verify query param {word} for value {word}")
   public void verifyQueryParam(String name, String value) {
     mockUpstreamServer.verifyQueryParam(name, value);
+  }
+
+  @And("current zone is {string}")
+  public void currentZoneIs(String zone) {
+    rf.setCurrentZone(zone);
   }
 
   public static JSONObject getTestJson() {

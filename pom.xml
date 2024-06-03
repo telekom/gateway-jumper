@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 
 	<groupId>de.telekom.ei.jumper</groupId>
 	<artifactId>jumper-sse</artifactId>
-	<version>3.10.0</version>
+	<version>3.14.3</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -24,11 +24,13 @@ SPDX-License-Identifier: Apache-2.0
 	<properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2021.0.8</spring-cloud.version>
+		<redis-lettuce.version>6.3.2.RELEASE</redis-lettuce.version>
 		<cucumber.version>7.14.0</cucumber.version>
 		<reactor-bom.version>2020.0.37</reactor-bom.version>
 		<netty.version>4.1.100.Final</netty.version>
 		<junit.jupiter.version>5.9.3</junit.jupiter.version>
 		<junit.platform.version>1.10.0</junit.platform.version>
+		<testcontainers.version>1.19.8</testcontainers.version>
 	</properties>
 
 	<dependencyManagement>
@@ -168,6 +170,26 @@ SPDX-License-Identifier: Apache-2.0
 		</dependency>
 
 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-redis</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>io.lettuce</groupId>
+			<artifactId>lettuce-core</artifactId>
+			<version>${redis-lettuce.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.retry</groupId>
+			<artifactId>spring-retry</artifactId>
+		</dependency>
+
+		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
 			<version>${junit.jupiter.version}</version>
@@ -224,6 +246,24 @@ SPDX-License-Identifier: Apache-2.0
 			<groupId>io.cucumber</groupId>
 			<artifactId>cucumber-junit-platform-engine</artifactId>
 			<version>${cucumber.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<version>${testcontainers.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<version>${testcontainers.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
 			<scope>test</scope>
 		</dependency>
 
@@ -284,6 +324,7 @@ SPDX-License-Identifier: Apache-2.0
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<excludedGroups>ignore</excludedGroups>
+					<useManifestOnlyJar>true</useManifestOnlyJar>
 				</configuration>
 			</plugin>
 		</plugins>

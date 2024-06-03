@@ -41,7 +41,7 @@ public class SpectreRequestFilter
               request.getHeaders().toSingleValueMap(),
               requestBody);
 
-          JumperConfig jc = JumperConfig.parseConfigFrom(exchange);
+          JumperConfig jc = JumperConfig.parseJumperConfigFrom(exchange);
           if (!jc.isListenerMatched()) {
             return chain.filter(exchange.mutate().request(request).build());
           }

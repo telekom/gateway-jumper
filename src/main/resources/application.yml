@@ -5,10 +5,15 @@
 server:
   port: ${JUMPER_PORT:8080}
   max-http-header-size: 16384
+  shutdown: GRACEFUL
   netty:
     max-initial-line-length: 8192
+    idle-timeout: 60000
 
 management:
+  health:
+    redis:
+      enabled: false
   endpoint:
     gateway.enabled: true # having actuators endpoint for filters e.g. host/actuator/gateway/routefilters
     loggers.enabled: true # having actuators endpoint for setting log level
@@ -20,6 +25,8 @@ management:
       exposure.include: gateway, loggers, prometheus, health
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 1m
   application:
     name: ${JUMPER_NAME:Jumper}
   cloud:
@@ -43,6 +50,7 @@ spring:
           max-life-time: 300s
           max-idle-time: 2s
           #eviction-interval: 120s
+          metrics: true
         connect-timeout: 10000
         response-timeout: 61s # ingress 60s
         #ssl:
@@ -71,12 +79,30 @@ spring:
       instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
     max-in-memory-size: 4194304
-
+  data:
+    redis:
+      repositories:
+        enabled: false
+  redis:
+    connect-timeout: ${ZONE_HEALTH_DATABASE_CONNECTTIMEOUT:500}
+    timeout: ${ZONE_HEALTH_DATABASE_TIMEOUT:500}
+    host: ${ZONE_HEALTH_DATABASE_HOST:localhost}
+    port: ${ZONE_HEALTH_DATABASE_PORT:6379}
+    database: ${ZONE_HEALTH_DATABASE_INDEX:2}
+    password: ${ZONE_HEALTH_DATABASE_PASSWORD:foobar}
 jumper:
   issuer:
     url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
   stargate:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+  zone:
+    name: ${JUMPER_ZONE_NAME:default}
+    health:
+      enabled: ${ZONE_HEALTH_ENABLED:false}
+      defaultZoneHealth: ${ZONE_HEALTH_DEFAULT:true}
+      redis:
+        channel: ${ZONE_HEALTH_KEY_CHANNEL:stargate-zone-status}
+        checkConnectionInterval: ${ZONE_HEALTH_REQUEST_GET_RATE:5000}
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600
@@ -86,4 +112,5 @@ jumpercache.cleanCacheInSeconds: 3600
 ##############################
 horizon:
   publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
+logging.level.jumper.service.AuditLogService: INFO
 #logging.pattern.level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]" #https://github.com/micrometer-metrics/tracing/wiki/Spring-Cloud-Sleuth-3.1-Migration-Guide
