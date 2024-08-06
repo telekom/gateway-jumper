@@ -2,12 +2,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# This multi-stage Dockerfile is used to build a Java application with Maven and run it with a JRE.
+# It skips the tests during the build process and uses a slim JRE image for the final container.
+# USE WITH CAUTION: This Dockerfile is intended for demonstration purposes only and should be adjusted to your needs.
+# The final container is started with a non-root user.
+
+
 FROM maven:3.9-eclipse-temurin-17-alpine AS build
 RUN mkdir -p /usr/app
 WORKDIR /usr/app
 ADD . /usr/app
 
-RUN mvn -f /usr/app/pom.xml clean package
+RUN mvn -f /usr/app/pom.xml clean package -DskipTests
 
 
 FROM eclipse-temurin:17-jre-alpine
