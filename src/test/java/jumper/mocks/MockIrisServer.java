@@ -33,6 +33,8 @@ public class MockIrisServer {
 
   private final String irisLocalHost = "localhost";
 
+  private static int responseCode = 200;
+
   public void startServer() {
     mockServer = startClientAndServer(irisLocalPort);
   }
@@ -58,7 +60,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -81,7 +83,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -104,7 +106,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -127,7 +129,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -150,7 +152,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -176,7 +178,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -202,7 +204,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -224,7 +226,7 @@ public class MockIrisServer {
             exactly(1))
         .respond(
             response()
-                .withStatusCode(200)
+                .withStatusCode(responseCode)
                 .withHeaders(
                     new Header("Content-Type", "application/json; charset=utf-8"),
                     new Header("Cache-Control", "no-store"))
@@ -270,6 +272,95 @@ public class MockIrisServer {
         .error(HttpError.error().withDropConnection(true));
   }
 
+  public void createExpectationExternalDropConnection(String id) {
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody(
+                    addIdSuffix("client_id=external_configured", id)
+                        + "&client_secret=secret&grant_type=client_credentials"),
+            exactly(3))
+        .error(HttpError.error().withDropConnection(true));
+  }
+
+  public void createExpectationWithTimeout(String id) {
+    String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody(
+                    addIdSuffix("client_id=external_configured", id)
+                        + "&client_secret=secret&grant_type=client_credentials"),
+            exactly(1))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withHeaders(
+                    new Header("Content-Type", "application/json; charset=utf-8"),
+                    new Header("Cache-Control", "no-store"))
+                .withBody(tokenInfoJson)
+                .withDelay(TimeUnit.SECONDS, 16));
+  }
+
+  public void createEmptyHeaderExpectationExternalToken(String id) {
+
+    String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody(
+                    addIdSuffix("client_id=external_configured", id)
+                        + "&client_secret=secret&grant_type=client_credentials"),
+            exactly(1))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withBody(tokenInfoJson)
+                .withDelay(TimeUnit.SECONDS, 1));
+  }
+
+  public void createEmptyBodyExpectationExternalToken(String id) {
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody(
+                    addIdSuffix("client_id=external_configured", id)
+                        + "&client_secret=secret&grant_type=client_credentials"),
+            exactly(1))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withHeaders(
+                    new Header("Content-Type", "application/json; charset=utf-8"),
+                    new Header("Cache-Control", "no-store"))
+                .withDelay(TimeUnit.SECONDS, 1));
+  }
+
+  public void createEmptyExpectationExternalToken(String id) {
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody(
+                    addIdSuffix("client_id=external_configured", id)
+                        + "&client_secret=secret&grant_type=client_credentials"),
+            exactly(1))
+        .respond(response().withStatusCode(responseCode).withDelay(TimeUnit.SECONDS, 1));
+  }
+
   private List<Header> getHeaderList(String contentLength) {
     List<Header> headersList = new ArrayList<>();
     headersList.add(new Header(HttpHeaders.HOST, irisLocalHost + ":" + irisLocalPort));
@@ -310,5 +401,9 @@ public class MockIrisServer {
             .originStargate(ORIGIN_STARGATE_REMOTE)
             .build();
     return token.getIdpToken();
+  }
+
+  public void setResponse(int response) {
+    this.responseCode = response;
   }
 }

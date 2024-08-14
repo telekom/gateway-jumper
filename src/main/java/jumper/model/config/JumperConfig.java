@@ -15,6 +15,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import java.util.*;
+import javax.validation.constraints.NotNull;
 import jumper.Constants;
 import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
@@ -31,6 +32,7 @@ public class JumperConfig {
   private HashMap<String, BasicAuthCredentials> basicAuth;
   private HashMap<String, RouteListener> routeListener;
   private GatewayClient gatewayClient;
+  private LoadBalancing loadBalancing;
 
   String targetZoneName;
   String scopes;
@@ -65,7 +67,7 @@ public class JumperConfig {
   String routingPath;
   String finalApiUrl;
 
-  Boolean auditLog = false;
+  Boolean secondaryFailover = false;
 
   @JsonIgnore
   public static String toBase64(Object o) {
@@ -103,10 +105,18 @@ public class JumperConfig {
   @JsonIgnore
   private void fillWithLegacyHeaders(ServerHttpRequest request) {
 
+    // proxy & real
+    if (request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
+      setRemoteApiUrl(
+          HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
+    } else if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
+      setRemoteApiUrl(calculateUpstream(loadBalancing.getServers()));
+    } else {
+      throw new RuntimeException(
+          "missing routing information " + Constants.HEADER_REMOTE_API_URL + " / jc.loadBalancing");
+    }
+
     // proxy
-    setRemoteApiUrl(
-        HeaderUtil.getLastValueFromHeaderField(
-            request, Constants.HEADER_REMOTE_API_URL)); // also real
     setInternalTokenEndpoint(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ISSUER));
     setClientId(
@@ -174,6 +184,13 @@ public class JumperConfig {
             HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
     this.setRouteListener(jc.getRouteListener());
     this.setGatewayClient(jc.getGatewayClient());
+
+    // check loadBalancing
+    if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
+      setRemoteApiUrl(calculateUpstream(loadBalancing.getServers()));
+    } else if (Objects.isNull(remoteApiUrl)) {
+      throw new RuntimeException("missing routing information jc.remoteApiUrl / jc.loadBalancing");
+    }
   }
 
   public static List<JumperConfig> parseJumperConfigListFrom(ServerHttpRequest request) {
@@ -228,8 +245,14 @@ public class JumperConfig {
   }
 
   public Optional<OauthCredentials> getOauthCredentials() {
-    if (Objects.nonNull(getOauth()) && getOauth().containsKey(getConsumer())) {
-      return Optional.of(getOauth().get(getConsumer()));
+    if (Objects.nonNull(getOauth())) {
+      if (getOauth().containsKey(getConsumer())) {
+        return Optional.of(getOauth().get(getConsumer()));
+      }
+
+      if (getOauth().containsKey(Constants.OAUTH_PROVIDER_KEY)) {
+        return Optional.of(getOauth().get(Constants.OAUTH_PROVIDER_KEY));
+      }
     }
 
     return Optional.empty();
@@ -238,5 +261,27 @@ public class JumperConfig {
   public String getSecurityScopes() {
     Optional<OauthCredentials> oauthCredentials = getOauthCredentials();
     return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
+  }
+
+  private static String calculateUpstream(@NotNull List<Server> servers) {
+    // Sum total of weights
+    double total = 0;
+    for (Server server : servers) {
+      total += server.getWeight();
+    }
+
+    // Random a number between [1, total]
+    double random = Math.ceil(Math.random() * total);
+
+    // Seek cursor to find which area the random is in
+    double cursor = 0;
+    for (Server server : servers) {
+      cursor += server.getWeight();
+      if (cursor >= random) {
+        return server.getUpstream();
+      }
+    }
+
+    throw new RuntimeException("can not calculate upstream");
   }
 }

@@ -23,6 +23,15 @@ public class RoutingConfigUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithLoadbalancing(
+      BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(
+          Constants.HEADER_ROUTING_CONFIG, getRcSecondaryLoadbalancing(baseSteps.getId()));
+    };
+  }
+
   public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
@@ -33,6 +42,11 @@ public class RoutingConfigUtil {
   public static String getRcSecondary(String id) {
     // proxy + real
     return toBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJc()));
+  }
+
+  public static String getRcSecondaryLoadbalancing(String id) {
+    // proxy + real (with loadbalancing)
+    return toBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJcLb()));
   }
 
   public static String getRcProxy(String id) {
@@ -64,6 +78,21 @@ public class RoutingConfigUtil {
   private static JumperConfig getRealRouteJc() {
     JumperConfig jc = new JumperConfig();
     jc.setRemoteApiUrl(REMOTE_HOST + REMOTE_PROVIDER_BASE_PATH);
+    jc.setApiBasePath(BASE_PATH);
+    jc.setRealmName(REALM);
+    jc.setEnvName(ENVIRONMENT);
+    jc.setAccessTokenForwarding(false);
+    return jc;
+  }
+
+  private static JumperConfig getRealRouteJcLb() {
+    JumperConfig jc = new JumperConfig();
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(
+        List.of(
+            new Server(REMOTE_HOST + REMOTE_PROVIDER_BASE_PATH, 50.0),
+            new Server(REMOTE_HOST + REMOTE_PROVIDER_BASE_PATH, 50.0)));
+    jc.setLoadBalancing(loadBalancing);
     jc.setApiBasePath(BASE_PATH);
     jc.setRealmName(REALM);
     jc.setEnvName(ENVIRONMENT);

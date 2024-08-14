@@ -42,10 +42,23 @@ public class HeaderSteps {
         TokenUtil.getRealRouteHeadersWithXtokenExchange(TokenUtil.getConsumerAccessToken()));
   }
 
+  @Given("RealRoute headers without remoteApiUrl are set")
+  public void realRouteHeadersWithoutRemoteApiUrlSet() {
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getRealRouteHeadersWithoutRemoteApiUrl(TokenUtil.getConsumerAccessToken()));
+  }
+
   @Given("Secondary routing_config header set")
   public void secondaryRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getSecondaryRouteHeaders(baseSteps));
+  }
+
+  @Given("Secondary routing_config with loadbalancing header set")
+  public void secondaryRoutingConfigWithLoadbalancingHeaderSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
   }
 
   @Given("Proxy routing_config header set")

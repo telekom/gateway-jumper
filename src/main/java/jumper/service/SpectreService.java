@@ -135,22 +135,14 @@ public class SpectreService {
 
   private void publishEvent(Spectre event, JumperConfig jc) {
 
-    String eventJson = null;
-    try {
-      eventJson = new ObjectMapper().writeValueAsString(event);
-    } catch (JsonProcessingException e1) {
-      e1.printStackTrace();
-    }
-
     // determine environment for local issuer and routing path on qa
     String envName = determineEnvironment(jc);
 
     publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
-            eventJson,
             oauthTokenUtil.generateGatewayTokenForPublisher(
                 localIssuerUrl + "/" + envName, envName),
-            event.getSpanId())
+            event)
         .subscribe();
   }
 
@@ -165,7 +157,7 @@ public class SpectreService {
     return jc.getRealmName();
   }
 
-  private Mono<Void> publishEventMono(String url, String eventJson, String token, String spanId) {
+  private Mono<Void> publishEventMono(String url, String token, Spectre event) {
     final Mono<Void> responseMono =
         spectreServiceWebClient
             .post()
@@ -180,11 +172,17 @@ public class SpectreService {
                   if (currentSpan != null) {
                     httpHeaders.set(
                         Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
-                    httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, spanId);
+                    httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, event.getSpanId());
                   }
+                  // pass Spectre related info also as a header
+                  httpHeaders.set(Constants.HEADER_X_SPECTRE_ISSUE, event.getData().getIssue());
+                  httpHeaders.set(
+                      Constants.HEADER_X_SPECTRE_PROVIDER, event.getData().getProvider());
+                  httpHeaders.set(
+                      Constants.HEADER_X_SPECTRE_CONSUMER, event.getData().getConsumer());
                 })
             .contentType(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromValue(eventJson))
+            .body(BodyInserters.fromValue(event))
             .retrieve()
             .onStatus(
                 HttpStatus::isError,

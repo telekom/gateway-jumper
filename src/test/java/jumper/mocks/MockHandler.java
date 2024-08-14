@@ -50,6 +50,8 @@ public class MockHandler {
   @After("@iris")
   public void afterIris() {
     mockIrisServer.stopServer();
+    int defaultIrisResponse = 200;
+    mockIrisServer.setResponse(defaultIrisResponse);
   }
 
   @Before("@horizon")

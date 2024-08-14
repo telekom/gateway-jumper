@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.When;
+import java.time.Duration;
 import java.util.function.Consumer;
 import jumper.filter.RequestFilter;
 import jumper.mocks.MockHorizonServer;
@@ -137,6 +138,16 @@ public class BaseSteps {
     mockHorizonServer.createVerifyEventType();
   }
 
+  @And("IDP set to respond with {int} status code")
+  public void idpSetToRespondWithStatusCode(int statusCode) {
+    mockIrisServer.setResponse(statusCode);
+  }
+
+  @And("IDP is shut down")
+  public void idpIsShutDown() {
+    mockIrisServer.stopServer();
+  }
+
   @And("IDP set to provide {word} token")
   public void idpWillRespondWithAStatusCode(String tokenType) {
     switch (tokenType) {
@@ -172,17 +183,55 @@ public class BaseSteps {
     }
   }
 
+  @And("external token IDP set to provide empty {word}")
+  public void externalIdpWillWithEmptyResponse(String tokenType) {
+    switch (tokenType) {
+      case "body":
+        mockIrisServer.createEmptyBodyExpectationExternalToken(id);
+        break;
+      case "header":
+        mockIrisServer.createEmptyHeaderExpectationExternalToken(id);
+        break;
+      case "both":
+        mockIrisServer.createEmptyExpectationExternalToken(id);
+        break;
+      default:
+        fail("expected tokenType not configured");
+    }
+  }
+
   @And("IDP set to drop connection")
   public void idpSetToDropConnection() {
     mockIrisServer.createExpectationDropConnection(id);
   }
 
+  @And("external token IDP request set to timeout")
+  public void idpSetToTimeoutConnection() {
+    mockIrisServer.createExpectationWithTimeout(id);
+  }
+
+  @And("external IDP set to drop connection")
+  public void externalIDPSetToDropConnection() {
+    mockIrisServer.createExpectationExternalDropConnection(id);
+  }
+
   @When("consumer calls the proxy route")
   public void consumerCallsTheAPI() {
     mockUpstreamServer.callbackRequest();
-
     requestExchange =
         webTestClient
+            .get()
+            .uri("/proxy/callback?statusCode=" + responseStatusCode)
+            .headers(httpHeadersOfRequest)
+            .exchange();
+  }
+
+  @When("consumer calls the proxy route with idp timeout")
+  public void consumerCallsTheAPIWithIDPTimeout() {
+    mockUpstreamServer.callbackRequest();
+    var mutatedClient = webTestClient.mutate().responseTimeout(Duration.ofSeconds(60)).build();
+    requestExchange =
+        mutatedClient
             .get()
             .uri("/proxy/callback?statusCode=" + responseStatusCode)
             .headers(httpHeadersOfRequest)

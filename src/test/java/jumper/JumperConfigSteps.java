@@ -53,26 +53,45 @@ public class JumperConfigSteps {
         baseSteps.httpHeadersOfRequest.andThen(
             httpHeaders -> {
               switch (jc_case) {
-                case "grant_type password":
+                case "consumer grant_type password":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
-                      getJcOauthGrantTypePassword(baseSteps.getId()));
+                      JcOauthConfig.CONSUMER.getJcOauthGrantTypePassword(baseSteps.getId()));
                   break;
-                case "grant_type password only":
+                case "consumer grant_type password only":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
-                      getJcOauthGrantTypePasswordOnly(baseSteps.getId()));
+                      JcOauthConfig.CONSUMER.getJcOauthGrantTypePasswordOnly(baseSteps.getId()));
                   break;
-                case "grant_type client_credentials":
+                case "consumer grant_type client_credentials":
                   httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getJcOauthGrantType(baseSteps.getId()));
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.CONSUMER.getJcOauthGrantType(baseSteps.getId()));
+                  break;
+                case "provider grant_type password":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypePassword(baseSteps.getId()));
+                  break;
+                case "provider grant_type password only":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypePasswordOnly(baseSteps.getId()));
+                  break;
+                case "provider grant_type client_credentials":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantType(baseSteps.getId()));
                   break;
                 case "scoped":
                   httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getJcOauthWithScope(baseSteps.getId()));
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.CONSUMER.getJcOauthWithScope(baseSteps.getId()));
                   break;
                 default:
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauth(baseSteps.getId()));
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.CONSUMER.getJcOauth(baseSteps.getId()));
               }
             }));
   }
@@ -102,7 +121,29 @@ public class JumperConfigSteps {
                       getJcBasicAuthOtherConsumer(baseSteps.getId()));
                   break;
                 default:
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcOauth(baseSteps.getId()));
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.CONSUMER.getJcOauth(baseSteps.getId()));
+              }
+            }));
+  }
+
+  @And("jumperConfig {word} loadbalancing set")
+  public void setJumperConfigLoadbalancing(String jc_case) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              switch (jc_case) {
+                case "valid":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancing(baseSteps.getId()));
+                  break;
+                case "empty":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getEmptyJcLoadBalancing(baseSteps.getId()));
+                  break;
+                default:
+                  assert false : "not defined";
               }
             }));
   }

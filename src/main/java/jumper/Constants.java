@@ -54,6 +54,10 @@ public class Constants {
   public static final String HEADER_X_FORWARDED_PORT_PORT = "443";
   public static final String HEADER_X_FORWARDED_PROTO_HTTPS = "https";
 
+  public static final String HEADER_X_SPECTRE_ISSUE = "x-spectre-issue";
+  public static final String HEADER_X_SPECTRE_PROVIDER = "x-spectre-provider";
+  public static final String HEADER_X_SPECTRE_CONSUMER = "x-spectre-consumer";
+
   public static final String HEADER_X_FAILOVER_SKIP_ZONE = "x-failover-skip-zone";
 
   public static final String QUERY_PARAM_LISTENER = "listener";
@@ -93,6 +97,7 @@ public class Constants {
   public static final List<String> SPACE_ZONES = List.of("space", "canis", "aries");
 
   public static final String BASIC_AUTH_PROVIDER_KEY = "default";
+  public static final String OAUTH_PROVIDER_KEY = "default";
 
   public static final String ENVIRONMENT_PLACEHOLDER = "ENVIRONMENT_PLACEHOLDER";
 }

@@ -5,10 +5,13 @@
 package jumper.util;
 
 import static jumper.config.Config.*;
+import static jumper.config.Config.CONSUMER;
 import static jumper.model.config.JumperConfig.toBase64;
 
 import java.util.HashMap;
+import java.util.List;
 import jumper.Constants;
+import jumper.config.Config;
 import jumper.model.config.*;
 
 public class JumperConfigUtil {
@@ -17,29 +20,6 @@ public class JumperConfigUtil {
     HashMap<String, OauthCredentials> oauth = new HashMap<>();
     OauthCredentials oc = new OauthCredentials();
     oc.setScopes(SCOPES);
-    oauth.put(CONSUMER, oc);
-    JumperConfig jc = new JumperConfig();
-    jc.setOauth(oauth);
-    return toBase64(jc);
-  }
-
-  public static String getJcOauth(String id) {
-    HashMap<String, OauthCredentials> oauth = new HashMap<>();
-    OauthCredentials oc = new OauthCredentials();
-    oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
-    oc.setClientSecret("secret");
-    oauth.put(CONSUMER, oc);
-    JumperConfig jc = new JumperConfig();
-    jc.setOauth(oauth);
-    return toBase64(jc);
-  }
-
-  public static String getJcOauthWithScope(String id) {
-    HashMap<String, OauthCredentials> oauth = new HashMap<>();
-    OauthCredentials oc = new OauthCredentials();
-    oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
-    oc.setClientSecret("secret");
-    oc.setScopes(OAUTH_SCOPE_CONFIGURED);
     oauth.put(CONSUMER, oc);
     JumperConfig jc = new JumperConfig();
     jc.setOauth(oauth);
@@ -94,42 +74,97 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
-  public static String getJcOauthGrantType(String id) {
-    HashMap<String, OauthCredentials> oauth = new HashMap<>();
-    OauthCredentials oc = new OauthCredentials();
-    oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
-    oc.setClientSecret("secret");
-    oc.setGrantType("client_credentials");
-    oauth.put(CONSUMER, oc);
+  public static String getJcLoadBalancing(String id) {
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(
+        List.of(
+            new Server("http://localhost:1080", 50.0), new Server("http://localhost:1080", 50.0)));
+
     JumperConfig jc = new JumperConfig();
-    jc.setOauth(oauth);
+    jc.setLoadBalancing(loadBalancing);
     return toBase64(jc);
   }
 
-  public static String getJcOauthGrantTypePassword(String id) {
-    HashMap<String, OauthCredentials> oauth = new HashMap<>();
-    OauthCredentials oc = new OauthCredentials();
-    oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
-    oc.setClientSecret("secret");
-    oc.setUsername("username");
-    oc.setPassword("geheim");
-    oc.setGrantType("password");
-    oauth.put(CONSUMER, oc);
+  public static String getEmptyJcLoadBalancing(String id) {
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(List.of());
+
     JumperConfig jc = new JumperConfig();
-    jc.setOauth(oauth);
+    jc.setLoadBalancing(loadBalancing);
     return toBase64(jc);
   }
 
-  public static String getJcOauthGrantTypePasswordOnly(String id) {
-    HashMap<String, OauthCredentials> oauth = new HashMap<>();
-    OauthCredentials oc = new OauthCredentials();
-    oc.setUsername(addIdSuffix("username", id));
-    oc.setPassword("geheim");
-    oc.setGrantType("password");
-    oauth.put(CONSUMER, oc);
-    JumperConfig jc = new JumperConfig();
-    jc.setOauth(oauth);
-    return toBase64(jc);
+  public enum JcOauthConfig {
+    CONSUMER,
+    PROVIDER;
+
+    List<String> determineKeys() {
+      return switch (this) {
+        case CONSUMER -> List.of(Config.CONSUMER);
+        case PROVIDER -> List.of(Constants.OAUTH_PROVIDER_KEY);
+      };
+    }
+
+    public String getJcOauthGrantType(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientSecret("secret");
+      oc.setGrantType("client_credentials");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public String getJcOauthGrantTypePassword(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientSecret("secret");
+      oc.setUsername("username");
+      oc.setPassword("geheim");
+      oc.setGrantType("password");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public String getJcOauthGrantTypePasswordOnly(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setUsername(addIdSuffix("username", id));
+      oc.setPassword("geheim");
+      oc.setGrantType("password");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public String getJcOauth(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientSecret("secret");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public String getJcOauthWithScope(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientSecret("secret");
+      oc.setScopes(OAUTH_SCOPE_CONFIGURED);
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
   }
 
   public static String getJcRouteListener(String id, String consumer) {

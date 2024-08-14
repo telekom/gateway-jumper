@@ -43,6 +43,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.UnsupportedMediaTypeException;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ResponseStatusException;
@@ -356,6 +357,18 @@ public class OauthTokenUtil {
                               + ", original status: "
                               + response.statusCode()));
                 })
+            .onStatus(
+                HttpStatus::is5xxServerError,
+                response -> {
+                  logClientErrorResponse(response, tokenKey);
+                  return Mono.error(
+                      new ResponseStatusException(
+                          HttpStatus.UNAUTHORIZED,
+                          "Failed to retrieve token from "
+                              + tokenEndpoint
+                              + ", original status: "
+                              + response.statusCode()));
+                })
             .bodyToMono(TokenInfo.class)
             .doOnError(
                 throwable ->
@@ -372,7 +385,8 @@ public class OauthTokenUtil {
                                 || throwable.getCause() instanceof PrematureCloseException)
                     .onRetryExhaustedThrow(
                         (retryBackoffSpec, retrySignal) -> {
-                          throw new RuntimeException(
+                          throw new ResponseStatusException(
+                              HttpStatus.UNAUTHORIZED,
                               "Failed to connect to "
                                   + tokenEndpoint
                                   + ", cause: "
@@ -391,7 +405,8 @@ public class OauthTokenUtil {
       String msg = e.getCause().getMessage();
 
       if (e.getCause() instanceof ResponseStatusException) {
-        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, msg);
+        var statusCode = ((ResponseStatusException) e.getCause()).getStatus();
+        throw new ResponseStatusException(statusCode, msg);
       }
 
       if (e.getCause() instanceof TimeoutException) {
@@ -400,12 +415,26 @@ public class OauthTokenUtil {
             "Timeout occurred while fetching token from " + tokenEndpoint);
       }
 
+      if (e.getCause().getCause() instanceof UnsupportedMediaTypeException) {
+        throw new ResponseStatusException(
+            HttpStatus.NOT_ACCEPTABLE,
+            "Failed while fetching token from "
+                + tokenEndpoint
+                + ": "
+                + e.getCause().getCause().getMessage().replace("bodyType=jumper.model.", ""));
+      }
+
       throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg);
 
     } catch (InterruptedException e) {
       throw new ResponseStatusException(
           HttpStatus.INTERNAL_SERVER_ERROR,
           "Error occurred while fetching token from " + tokenEndpoint);
+    }
+
+    if (accessToken == null) {
+      throw new ResponseStatusException(
+          HttpStatus.NOT_ACCEPTABLE, "Empty response while fetching token from " + tokenEndpoint);
     }
 
     tokenCache.saveToken(tokenKey, accessToken);

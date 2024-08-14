@@ -118,7 +118,7 @@ Feature: proper authorization token reaches provider endpoint
   Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via basic auth
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And jumperConfig oauth "grant_type client_credentials" set
+    And jumperConfig oauth "consumer grant_type client_credentials" set
     And IDP set to provide externalBasicAuthCredentials token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
@@ -128,7 +128,7 @@ Feature: proper authorization token reaches provider endpoint
   Scenario: Consumer calls proxy route with jc with configured password grant type, external authorization token received using username/password
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And jumperConfig oauth "grant_type password" set
+    And jumperConfig oauth "consumer grant_type password" set
     And IDP set to provide externalUsernamePasswordCredentials token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
@@ -138,7 +138,37 @@ Feature: proper authorization token reaches provider endpoint
   Scenario: Consumer calls proxy route with jc with configured password grant type, no client credentials provided, external authorization token received using username/password only
     Given RealRoute headers are set
     And oauth tokenEndpoint set
-    And jumperConfig oauth "grant_type password only" set
+    And jumperConfig oauth "consumer grant_type password only" set
+    And IDP set to provide externalUsernamePasswordCredentialsOnly token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via basic auth
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider grant_type client_credentials" set
+    And IDP set to provide externalBasicAuthCredentials token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc with configured password grant type, external authorization token received using username/password
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider grant_type password" set
+    And IDP set to provide externalUsernamePasswordCredentials token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc with configured password grant type, no client credentials provided, external authorization token received using username/password only
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider grant_type password only" set
     And IDP set to provide externalUsernamePasswordCredentialsOnly token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route

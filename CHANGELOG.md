@@ -1,5 +1,82 @@
 # Changelog
 
+## [3.16.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.2...3.16.0) (2024-07-04)
+
+
+### 🧪 Tests
+
+* added loadbalancing test ([ca1940f](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/ca1940ffd9c00408ffa4e61a5186c1386aee5aad))
+* fix no header test ([5236a03](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/5236a03dda2a2d272a6b4ddf6f11a39e8ec4f1ae))
+
+
+### 🚀 Features
+
+* loadbalancing draft ([f89ecec](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f89ecec6131a57b9f8f5b3413068cac0574cc4b1))
+
+
+### 🛠 Fixes
+
+* pass spectre info as header ([98de0fb](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/98de0fbbc8a28e526b333c23dcb4cbd84f864fbc))
+
+## [3.15.2](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.1...3.15.2) (2024-06-25)
+
+
+### 💈 Style
+
+* fix formatting ([8e9c1af](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/8e9c1afbba9ca788f8fd0715556845080252b3dc))
+
+
+### 🦊 CI/CD
+
+* fix pipeline ([32ccb34](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/32ccb346b07e78b81695283b6b97f877eb1856ed))
+
+
+### Other
+
+* update to new Gherkin KeyWords ([9c01cfb](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/9c01cfb2b1385b10c131b644f1e3cb3ffdeed7af))
+
+## [3.15.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.0...3.15.1) (2024-06-25)
+
+
+### 🛠 Fixes
+
+* **dhei-12175:** added logic to handle default-key in jc-oauth-config ([efeb289](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/efeb289fcb6776a2c0e27646e6a834a5b3a09417))
+
+
+### Other
+
+* **release:** 3.15.0 ([8356342](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/83563429c391e35aa0019fd6842a62f69da3f615))
+
+## [3.15.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.4...3.15.0) (2024-06-25)
+
+
+### 🚀 Features
+
+* enhance-Jumper-error-handling ([d1387ec](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/d1387ec80d089616663f48f93df3e18a672f2dfe))
+* enhanced error handling for external IDP responses to consumer ([94852e4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/94852e4efde19516ca6f6d5148e6fd76ca7f1adb))
+
+
+### Other
+
+* **release:** 3.14.4 ([22add44](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/22add443d09fe29a37f066081c04578c835b80f2))
+
+## [3.14.4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.3...3.14.4) (2024-06-05)
+
+
+### 🦊 CI/CD
+
+* **dhei-00000:** pass headers for secondary failover ([fc50cb4](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/fc50cb4e0a6953794be193905647ce85451ee376))
+
+
+### 🛠 Fixes
+
+* pass headers for secondary failover ([da06f74](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/da06f7462b72c621aa553acc7c8df7f8d81697d5))
+
+
+### Other
+
+* **release:** 3.14.3 ([583d339](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/583d339a4780a6202501956979fb6efd038a081d))
+
 ## [3.14.3](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.14.2...3.14.3) (2024-05-30)
 
 
