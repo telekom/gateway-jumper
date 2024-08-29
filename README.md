@@ -57,7 +57,8 @@ This will build the image and tag it as `jumper:latest`.
 
 ### Multi-stage Docker build
 
-Alternatively, you can use the multi-stage Docker build to build the image. This will build the application in a Maven container and then copy the resulting artifacts into a smaller container. To build the image, run:
+Alternatively, you can use the multi-stage Docker build to build the image. This will build the application in a Maven container and then copy the resulting artifacts into a smaller container.  
+**It will, however, skip the Maven unit test stage due to some issues with Testcontainers.** To build the image, run:
 
 ```bash
   docker build --platform linux/amd64 -t jumper -f Dockerfile.multi-stage .
