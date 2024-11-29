@@ -66,14 +66,7 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization MeshToken
     And API consumer receives a 200 status code
 
-  ################ external ################
-  Scenario: Consumer calls proxy route with jc with oauth, but client credentials not defined, consumer receives 401
-    Given RealRoute headers are set
-    And oauth tokenEndpoint set
-    And API provider set to respond with a 200 status code
-    When consumer calls the proxy route
-    And API consumer receives a 401 status code
-
+  ################ external legacy ################
   Scenario: Consumer calls proxy route with jc with oauth, external authorization token sent
     Given RealRoute headers are set
     And oauth tokenEndpoint set
@@ -115,6 +108,14 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization ExternalHeader
     And API consumer receives a 200 status code
 
+  ################ external ################
+  Scenario: Consumer calls proxy route with jc with oauth, but client credentials not defined, consumer receives 401
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    And API consumer receives a 401 status code
+
   Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via basic auth
     Given RealRoute headers are set
     And oauth tokenEndpoint set
@@ -155,6 +156,16 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
+  Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via post
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider grant_type client_credentials client_secret_post method" set
+    And IDP set to provide external token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route with jc with configured password grant type, external authorization token received using username/password
     Given RealRoute headers are set
     And oauth tokenEndpoint set
@@ -170,6 +181,16 @@ Feature: proper authorization token reaches provider endpoint
     And oauth tokenEndpoint set
     And jumperConfig oauth "provider grant_type password only" set
     And IDP set to provide externalUsernamePasswordCredentialsOnly token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc with configured oauth key auth, external authorization token sent
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider grant_type key" set
+    And IDP set to provide externalKey token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     Then API Provider receives authorization ExternalConfigured
@@ -201,4 +222,13 @@ Feature: proper authorization token reaches provider endpoint
     When consumer calls the proxy route
     Then API Provider receives default basic authorization headers
     Then API Provider receives authorization BasicAuthConsumer
+    And API consumer receives a 200 status code
+
+    ################ auth header not present ################
+  Scenario: Service configured with authorization on removeHeaders list, no authorization sent to provider
+    Given RealRoute headers are set
+    And jumperConfig "dummy, authorization" removeHeaders set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives no authorization header
     And API consumer receives a 200 status code

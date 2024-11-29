@@ -6,7 +6,9 @@ package jumper;
 
 import static jumper.util.JumperConfigUtil.*;
 
+import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.And;
+import java.util.List;
 import jumper.config.Config;
 import lombok.RequiredArgsConstructor;
 
@@ -26,13 +28,12 @@ public class JumperConfigSteps {
               switch (jc_case) {
                 case "consumer":
                   httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG,
-                      getJcRouteListener(baseSteps.getId(), Config.CONSUMER));
+                      Constants.HEADER_JUMPER_CONFIG, getJcRouteListener(Config.CONSUMER));
                   break;
                 case "otherConsumer":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
-                      getJcRouteListener(baseSteps.getId(), Config.CONSUMER_EXTERNAL_CONFIGURED));
+                      getJcRouteListener(Config.CONSUMER_EXTERNAL_CONFIGURED));
                   break;
               }
             }));
@@ -42,9 +43,7 @@ public class JumperConfigSteps {
   public void setJumperConfigScopes() {
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> {
-              httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity());
-            }));
+            httpHeaders -> httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity())));
   }
 
   @And("jumperConfig oauth {string} set")
@@ -83,10 +82,20 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.PROVIDER.getJcOauthGrantType(baseSteps.getId()));
                   break;
+                case "provider grant_type client_credentials client_secret_post method":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypePost(baseSteps.getId()));
+                  break;
                 case "scoped":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.CONSUMER.getJcOauthWithScope(baseSteps.getId()));
+                  break;
+                case "provider grant_type key":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.PROVIDER.getJcOauthGrantTypeWithKey(baseSteps.getId()));
                   break;
                 default:
                   httpHeaders.set(
@@ -94,6 +103,23 @@ public class JumperConfigSteps {
                       JcOauthConfig.CONSUMER.getJcOauth(baseSteps.getId()));
               }
             }));
+  }
+
+  @And("jumperConfig set with key type {string}")
+  public void setJumperConfigOauthWithKeyType(String keyType) {
+    switch (keyType.toLowerCase()) {
+      case "weak":
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.WEAK.getKey());
+        break;
+      case "invalid":
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.INVALID.getKey());
+        break;
+      case "empty":
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.EMPTY.getKey());
+        break;
+      default:
+        JcOauthConfig.PROVIDER.setJcOauthKeyType(KeyType.SECURE.getKey());
+    }
   }
 
   @And("jumperConfig basic auth {string} set")
@@ -135,16 +161,28 @@ public class JumperConfigSteps {
             httpHeaders -> {
               switch (jc_case) {
                 case "valid":
-                  httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancing(baseSteps.getId()));
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancing());
                   break;
                 case "empty":
-                  httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getEmptyJcLoadBalancing(baseSteps.getId()));
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getEmptyJcLoadBalancing());
                   break;
                 default:
                   assert false : "not defined";
               }
             }));
+  }
+
+  @And("jumperConfig \"{listOfStrings}\" removeHeaders set")
+  public void setJumperConfigRemoveHeaders(List<String> removeHeaders) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders ->
+                httpHeaders.set(
+                    Constants.HEADER_JUMPER_CONFIG, getJcRemoveHeaders(removeHeaders))));
+  }
+
+  @ParameterType("(?:[^,]*)(?:,\\s?[^,]*)*")
+  public List<String> listOfStrings(String arg) {
+    return List.of(arg.split(",\\s?"));
   }
 }

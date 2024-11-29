@@ -31,6 +31,7 @@ public class JumperConfig {
   private HashMap<String, OauthCredentials> oauth;
   private HashMap<String, BasicAuthCredentials> basicAuth;
   private HashMap<String, RouteListener> routeListener;
+  private List<String> removeHeaders;
   private GatewayClient gatewayClient;
   private LoadBalancing loadBalancing;
 

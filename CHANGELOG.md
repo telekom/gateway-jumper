@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.18.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.17.0...3.18.0) (2024-10-21)
+
+
+### 🚀 Features
+
+* **dhei-16267:** header removal feature, filter query params list ([f608044](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f6080449f89b8a61ab21c9abb596503898de84f6))
+
+## [3.17.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.16.0...3.17.0) (2024-09-26)
+
+
+### 💈 Style
+
+* **jwt:** linting ([6c931b5](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/6c931b54cfccabf24f68f9f53d3e80f0f34fa601))
+
+
+### 🧪 Tests
+
+* **jwt:** add testcases for the happy path ([7286055](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/7286055ce8142e43adf806ff3e60f9295c27fa34))
+* **jwt:** add testcases for wrong client configuration ([64a6268](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/64a62685e503c588904fa177d5d29209c4327a12))
+
+
+### 🚀 Features
+
+* evaluate token request , test structure improved ([d8eb836](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/d8eb83609a030f3aa35e38186e65a9de8c92ca81))
+* **jwt:** add jwt authorization for external idp ([f111116](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/f111116dcb5d5d2b52a89d69828c2b2ffda43d02))
+
+
+### 🛠 Fixes
+
+* merge duplicate code, improved TokenCacheKey structure ([56af4d7](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/56af4d7eac8739b6f065545a0de8e2c78cd0338d))
+
+
+### Other
+
+* sync from gitlab ([630f7ec](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/630f7eca40a4327d86b4ff8bd0c54589c2cbc816))
+* sync from gitlab ([9b0738d](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/9b0738d304aa5508521fbe0312dce1f74eb219d9))
+* sync from gitlab ([1deb92c](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/1deb92cff2f447bac8a3faa3380478b1cb989c9d))
+
 ## [3.16.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.15.2...3.16.0) (2024-07-04)
 
 

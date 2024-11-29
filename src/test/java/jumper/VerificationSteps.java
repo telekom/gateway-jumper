@@ -86,6 +86,11 @@ public class VerificationSteps {
     this.baseSteps.getRequestExchange().expectHeader().doesNotExist("routing_config");
   }
 
+  @Then("API Provider receives no authorization header")
+  public void apiProvidersReceivesNoAuthorizationHeader() {
+    this.baseSteps.getRequestExchange().expectHeader().doesNotExist("Authorization");
+  }
+
   @Then("API Provider receives authorization {word}")
   public void apiProviderReceivesToken(String tokenType) {
     if (tokenType.equalsIgnoreCase("OneToken")) {

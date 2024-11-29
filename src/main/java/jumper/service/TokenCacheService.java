@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import jumper.model.TokenInfo;
+import jumper.model.config.OauthCredentials;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -74,13 +75,16 @@ public class TokenCacheService {
     this.cachingList.put(tokenKey, gwAccessToken);
   }
 
-  public String generateTokenCacheKey(
-      String tokenEndpoint, String clientID, String subscriberClientId) {
-    return tokenEndpoint
-        + TOKEN_CACHE_KEY_DELIMITER
-        + clientID
-        + TOKEN_CACHE_KEY_DELIMITER
-        + subscriberClientId;
+  public String generateTokenCacheKey(String tokenEndpoint, OauthCredentials oauthCredentials) {
+    return String.join(
+        TOKEN_CACHE_KEY_DELIMITER,
+        tokenEndpoint,
+        oauthCredentials.getId(),
+        oauthCredentials.getScopes());
+  }
+
+  public String generateTokenCacheKey(String tokenEndpoint, String clientID, String scopes) {
+    return String.join(TOKEN_CACHE_KEY_DELIMITER, tokenEndpoint, clientID, scopes);
   }
 
   public void printCache() {

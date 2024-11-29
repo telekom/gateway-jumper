@@ -74,7 +74,7 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
-  public static String getJcLoadBalancing(String id) {
+  public static String getJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(
         List.of(
@@ -85,7 +85,7 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
-  public static String getEmptyJcLoadBalancing(String id) {
+  public static String getEmptyJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(List.of());
 
@@ -94,9 +94,17 @@ public class JumperConfigUtil {
     return toBase64(jc);
   }
 
+  public static String getJcRemoveHeaders(List<String> values) {
+    JumperConfig jc = new JumperConfig();
+    jc.setRemoveHeaders(values);
+    return toBase64(jc);
+  }
+
   public enum JcOauthConfig {
     CONSUMER,
     PROVIDER;
+
+    private String clientKey = PRIVATE_RSA_KEY_SECURE_EXAMPLE;
 
     List<String> determineKeys() {
       return switch (this) {
@@ -111,6 +119,19 @@ public class JumperConfigUtil {
       oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
       oc.setClientSecret("secret");
       oc.setGrantType("client_credentials");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public String getJcOauthGrantTypePost(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientSecret("secret");
+      oc.setGrantType("client_credentials");
+      oc.setTokenRequest("BODY");
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
@@ -165,9 +186,41 @@ public class JumperConfigUtil {
       jc.setOauth(oauth);
       return toBase64(jc);
     }
+
+    public String getJcOauthGrantTypeWithKey(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+      oc.setClientKey(this.clientKey);
+      oc.setGrantType("client_credentials");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toBase64(jc);
+    }
+
+    public void setJcOauthKeyType(String clientKey) {
+      this.clientKey = clientKey;
+    }
   }
 
-  public static String getJcRouteListener(String id, String consumer) {
+  public enum KeyType {
+    WEAK,
+    SECURE,
+    INVALID,
+    EMPTY;
+
+    public String getKey() {
+      return switch (this) {
+        case WEAK -> PRIVATE_RSA_KEY_WEAK_EXAMPLE;
+        case SECURE -> PRIVATE_RSA_KEY_SECURE_EXAMPLE;
+        case INVALID -> "InvalidRSAKey";
+        case EMPTY -> "";
+      };
+    }
+  }
+
+  public static String getJcRouteListener(String consumer) {
     HashMap<String, RouteListener> routeListenerHashMap = new HashMap<>();
     RouteListener rl = new RouteListener();
     rl.setIssue(LISTENER_ISSUE);

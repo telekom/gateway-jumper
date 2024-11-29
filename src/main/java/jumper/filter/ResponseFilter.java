@@ -24,7 +24,6 @@ import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
 
 @Component
 @Slf4j
@@ -45,54 +44,52 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
         (exchange, chain) ->
             chain
                 .filter(exchange)
-                .doOnTerminate(() -> {
-                        if (exchange.getResponse().isCommitted()) {
-                            return;
-                        }
-                            WebFluxSleuthOperators.withSpanInScope(
-                                tracer,
-                                currentTraceContext,
-                                exchange,
-                                () -> {
-                                  ServerHttpResponse response = exchange.getResponse();
-                                  ServerHttpRequest request = exchange.getRequest();
+                .doOnTerminate(
+                    () -> {
+                      if (exchange.getResponse().isCommitted()) {
+                        return;
+                      }
+                      WebFluxSleuthOperators.withSpanInScope(
+                          tracer,
+                          currentTraceContext,
+                          exchange,
+                          () -> {
+                            ServerHttpResponse response = exchange.getResponse();
+                            ServerHttpRequest request = exchange.getRequest();
 
-                                  if (log.isDebugEnabled()) {
-                                    JumperInfoResponse jumperInfoResponse =
-                                        new JumperInfoResponse();
-                                    IncomingResponse incomingResponse = new IncomingResponse();
+                            if (log.isDebugEnabled()) {
+                              JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();
+                              IncomingResponse incomingResponse = new IncomingResponse();
 
-                                    incomingResponse.setHost(
-                                        Objects.requireNonNull(
-                                                exchange.getAttribute(
-                                                    ServerWebExchangeUtils
-                                                        .GATEWAY_REQUEST_URL_ATTR))
-                                            .toString());
-                                    incomingResponse.setHttpStatusCode(
-                                        Objects.requireNonNull(response.getStatusCode()).value());
-                                    incomingResponse.setMethod(request.getMethodValue());
-                                    incomingResponse.setRequestHeaders(
-                                        request.getHeaders().toSingleValueMap());
-                                    jumperInfoResponse.setIncomingResponse(incomingResponse);
+                              incomingResponse.setHost(
+                                  Objects.requireNonNull(
+                                          exchange.getAttribute(
+                                              ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR))
+                                      .toString());
+                              incomingResponse.setHttpStatusCode(
+                                  Objects.requireNonNull(response.getStatusCode()).value());
+                              incomingResponse.setMethod(request.getMethodValue());
+                              incomingResponse.setRequestHeaders(
+                                  request.getHeaders().toSingleValueMap());
+                              jumperInfoResponse.setIncomingResponse(incomingResponse);
 
-                                    log.debug(
-                                        "logging response: {}",
-                                        value("jumperInfo", jumperInfoResponse));
-                                  }
+                              log.debug(
+                                  "logging response: {}", value("jumperInfo", jumperInfoResponse));
+                            }
 
-                                  long contentLength = response.getHeaders().getContentLength();
+                            long contentLength = response.getHeaders().getContentLength();
 
-                                  Span span = tracer.currentSpan();
+                            Span span = tracer.currentSpan();
 
-                                  if (Long.toString(contentLength).equals("-1")) {
-                                    span.tag("message.size_response", "0");
-                                  } else {
-                                    span.tag("message.size_response", Long.toString(contentLength));
-                                  }
+                            if (Long.toString(contentLength).equals("-1")) {
+                              span.tag("message.size_response", "0");
+                            } else {
+                              span.tag("message.size_response", Long.toString(contentLength));
+                            }
 
-                                  span.event("jrpf");
-                                });
-                }),
+                            span.event("jrpf");
+                          });
+                    }),
         RequestFilter.REQUEST_FILTER_ORDER);
   }
 

@@ -6,6 +6,7 @@ package jumper.service;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 import java.util.Objects;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
@@ -38,18 +39,25 @@ public class HeaderUtil {
     exchange.getRequest().mutate().headers(httpHeaders -> httpHeaders.remove(headerName)).build();
   }
 
+  public static void removeHeaders(ServerWebExchange exchange, List<String> headerList) {
+    if (Objects.isNull(headerList) || headerList.isEmpty()) return;
+    exchange
+        .getRequest()
+        .mutate()
+        .headers(httpHeaders -> headerList.forEach(httpHeaders::remove))
+        .build();
+  }
+
   public static void rewriteXForwardedHeader(
       ServerWebExchange exchange, JumperConfig jumperConfig) {
 
     if (Objects.nonNull(jumperConfig.getConsumerOriginStargate())) {
-      String hostStargate = "";
       try {
         URL url = new URL(jumperConfig.getConsumerOriginStargate());
-        hostStargate = url.getHost();
+        HeaderUtil.addHeader(exchange, Constants.HEADER_X_FORWARDED_HOST, url.getHost());
       } catch (MalformedURLException e) {
         log.error(e.getMessage(), e);
       }
-      HeaderUtil.addHeader(exchange, Constants.HEADER_X_FORWARDED_HOST, hostStargate);
     }
 
     addHeader(exchange, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);

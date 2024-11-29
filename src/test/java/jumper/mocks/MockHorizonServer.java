@@ -140,7 +140,6 @@ public class MockHorizonServer {
 
   private List<Header> getHeaderList(String id) {
     List<Header> headersList = new ArrayList<>();
-    headersList.add(new Header(HttpHeaders.USER_AGENT, "ReactorNetty/1.0.38"));
     headersList.add(new Header(HttpHeaders.HOST, horizonLocalHost + ":" + horizonLocalPort));
     headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
     headersList.add(new Header(HttpHeaders.ACCEPT_ENCODING, "gzip"));

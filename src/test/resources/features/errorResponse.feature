@@ -153,3 +153,38 @@ Feature: proper error message returned based on conditions
     When consumer calls the proxy route
     And API consumer receives a 401 status code
     And error response contains msg "401 UNAUTHORIZED \"Failed to connect to http://localhost:1081/external, cause: Connection prematurely closed BEFORE response; nested exception is reactor.netty.http.client.PrematureCloseException: Connection prematurely closed BEFORE response\"" error "Unauthorized" status 401
+
+################ external IDP - jwt authorization ################
+  Scenario: external IDP weak key configured
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig set with key type "weak"
+    And jumperConfig oauth "provider grant_type key" set
+    And IDP set to provide externalKey token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    And API consumer receives a 401 status code
+    And error response contains msg "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used with RS256 MUST have a size >= 2048 bits." error "Unauthorized" status 401
+
+  Scenario: external IDP invalid key scheme configures
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig set with key type "invalid"
+    And jumperConfig oauth "provider grant_type key" set
+    And IDP set to provide externalKey token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    And API consumer receives a 401 status code
+    And error response contains msg "Invalid key configuration: Last unit does not have enough valid bits" error "Unauthorized" status 401
+
+
+  Scenario: external IDP empty key scheme configures
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig set with key type "empty"
+    And jumperConfig oauth "provider grant_type key" set
+    And IDP set to provide externalInvalidAuth token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    And API consumer receives a 401 status code
+    And error response contains msg "401 UNAUTHORIZED \"Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND\"" error "Unauthorized" status 401

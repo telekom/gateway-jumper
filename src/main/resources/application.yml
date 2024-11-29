@@ -71,6 +71,7 @@ spring:
   zipkin:
     baseUrl: ${TRACING_URL:https://collector-zipkin-http-drax-guardians.test.dhei.telekom.de}
   sleuth:
+    filter-param-list: X-Amz-.*
     sampler.probability: 1
     propagation:
       tag.enabled: false

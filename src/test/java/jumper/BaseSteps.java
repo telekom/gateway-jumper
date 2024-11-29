@@ -157,6 +157,9 @@ public class BaseSteps {
       case "external":
         mockIrisServer.createExpectationExternalToken(id);
         break;
+      case "externalKey":
+        mockIrisServer.createExpectationExternalTokenKeyed(id);
+        break;
       case "externalScoped":
         mockIrisServer.createExpectationExternalTokenScoped(id);
         break;
