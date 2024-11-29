@@ -45,9 +45,10 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
         (exchange, chain) ->
             chain
                 .filter(exchange)
-                .then(
-                    Mono.fromRunnable(
-                        () ->
+                .doOnTerminate(() -> {
+                        if (exchange.getResponse().isCommitted()) {
+                            return;
+                        }
                             WebFluxSleuthOperators.withSpanInScope(
                                 tracer,
                                 currentTraceContext,
@@ -90,7 +91,8 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
                                   }
 
                                   span.event("jrpf");
-                                }))),
+                                });
+                }),
         RequestFilter.REQUEST_FILTER_ORDER);
   }
 
