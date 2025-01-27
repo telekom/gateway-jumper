@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.19.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.18.0...3.19.0) (2025-01-24)
+
+### 💈 Style
+
+* spotless libation ([2d55531](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/2d55531d59b6d48801ee7420ca57d7a48752d01f))
+
+### 🚀 Features
+
+* DHEI-16971 adjust config to hide sig param in sleuth tracing ([0c709f9](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/0c709f992b43994dc9d7ce8a39ba2666fb90b516))
+
 ## [3.18.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.17.0...3.18.0) (2024-10-21)
 
 
