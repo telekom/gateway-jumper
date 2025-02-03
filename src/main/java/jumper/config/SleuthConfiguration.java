@@ -6,12 +6,8 @@ package jumper.config;
 
 import brave.http.HttpRequestParser;
 import brave.http.HttpResponseParser;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
-import java.util.regex.*;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 import jumper.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +15,9 @@ import org.springframework.cloud.sleuth.instrument.web.HttpClientRequestParser;
 import org.springframework.cloud.sleuth.instrument.web.HttpClientResponseParser;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Configuration(proxyBeanMethods = false)
 @Slf4j
@@ -60,50 +59,35 @@ public class SleuthConfiguration {
     };
   }
 
-  private String filterQueryParams(String urlString, List<String> patterns) {
+  protected static String filterQueryParams(String urlString, List<String> patterns) {
     // first check, if there is something to do
-    if (!urlString.contains("?") || queryFilterList.isEmpty()) {
+    if (!urlString.contains("?") || patterns.isEmpty()) {
       return urlString;
     }
 
-    try {
-      URI uri = new URI(urlString);
-      String query = uri.getQuery();
-      String[] params = query.split("&");
+    List<Pattern> compiledPatterns = patterns.stream().map(Pattern::compile).toList();
 
-      List<Pattern> compiledPatterns = patterns.stream().map(Pattern::compile).toList();
+    var uriComponents = UriComponentsBuilder.fromHttpUrl(urlString).build(urlString.contains("%"));
 
-      String filteredParams =
-          Arrays.stream(params)
-              .filter(
-                  param -> {
-                    String[] keyValue = param.split("=");
-                    return compiledPatterns.stream()
-                        .noneMatch(pattern -> pattern.matcher(keyValue[0]).matches());
-                  })
-              .map(
-                  param -> {
-                    String[] keyValue = param.split("=");
-                    return URLEncoder.encode(keyValue[0], StandardCharsets.UTF_8)
-                        + "="
-                        + URLEncoder.encode(keyValue[1], StandardCharsets.UTF_8);
-                  })
-              .collect(Collectors.joining("&"));
+    MultiValueMap<String, String> filteredParams = new LinkedMultiValueMap<>();
 
-      URI filteredUri;
-      // just avoid trailing ?
-      if (!filteredParams.isEmpty()) {
-        filteredUri =
-            new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), filteredParams, null);
-      } else {
-        filteredUri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), null, null);
-      }
-      return filteredUri.toString();
+    uriComponents
+        .getQueryParams()
+        .forEach(
+            (key, values) -> {
+              if (compiledPatterns.stream().noneMatch(p -> p.matcher(key).matches())) {
+                filteredParams.put(key, values);
+              }
+            });
 
-    } catch (URISyntaxException e) {
-      // we do not want to affect processing, just log and return original url
-      log.error("Problem occurred while filtering query params");
-      return urlString;
-    }
+    return UriComponentsBuilder.newInstance()
+        .scheme(uriComponents.getScheme())
+        .host(uriComponents.getHost())
+        .port(uriComponents.getPort())
+        .path(uriComponents.getPath())
+        .queryParams(filteredParams)
+        .fragment(uriComponents.getFragment())
+        .build()
+        .toUriString();
   }
 }

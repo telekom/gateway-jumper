@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.19.1](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.19.0...3.19.1) (2025-02-03)
+
+### 🛠 Fixes
+
+* DHEI-16971 en/decoding for tracing as well as splitting query params manually ([406f63d](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/commit/406f63dd616bd3faeb3f2026dd50bc1a10550d50))
+
 ## [3.19.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/3.18.0...3.19.0) (2025-01-24)
 
 ### 💈 Style
