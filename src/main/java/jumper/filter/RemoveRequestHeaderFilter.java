@@ -10,7 +10,6 @@ import lombok.Setter;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,16 +26,13 @@ public class RemoveRequestHeaderFilter
   @Override
   public GatewayFilter apply(Config config) {
     return new OrderedGatewayFilter(
-        (exchange, chain) -> {
-          ServerHttpRequest request =
-              exchange
-                  .getRequest()
-                  .mutate()
-                  .headers(httpHeaders -> config.getHeaders().forEach(httpHeaders::remove))
-                  .build();
-
-          return chain.filter(exchange.mutate().request(request).build());
-        },
+        (exchange, chain) ->
+            chain.filter(
+                exchange
+                    .mutate()
+                    .request(
+                        req -> req.headers(headers -> config.getHeaders().forEach(headers::remove)))
+                    .build()),
         REMOVE_REQUEST_HEADER_FILTER_ORDER);
   }
 

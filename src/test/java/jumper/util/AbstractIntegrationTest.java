@@ -18,8 +18,7 @@ public class AbstractIntegrationTest {
 
   static {
     REDIS_CONTAINER =
-        new GenericContainer<>("bitnami/redis:latest")
-            .withEnv("REDIS_PASSWORD", "foobar")
+        new GenericContainer<>("redis:latest")
             .withExposedPorts(REDIS_PORT)
             .waitingFor(Wait.forLogMessage(".*Ready to accept connections.*", 1));
     REDIS_CONTAINER.start();
@@ -27,8 +26,8 @@ public class AbstractIntegrationTest {
 
   @DynamicPropertySource
   static void dynamicProperties(DynamicPropertyRegistry registry) {
-    registry.add("spring.redis.host", REDIS_CONTAINER::getHost);
-    registry.add("spring.redis.port", () -> REDIS_CONTAINER.getMappedPort(REDIS_PORT));
+    registry.add("spring.data.redis.host", REDIS_CONTAINER::getHost);
+    registry.add("spring.data.redis.port", () -> REDIS_CONTAINER.getMappedPort(REDIS_PORT));
     registry.add("jumper.zone.health.enabled", () -> true);
   }
 }
