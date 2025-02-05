@@ -4,15 +4,14 @@
 
 package jumper.service;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.web.server.ServerWebExchange;
 
 @Slf4j
 public class HeaderUtil {
@@ -31,37 +30,34 @@ public class HeaderUtil {
         .orElse(null);
   }
 
-  public static void addHeader(ServerWebExchange exchange, String headerName, String headerValue) {
-    exchange.getRequest().mutate().header(headerName, headerValue).build();
+  public static void addHeader(
+      ServerHttpRequest.Builder builder, String headerName, String headerValue) {
+    builder.header(headerName, headerValue);
   }
 
-  public static void removeHeader(ServerWebExchange exchange, String headerName) {
-    exchange.getRequest().mutate().headers(httpHeaders -> httpHeaders.remove(headerName)).build();
+  public static void removeHeader(ServerHttpRequest.Builder builder, String headerName) {
+    builder.headers(httpHeaders -> httpHeaders.remove(headerName));
   }
 
-  public static void removeHeaders(ServerWebExchange exchange, List<String> headerList) {
+  public static void removeHeaders(ServerHttpRequest.Builder builder, List<String> headerList) {
     if (Objects.isNull(headerList) || headerList.isEmpty()) return;
-    exchange
-        .getRequest()
-        .mutate()
-        .headers(httpHeaders -> headerList.forEach(httpHeaders::remove))
-        .build();
+    builder.headers(httpHeaders -> headerList.forEach(httpHeaders::remove));
   }
 
   public static void rewriteXForwardedHeader(
-      ServerWebExchange exchange, JumperConfig jumperConfig) {
+      ServerHttpRequest.Builder builder, JumperConfig jumperConfig) {
 
     if (Objects.nonNull(jumperConfig.getConsumerOriginStargate())) {
       try {
-        URL url = new URL(jumperConfig.getConsumerOriginStargate());
-        HeaderUtil.addHeader(exchange, Constants.HEADER_X_FORWARDED_HOST, url.getHost());
-      } catch (MalformedURLException e) {
+        URI url = new URI(jumperConfig.getConsumerOriginStargate());
+        HeaderUtil.addHeader(builder, Constants.HEADER_X_FORWARDED_HOST, url.getHost());
+      } catch (URISyntaxException e) {
         log.error(e.getMessage(), e);
       }
     }
 
-    addHeader(exchange, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
+    addHeader(builder, Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT);
     addHeader(
-        exchange, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
+        builder, Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
   }
 }

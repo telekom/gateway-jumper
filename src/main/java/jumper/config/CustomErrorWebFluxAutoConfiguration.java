@@ -6,6 +6,7 @@ package jumper.config;
 
 import static org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication.Type.REACTIVE;
 
+import io.micrometer.tracing.Tracer;
 import java.util.stream.Collectors;
 import jumper.exception.JsonErrorWebExceptionHandler;
 import org.springframework.beans.factory.ObjectProvider;
@@ -19,8 +20,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
-import org.springframework.cloud.sleuth.CurrentTraceContext;
-import org.springframework.cloud.sleuth.Tracer;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,8 +44,7 @@ public class CustomErrorWebFluxAutoConfiguration {
       ServerCodecConfigurer serverCodecConfigurer,
       ApplicationContext applicationContext,
       ServerProperties serverProperties,
-      Tracer tracer,
-      CurrentTraceContext currentTraceContext) {
+      Tracer tracer) {
 
     JsonErrorWebExceptionHandler exceptionHandler =
         new JsonErrorWebExceptionHandler(
@@ -54,8 +52,7 @@ public class CustomErrorWebFluxAutoConfiguration {
             webProperties.getResources(),
             serverProperties.getError(),
             applicationContext,
-            tracer,
-            currentTraceContext);
+            tracer);
 
     exceptionHandler.setViewResolvers(viewResolvers.orderedStream().collect(Collectors.toList()));
     exceptionHandler.setMessageWriters(serverCodecConfigurer.getWriters());

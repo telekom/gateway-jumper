@@ -6,7 +6,12 @@ package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.context.ContextExecutorService;
+import io.micrometer.context.ContextSnapshotFactory;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import jumper.config.RedisConfig;
 import jumper.model.config.HealthStatus;
 import jumper.model.config.ZoneHealthMessage;
@@ -67,6 +72,10 @@ public class RedisZoneHealthStatusService implements MessageListener {
   }
 
   void lazyInitializeRedisMessageListenerContainer() {
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    ContextSnapshotFactory contextSnapshotFactory = ContextSnapshotFactory.builder().build();
+    Executor wrappedExecutor = ContextExecutorService.wrap(executorService, contextSnapshotFactory);
+
     CompletableFuture.supplyAsync(
             () -> {
               var template =
@@ -101,7 +110,8 @@ public class RedisZoneHealthStatusService implements MessageListener {
                         context.getRetryCount());
                     return true;
                   });
-            })
+            },
+            wrappedExecutor)
         .exceptionally(
             throwable -> {
               log.error(

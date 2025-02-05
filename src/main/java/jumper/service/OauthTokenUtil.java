@@ -6,13 +6,7 @@ package jumper.service;
 
 import static jumper.Constants.TOKEN_REQUEST_METHOD_POST;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
-import io.jsonwebtoken.Header;
-import io.jsonwebtoken.Jwt;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
-import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
@@ -26,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.stereotype.Service;
@@ -314,7 +309,7 @@ public class OauthTokenUtil {
             .body(BodyInserters.fromFormData(formData))
             .retrieve()
             .onStatus(
-                HttpStatus::is4xxClientError,
+                HttpStatusCode::is4xxClientError,
                 response -> {
                   logClientErrorResponse(response, tokenKey);
                   return Mono.error(
@@ -326,7 +321,7 @@ public class OauthTokenUtil {
                               + response.statusCode()));
                 })
             .onStatus(
-                HttpStatus::is5xxServerError,
+                HttpStatusCode::is5xxServerError,
                 response -> {
                   logClientErrorResponse(response, tokenKey);
                   return Mono.error(
@@ -373,7 +368,8 @@ public class OauthTokenUtil {
       String msg = e.getCause().getMessage();
 
       if (e.getCause() instanceof ResponseStatusException) {
-        var statusCode = ((ResponseStatusException) e.getCause()).getStatus();
+        var statusCode =
+            HttpStatus.valueOf(((ResponseStatusException) e.getCause()).getStatusCode().value());
         throw new ResponseStatusException(statusCode, msg);
       }
 

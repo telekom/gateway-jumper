@@ -4,25 +4,38 @@
 
 server:
   port: ${JUMPER_PORT:8080}
-  max-http-header-size: 16384
   shutdown: GRACEFUL
   netty:
     max-initial-line-length: 8192
     idle-timeout: 60000
+  max-http-request-header-size: 16384
+  forward-headers-strategy: none
 
 management:
   health:
     redis:
       enabled: false
   endpoint:
-    gateway.enabled: true # having actuators endpoint for filters e.g. host/actuator/gateway/routefilters
-    loggers.enabled: true # having actuators endpoint for setting log level
     health:
-      enabled: true # healthcheck endpoint
-      probes.enabled: true #healthcheck probes, liveness and readiness
+      probes:
+        enabled: true #healthcheck probes, liveness and readiness
   endpoints:
     web:
       exposure.include: gateway, loggers, prometheus, health
+  observations:
+    enable:
+      spring.security: false
+  tracing:
+    enabled: true
+    sampling:
+      probability: 1.0
+    propagation:
+      type: B3_MULTI
+    baggage:
+      enabled: false
+  zipkin:
+    tracing:
+      endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
 
 cache-manager:
   caffeine-caches:
@@ -35,10 +48,11 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 1m
   application:
-    name: ${JUMPER_NAME:Jumper}
+    name: ${JUMPER_NAME:jumper}
   cloud:
     gateway:
-      metrics.enabled: true #default ## in order to "push" to prometheus a prometheus dependency is needed in the pom.xml
+      metrics:
+        enabled: true #default ## in order to "push" to prometheus a prometheus dependency is needed in the pom.xml
       default-filters:
         - name: Retry
           args:
@@ -75,30 +89,27 @@ spring:
         prefix-append: false
       forwarded:
         enabled: false
-  zipkin:
-    baseUrl: ${TRACING_URL:https://collector-zipkin-http-drax-guardians.test.dhei.telekom.de}
-  sleuth:
-    filter-param-list: X-Amz-.*,sig
-    sampler.probability: 1
-    propagation:
-      tag.enabled: false
-      type: b3
-    reactor:
-      instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
+      predicate:
+        cookie:
+          enabled: false
   codec:
     max-in-memory-size: 12582912
   data:
     redis:
       repositories:
         enabled: false
-  redis:
-    connect-timeout: ${ZONE_HEALTH_DATABASE_CONNECTTIMEOUT:500}
-    timeout: ${ZONE_HEALTH_DATABASE_TIMEOUT:500}
-    host: ${ZONE_HEALTH_DATABASE_HOST:localhost}
-    port: ${ZONE_HEALTH_DATABASE_PORT:6379}
-    database: ${ZONE_HEALTH_DATABASE_INDEX:2}
-    password: ${ZONE_HEALTH_DATABASE_PASSWORD:foobar}
+      connect-timeout: ${ZONE_HEALTH_DATABASE_CONNECTTIMEOUT:500}
+      timeout: ${ZONE_HEALTH_DATABASE_TIMEOUT:500}
+      host: ${ZONE_HEALTH_DATABASE_HOST:localhost}
+      port: ${ZONE_HEALTH_DATABASE_PORT:6379}
+      database: ${ZONE_HEALTH_DATABASE_INDEX:2}
+      password: ${ZONE_HEALTH_DATABASE_PASSWORD:foobar}
+  reactor:
+    context-propagation: auto
+
 jumper:
+  tracing:
+    filter-param-list: X-Amz-.*,sig
   issuer:
     url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
   stargate:
@@ -125,13 +136,19 @@ jumper:
     pk-file: tls.key
     kid-file: tls.kid
 
-jumpercache.ttlOffset: 10
-jumpercache.cleanCacheInSeconds: 3600
+jumpercache:
+  ttlOffset: 10
+  cleanCacheInSeconds: 3600
 
 ##############################
 # local horizon
 ##############################
 horizon:
   publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
-logging.level.jumper.service.AuditLogService: INFO
-#logging.pattern.level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]" #https://github.com/micrometer-metrics/tracing/wiki/Spring-Cloud-Sleuth-3.1-Migration-Guide
+
+logging:
+  structured:
+    format:
+      console: logstash
+  level:
+    jumper.service.AuditLogService: INFO

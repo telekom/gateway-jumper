@@ -5,11 +5,11 @@
 package jumper.filter.rewrite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Objects;
 import jumper.Constants;
 import jumper.model.config.Spectre;
+import jumper.service.ObjectMapperUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
@@ -35,9 +35,9 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
 
     String eventJson = null;
     try {
-      eventJson = new ObjectMapper().writeValueAsString(event);
+      eventJson = ObjectMapperUtil.getInstance().writeValueAsString(event);
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
+      log.error("Failed to write event type as json", e);
     }
     log.debug("Spectre: adjusted={}", eventJson);
 
@@ -48,10 +48,10 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
     Spectre event = null;
 
     try {
-      event = new ObjectMapper().readValue(body, Spectre.class);
+      event = ObjectMapperUtil.getInstance().readValue(body, Spectre.class);
       event.setType(event.getType() + "." + id);
     } catch (IOException e) {
-      e.printStackTrace();
+      log.error("Failed to adjust event type", e);
     }
 
     return event;
