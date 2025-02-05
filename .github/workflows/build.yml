@@ -9,7 +9,7 @@ name: Build
 # - REGISTRY_HOST: Container registry host (e.g. mtr.devops.telekom.de)
 # - REGISTRY_REPO: Repository path (e.g. /tardis-internal/gateway/jumper-sse)
 # - REGISTRY_USER: Container registry username
-# - JAVA_VERSION: Java version to use (defaults to '17' if not specified)
+# - JAVA_VERSION: Java version to use (defaults to '21' if not specified)
 # - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'temurin' if not specified)
 # - BASE_IMAGE: The base image used for the Docker build
 #
@@ -34,7 +34,7 @@ permissions:
   contents: read
 
 env:
-  JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
+  JAVA_VERSION: ${{ vars.JAVA_VERSION || '21' }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
 
 jobs:
@@ -43,9 +43,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -60,23 +60,16 @@ jobs:
       version: ${{ steps.extract-version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
           cache: 'maven'
-      - name: Cache compiled classes
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-
       - name: Build with Maven
         run: |
-          mvn -B package -DskipTests -U
+          mvn -B clean package -DskipTests -U
       - name: Extract version
         id: extract-version
         run: |
@@ -94,20 +87,13 @@ jobs:
     needs: [build-maven]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
           cache: 'maven'
-      - name: Cache compiled classes
-        uses: actions/cache@v4
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-
       - name: Run tests
         run: mvn -B test
       - name: Upload test results
@@ -127,12 +113,12 @@ jobs:
       image-tag: ${{ steps.tag.outputs.image-tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Download Maven build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: maven-build
-          path: "target"
+          path: "target" # check of breaking change
       - name: Inject slug vars
         uses: rlespinasse/github-slug-action@v5
       - name: Determine tag
@@ -184,7 +170,7 @@ jobs:
       contents: write
     steps:
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.32.0
+        uses: aquasecurity/trivy-action@0.33.1
         env:
           TRIVY_USERNAME: ${{ vars.REGISTRY_USER }}
           TRIVY_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}

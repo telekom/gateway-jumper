@@ -4,10 +4,10 @@
 
 package jumper.service;
 
+import java.util.Base64;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
-import org.springframework.util.Base64Utils;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +19,6 @@ public class BasicAuthUtil {
     Assert.notNull(password, "Password must not be null");
 
     String basicAuthPreparation = username + ":" + password;
-    return Base64Utils.encodeToString(basicAuthPreparation.getBytes());
+    return Base64.getEncoder().encodeToString(basicAuthPreparation.getBytes());
   }
 }

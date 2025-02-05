@@ -73,7 +73,7 @@ The Dockerfile supports customization via build arguments to specify a custom ba
 docker build --platform linux/amd64 -t jumper --build-arg BASE_IMAGE=<your-preferred-base-image> .
 ```
 
-By default, the Dockerfile uses `eclipse-temurin:17-jre-alpine`.
+By default, the Dockerfile uses `eclipse-temurin:21-jre-alpine`.
 
 #### One-Step Multi-Stage Build
 

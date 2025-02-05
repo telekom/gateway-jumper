@@ -5,7 +5,7 @@
 package jumper.util;
 
 import static jumper.config.Config.*;
-import static jumper.model.config.JumperConfig.toBase64;
+import static jumper.model.config.JumperConfig.toJsonBase64;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -41,17 +41,17 @@ public class RoutingConfigUtil {
 
   public static String getRcSecondary(String id) {
     // proxy + real
-    return toBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJc()));
+    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJc()));
   }
 
   public static String getRcSecondaryLoadbalancing(String id) {
     // proxy + real (with loadbalancing)
-    return toBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJcLb()));
+    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJcLb()));
   }
 
   public static String getRcProxy(String id) {
     // proxy + proxy
-    return toBase64(
+    return toJsonBase64(
         List.of(
             getProxyRouteJc(REMOTE_ZONE_NAME, id), getProxyRouteJc(REMOTE_FAILOVER_ZONE_NAME, id)));
   }

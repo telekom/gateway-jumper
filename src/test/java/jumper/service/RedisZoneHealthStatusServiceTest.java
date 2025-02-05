@@ -20,10 +20,10 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.data.redis.connection.DefaultMessage;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -38,7 +38,7 @@ class RedisZoneHealthStatusServiceTest extends AbstractIntegrationTest {
 
   @Autowired private RedisZoneHealthStatusService redisZoneHealthStatusService;
 
-  @SpyBean private ZoneHealthCheckService zoneHealthCheckService;
+  @MockitoSpyBean private ZoneHealthCheckService zoneHealthCheckService;
 
   @BeforeEach
   void setUp() {

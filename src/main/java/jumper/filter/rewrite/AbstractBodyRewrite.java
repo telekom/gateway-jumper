@@ -4,13 +4,13 @@
 
 package jumper.filter.rewrite;
 
+import java.util.Base64;
 import java.util.Objects;
 import jumper.config.SpectreConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
-import org.springframework.util.Base64Utils;
 
 @Slf4j
 public abstract class AbstractBodyRewrite {
@@ -28,7 +28,7 @@ public abstract class AbstractBodyRewrite {
 
     } else {
       log.debug("MediaType identified as non text, store as base64");
-      bodyToStore = Base64Utils.encodeToString(originalBody);
+      bodyToStore = Base64.getEncoder().encodeToString(originalBody);
     }
 
     if (bodyToStore.length() > limit) {

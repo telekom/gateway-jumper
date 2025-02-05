@@ -36,6 +36,14 @@ public class VerificationSteps {
     apiProvidersReceivesDefaultHeaders();
   }
 
+  @Then("API Provider receives header {word} that matches regex {word}")
+  public void apiProviderReceivesXTardisTraceId(String headerName, String valueRegex) {
+    this.baseSteps
+        .getRequestExchange()
+        .expectHeader()
+        .valueMatches(headerName, Pattern.compile("\\w+").pattern());
+  }
+
   @Then("API Provider receives default basic authorization headers")
   public void apiProvidersReceivesDefaultBasicAuthHeaders() {
     this.baseSteps
