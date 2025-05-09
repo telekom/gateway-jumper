@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+spring:
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 5s # ingress 60s
+        max-initial-line-length-tardis: ${MAX_INITIAL_LINE_LENGTH:8192} #available scg parameter does not have effect, so we add custom one
+
+jumper:
+  issuer:
+    url: ${JUMPER_ISSUER_URL:https://stargate-test.de/auth/realms}
+  security:
+    dir: src/test/resources/keypair
+  zone:
+    health:
+      enabled: :true
+      redis:
+        channel: stargate-zone-status
+        checkConnectionInterval: 15000
+
+##############################
+# local horizon
+##############################
+horizon:
+  publishEventUrl: ${PUBLISH_EVENT_URL:http://localhost:1082/v1/events}

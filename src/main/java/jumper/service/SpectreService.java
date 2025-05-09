@@ -6,11 +6,9 @@ package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 import jumper.Constants;
+import jumper.config.SpectreConfiguration;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
@@ -18,6 +16,7 @@ import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.sleuth.CurrentTraceContext;
 import org.springframework.cloud.sleuth.Span;
@@ -53,6 +52,8 @@ public class SpectreService {
 
   @Value("${horizon.publishEventUrl}")
   private String publishEventUrl;
+
+  @Autowired private SpectreConfiguration spectreConfiguration;
 
   public void handleEvent(
       JumperConfig jc,
@@ -219,14 +220,14 @@ public class SpectreService {
 
     if (Objects.nonNull(payload)
         && mediaType != null
-        && mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)) {
+        && spectreConfiguration.jsonContentTypesContains(mediaType)) {
 
       log.debug("json compatible content-type, will try to parse as json payload");
       try {
         // try to return payload as json
         return new ObjectMapper().readTree(payload);
       } catch (JsonProcessingException e) {
-        e.printStackTrace();
+        log.error("error while parsing json payload for spectre", e);
       }
     }
 

@@ -24,7 +24,14 @@ management:
     web:
       exposure.include: gateway, loggers, prometheus, health
 
+cache-manager:
+  caffeine-caches:
+    - cache-names: [ cache-key-info ]
+      spec: maximumSize=1, expireAfterWrite=1m
+
 spring:
+  cache:
+    type: caffeine
   lifecycle:
     timeout-per-shutdown-phase: 1m
   application:
@@ -79,7 +86,7 @@ spring:
     reactor:
       instrumentation-type: MANUAL #https://docs.spring.io/spring-cloud-sleuth/docs/current-SNAPSHOT/reference/html/integrations.html
   codec:
-    max-in-memory-size: 4194304
+    max-in-memory-size: 12582912
   data:
     redis:
       repositories:
@@ -104,6 +111,18 @@ jumper:
       redis:
         channel: ${ZONE_HEALTH_KEY_CHANNEL:stargate-zone-status}
         checkConnectionInterval: ${ZONE_HEALTH_REQUEST_GET_RATE:5000}
+  spectre:
+    jsonContentTypes:
+      - application/json
+      - application/merge-patch+json
+      - application/json-patch+json
+      - application/json-patch-query+json
+      - application/json
+      - application/problem+json
+  security:
+    dir: /keypair
+    pk-file: tls.key
+    kid-file: tls.kid
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600

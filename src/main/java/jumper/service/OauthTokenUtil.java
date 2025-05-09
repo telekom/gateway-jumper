@@ -155,7 +155,7 @@ public class OauthTokenUtil {
       claims.put(Constants.TOKEN_CLAIM_AUD, aud);
     }
 
-    return tokenGenerator.fromRealm(claims, issuer, expiration, issuedAt, jc.getRealmName());
+    return tokenGenerator.fromRealm(claims, issuer, expiration, issuedAt);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {
@@ -168,8 +168,7 @@ public class OauthTokenUtil {
         claims,
         issuer,
         new Date(System.currentTimeMillis() + 300 * 1000),
-        new Date(System.currentTimeMillis()),
-        realm);
+        new Date(System.currentTimeMillis()));
   }
 
   public TokenInfo getInternalMeshAccessToken(JumperConfig jc) {

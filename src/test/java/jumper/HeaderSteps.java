@@ -36,6 +36,15 @@ public class HeaderSteps {
         TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken()));
   }
 
+  @Given("request header {word} is set to {word}")
+  public void specificRequestHeaderSet(String header, String value) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              httpHeaders.set(header, value);
+            }));
+  }
+
   @Given("RealRoute headers are set with x-token-exchange")
   public void realRouteHeadersSetWithXtokenExchange() {
     baseSteps.setHttpHeadersOfRequest(

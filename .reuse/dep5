@@ -6,3 +6,7 @@ Source: https://github.com/telekom/gateway-jumper
 Files: *.md
 Copyright: 2023 Deutsche Telekom AG
 License: CC0-1.0
+
+Files: src/test/resources/*
+Copyright: 2023 Deutsche Telekom AG
+License: Apache-2.0

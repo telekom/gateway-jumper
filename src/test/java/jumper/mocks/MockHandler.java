@@ -19,7 +19,8 @@ public class MockHandler {
 
   MockUpstreamServer mockUpstreamServer;
   MockIrisServer mockIrisServer;
-  MockHorizonServer mockHorizonServer;
+
+  static MockHorizonServer mockHorizonServer = new MockHorizonServer();
 
   @Autowired WebTestClient webTestClient;
 
@@ -55,14 +56,12 @@ public class MockHandler {
   }
 
   @Before("@horizon")
-  public void beforeHorizon() {
-    mockHorizonServer = new MockHorizonServer(baseSteps);
-    mockHorizonServer.startServer();
+  public void beforeEach() {
     this.baseSteps.setMockHorizonServer(mockHorizonServer);
   }
 
   @After("@horizon")
-  public void afterHorizon() {
-    mockHorizonServer.stopServer();
+  public void afterEach() {
+    mockHorizonServer.resetMockServer();
   }
 }

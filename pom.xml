@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
 
 	<groupId>de.telekom.ei.jumper</groupId>
 	<artifactId>jumper-sse</artifactId>
-	<version>3.19.1</version>
+	<version>4.0.0</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -41,6 +41,14 @@ SPDX-License-Identifier: Apache-2.0
 				<version>${spring-cloud.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.junit</groupId>
+				<artifactId>junit-bom</artifactId>
+				<version>${junit.jupiter.version}</version>
+				<scope>import</scope>
+				<type>pom</type>
 			</dependency>
 
 		</dependencies>
@@ -175,6 +183,15 @@ SPDX-License-Identifier: Apache-2.0
 		</dependency>
 
 		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.ben-manes.caffeine</groupId>
+			<artifactId>caffeine</artifactId>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework.data</groupId>
 			<artifactId>spring-data-redis</artifactId>
 		</dependency>
@@ -191,19 +208,7 @@ SPDX-License-Identifier: Apache-2.0
 
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<version>${junit.jupiter.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-api</artifactId>
-			<version>${junit.jupiter.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-params</artifactId>
+			<artifactId>junit-jupiter</artifactId>
 			<version>${junit.jupiter.version}</version>
 			<scope>test</scope>
 		</dependency>
@@ -213,7 +218,6 @@ SPDX-License-Identifier: Apache-2.0
 			<version>${junit.platform.version}</version>
 			<scope>test</scope>
 		</dependency>
-
 
 		<dependency>
 			<groupId>org.mock-server</groupId>

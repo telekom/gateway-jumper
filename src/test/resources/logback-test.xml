@@ -13,7 +13,7 @@ SPDX-License-Identifier: Apache-2.0
     <appender name="jsonConsoleAppender" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
     </appender>
-    <root level="ERROR">
+    <root level="INFO">
         <appender-ref ref="classicConsoleAppender"/>
         <!--appender-ref ref="jsonConsoleAppender"/-->
     </root>

@@ -4,63 +4,44 @@
 
 package jumper.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.WeakKeyException;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
+import java.security.GeneralSecurityException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Map;
 import jumper.model.config.KeyInfo;
+import jumper.util.RsaUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class TokenGeneratorService {
 
-  private static String securityPath;
-  private static String securityFile;
-
-  @Value("${jumper.security.dir:keypair}")
-  private void setSecurityPath(String name) {
-    securityPath = name;
-  }
-
-  @Value("${jumper.security.file:private.json}")
-  private void setSecurityFile(String name) {
-    securityFile = name;
-  }
+  private final KeyInfoService keyInfoService;
 
   public String fromRealm(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, String realm) {
-    Map<String, KeyInfo> keyInfoMap;
-
+      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
+    KeyInfo keyInfo;
     try {
       log.debug("GatewayToken or OneToken: Loading keyInfo");
-      keyInfoMap = loadKeyInfo();
+      keyInfo = keyInfoService.getKeyInfo();
 
     } catch (IOException e1) {
       log.error("IOException", e1);
-      throw new RuntimeException("Error while generating LMS token, key info missing");
+      throw new RuntimeException("Error while generating LMS token", e1);
+    } catch (GeneralSecurityException e2) {
+      log.error("GeneralSecurityException", e2);
+      throw new RuntimeException("Could not create PrivateKey from key file", e2);
     }
 
-    if (!keyInfoMap.containsKey(realm)) {
-      throw new RuntimeException("key info missing for realm " + realm);
-    }
-
-    return generateToken(claims, issuer, expiration, issuedAt, keyInfoMap.get(realm));
+    return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
   }
 
   public String fromKey(
@@ -68,8 +49,8 @@ public class TokenGeneratorService {
 
     KeyInfo keyInfo = new KeyInfo();
     try {
-      keyInfo.setPk(key);
-    } catch (NoSuchAlgorithmException | InvalidKeySpecException | IllegalArgumentException e) {
+      keyInfo.setPk(RsaUtils.getPrivateKey(key));
+    } catch (Exception e) {
       throw new ResponseStatusException(
           HttpStatus.UNAUTHORIZED, "Invalid key configuration: " + e.getMessage());
     }
@@ -94,21 +75,5 @@ public class TokenGeneratorService {
           HttpStatus.UNAUTHORIZED,
           "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used with RS256 MUST have a size >= 2048 bits.");
     }
-  }
-
-  public static Map<String, KeyInfo> loadKeyInfo() throws IOException {
-    Path kidFile =
-        Path.of(
-            System.getProperty("user.dir")
-                + File.separator
-                + securityPath
-                + File.separator
-                + securityFile);
-
-    TypeReference<HashMap<String, KeyInfo>> typeRef = new TypeReference<>() {};
-
-    return new ObjectMapper()
-        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        .readValue(Files.readString(kidFile), typeRef);
   }
 }

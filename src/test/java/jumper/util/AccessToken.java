@@ -9,14 +9,13 @@ import static jumper.config.Config.REMOTE_ISSUER;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import java.io.IOException;
+import java.nio.file.Path;
+import java.security.PrivateKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import jumper.Constants;
-import jumper.model.config.KeyInfo;
 import lombok.Builder;
 
 @Builder
@@ -58,22 +57,23 @@ public class AccessToken {
 
     Date issuedAt = new Date(System.currentTimeMillis());
     Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
-    KeyInfo keyInfo = null;
+
+    PrivateKey privateKey = null;
     try {
-      keyInfo = jumper.service.TokenGeneratorService.loadKeyInfo().get(Constants.DEFAULT_REALM);
-    } catch (IOException e) {
+      privateKey = RsaUtils.getPrivateKey(Path.of("src/test/resources/keypair", "tls.key"));
+    } catch (Exception e) {
       e.getStackTrace();
     }
 
     String keyId = "123456";
 
-    assert keyInfo != null;
+    assert privateKey != null;
     return Jwts.builder()
         .setClaims(claims)
         .setIssuer(issuer)
         .setExpiration(expiration)
         .setIssuedAt(issuedAt)
-        .signWith(keyInfo.getPk(), SignatureAlgorithm.RS256)
+        .signWith(privateKey, SignatureAlgorithm.RS256)
         .setHeaderParam("kid", keyId)
         .setHeaderParam("typ", "JWT")
         .compact();

@@ -5,7 +5,9 @@
 package jumper.filter.rewrite;
 
 import java.util.Objects;
+import jumper.config.SpectreConfiguration;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.util.Base64Utils;
@@ -15,6 +17,8 @@ public abstract class AbstractBodyRewrite {
 
   @Value("${spring.codec.max-in-memory-size}")
   private int limit;
+
+  @Autowired private SpectreConfiguration spectreConfiguration;
 
   String getBodyForContentType(MediaType mediaType, byte[] originalBody) {
     String bodyToStore;
@@ -39,7 +43,7 @@ public abstract class AbstractBodyRewrite {
   private boolean isText(MediaType mediaType) {
     return Objects.nonNull(mediaType)
         && (mediaType.isCompatibleWith(MediaType.parseMediaType("text/*"))
-            || mediaType.isCompatibleWith(MediaType.APPLICATION_JSON)
+            || spectreConfiguration.jsonContentTypesContains(mediaType)
             || mediaType.isCompatibleWith(MediaType.APPLICATION_XML));
   }
 }
