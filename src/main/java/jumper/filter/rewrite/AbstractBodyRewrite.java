@@ -15,7 +15,7 @@ import org.springframework.http.MediaType;
 @Slf4j
 public abstract class AbstractBodyRewrite {
 
-  @Value("${spring.codec.max-in-memory-size}")
+  @Value("${spring.http.codecs.max-in-memory-size}")
   private int limit;
 
   @Autowired private SpectreConfiguration spectreConfiguration;
