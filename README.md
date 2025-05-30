@@ -266,7 +266,7 @@ When a consumer sets the `X-Token-Exchange` header containing an external provid
 Spectre allows a third-party listener application to monitor communication between consumer and provider for specific APIs.
 
 **Prerequisites:**
-- Configured `horizon.publishEventUrl` in application properties
+- Configured `jumper.horizon.publishEventUrl` in application properties
 - Properly configured `jumper_config` header with listener settings
 
 ```json

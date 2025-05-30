@@ -19,10 +19,10 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class TokenCacheService {
 
-  @Value("${jumpercache.ttlOffset}")
+  @Value("${jumper.tokencache.ttlOffset}")
   private int ttlOffset;
 
-  @Value("${jumpercache.cleanCacheInSeconds:0}")
+  @Value("${jumper.tokencache.cleanCacheInSeconds:0}")
   private long cleanCacheInSeconds;
 
   private static final String TOKEN_CACHE_KEY_DELIMITER = ".";
@@ -42,7 +42,7 @@ public class TokenCacheService {
 
     } else {
       log.debug(
-          "JumperCache cleanup job is not enabled. Specify a value > 0 in your properties with the key 'jumpercache.cleanCacheInSeconds'.");
+          "JumperCache cleanup job is not enabled. Specify a value > 0 in your properties with the key 'jumper.tokencache.cleanCacheInSeconds'.");
     }
   }
 

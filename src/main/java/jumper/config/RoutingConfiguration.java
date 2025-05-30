@@ -20,7 +20,7 @@ import org.springframework.http.HttpMethod;
 @Configuration
 public class RoutingConfiguration {
 
-  @Value("${horizon.publishEventUrl}")
+  @Value("${jumper.horizon.publishEventUrl}")
   private String publishEventUrl;
 
   @Bean

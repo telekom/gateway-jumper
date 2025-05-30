@@ -25,7 +25,7 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
 
-  @Value("${horizon.publishEventUrl}")
+  @Value("${jumper.horizon.publishEventUrl}")
   private String publishEventUrl;
 
   public GatewayFilter apply() {

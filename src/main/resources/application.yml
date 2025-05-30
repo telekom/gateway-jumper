@@ -31,8 +31,6 @@ management:
       probability: 1.0
     propagation:
       type: B3_MULTI
-    baggage:
-      enabled: false
   zipkin:
     tracing:
       endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
@@ -51,49 +49,44 @@ spring:
     name: ${JUMPER_NAME:jumper}
   cloud:
     gateway:
-      metrics:
-        enabled: true #default ## in order to "push" to prometheus a prometheus dependency is needed in the pom.xml
-      default-filters:
-        - name: Retry
-          args:
-            retries: 1
-            statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
-            methods: GET,POST,PUT,DELETE,PATCH,HEAD
-      httpclient:
-        proxy:
-          host: ${FPA_PROXY_HOST:}
-          port: ${FPA_PROXY_PORT:}
-          non-proxy-hosts-pattern: ${FPA_NON_PROXY_HOSTS_REGEX:}
-        pool:
-          type: ELASTIC
-          #max-connections: 1000 #Only for type FIXED
-          #acquire-timeout: 8000 #Only for type FIXED
-          max-life-time: 300s
-          max-idle-time: 2s
-          #eviction-interval: 120s
-          metrics: true
-        connect-timeout: 10000
-        response-timeout: 61s # ingress 60s
-        #ssl:
-          #useInsecureTrustManager: true # routing to a https backend, Gateway will trust all downstream certificates
-      x-forwarded:
-        for-enabled: false
-        for-append: false
-        host-enabled: false
-        host-append: false
-        port-enabled: false
-        port-append: false
-        proto-enabled: false
-        proto-append: false
-        prefix-enabled: false
-        prefix-append: false
-      forwarded:
-        enabled: false
-      predicate:
-        cookie:
-          enabled: false
-  codec:
-    max-in-memory-size: 12582912
+      server:
+        webflux:
+          forwarded:
+            enabled: false
+          x-forwarded:
+            for-enabled: false
+            prefix-append: false
+            for-append: false
+            host-enabled: false
+            host-append: false
+            port-enabled: false
+            port-append: false
+            proto-enabled: false
+            proto-append: false
+            prefix-enabled: false
+          predicate:
+            cookie:
+              enabled: false
+          metrics:
+            enabled: true
+          httpclient:
+            proxy:
+              host: ${FPA_PROXY_HOST:}
+              port: ${FPA_PROXY_PORT:}
+              non-proxy-hosts-pattern: ${FPA_NON_PROXY_HOSTS_REGEX:}
+            response-timeout: 61s
+            connect-timeout: 10000
+            pool:
+              metrics: true
+              max-idle-time: 2s
+              max-life-time: 300s
+              type: ELASTIC
+          default-filters:
+            - name: Retry
+              args:
+                retries: 1
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+                methods: GET,POST,PUT,DELETE,PATCH,HEAD
   data:
     redis:
       repositories:
@@ -106,6 +99,9 @@ spring:
       password: ${ZONE_HEALTH_DATABASE_PASSWORD:foobar}
   reactor:
     context-propagation: auto
+  http:
+    codecs:
+      max-in-memory-size: 12582912
 
 jumper:
   tracing:
@@ -135,16 +131,11 @@ jumper:
     dir: /keypair
     pk-file: tls.key
     kid-file: tls.kid
-
-jumpercache:
-  ttlOffset: 10
-  cleanCacheInSeconds: 3600
-
-##############################
-# local horizon
-##############################
-horizon:
-  publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
+  tokencache:
+    ttlOffset: 10
+    cleanCacheInSeconds: 3600
+  horizon:
+    publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
 
 logging:
   structured:

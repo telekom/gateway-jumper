@@ -51,7 +51,7 @@ public class SpectreService {
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
 
-  @Value("${horizon.publishEventUrl}")
+  @Value("${jumper.horizon.publishEventUrl}")
   private String publishEventUrl;
 
   @Autowired private SpectreConfiguration spectreConfiguration;
