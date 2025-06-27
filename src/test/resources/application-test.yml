@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 spring:
+  main:
+    allow-bean-definition-overriding: true
   cloud:
     gateway:
       httpclient:
@@ -21,6 +23,11 @@ jumper:
       redis:
         channel: stargate-zone-status
         checkConnectionInterval: 15000
+
+test:
+  upstream:
+    ssl:
+      handshake-timeout: 1
 
 ##############################
 # local horizon

@@ -32,3 +32,10 @@ Feature: expected upstream response is propagated
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route and connection is dropped
     Then API consumer receives a 500 status code
+
+  Scenario: Consumer calls jumper with real route headers and SslHandshakeTimeoutException is thrown, provider responds 504
+    Given I need an upstream server with TLS
+    Given RealRoute headers are set with RemoteApiUrl over TLS true
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route and runs into timeout
+    Then API consumer receives a 504 status code

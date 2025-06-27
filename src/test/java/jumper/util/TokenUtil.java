@@ -72,13 +72,14 @@ public class TokenUtil {
   }
 
   public static Consumer<HttpHeaders> getRealRouteHeaders() {
-    return getRealRouteHeaders(null);
+    return getRealRouteHeaders(null, false);
   }
 
-  public static Consumer<HttpHeaders> getRealRouteHeaders(String authorization) {
+  public static Consumer<HttpHeaders> getRealRouteHeaders(String authorization, boolean tls) {
+    String remoteApiUrl = tls ? "https://localhost:1080" : "http://localhost:1080";
     return httpHeaders -> {
       if (authorization != null) httpHeaders.setBearerAuth(authorization);
-      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
+      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, remoteApiUrl);
       httpHeaders.set(Constants.HEADER_API_BASE_PATH, BASE_PATH);
       httpHeaders.set(Constants.HEADER_ENVIRONMENT, ENVIRONMENT);
       httpHeaders.set(Constants.HEADER_REALM, REALM);

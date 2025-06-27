@@ -57,6 +57,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   @Value("${jumper.zone.name}")
   private String currentZone;
 
+  @Value("#{'${jumper.zone.internetFacingZones}'.toLowerCase().split(',')}")
+  private List<String> internetFacingZones;
+
   @Value("${spring.application.name}")
   private String applicationName;
 
@@ -159,7 +162,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     HeaderUtil.addHeader(
                         exchange, Constants.HEADER_CONSUMER_TOKEN, jumperConfig.getConsumerToken());
 
-                    checkForSpaceZone(
+                    checkForInternetFacingZone(
                         exchange,
                         jumperConfig.getConsumerOriginZone(),
                         jumperConfig.getConsumerToken());
@@ -168,7 +171,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                     // ALL NON MESH SCENARIOS
 
                     if (request.getHeaders().containsKey(Constants.HEADER_X_TOKEN_EXCHANGE)
-                        && isSpaceZone(currentZone)) {
+                        && isInternetFacingZone(currentZone)) {
 
                       log.debug("----------------X-TOKEN-EXCHANGE HEADER-------------");
                       jumperInfoRequest.ifPresent(
@@ -480,8 +483,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         HttpStatus.SERVICE_UNAVAILABLE, "Non of defined failover zones available");
   }
 
-  private void checkForSpaceZone(ServerWebExchange exchange, String zone, String token) {
-    if (isSpaceZone(zone)) {
+  private void checkForInternetFacingZone(ServerWebExchange exchange, String zone, String token) {
+    if (isInternetFacingZone(zone)) {
       HeaderUtil.addHeader(exchange, Constants.HEADER_X_SPACEGATE_TOKEN, token);
     }
   }
@@ -500,9 +503,9 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 exchange.getRequest(), Constants.HEADER_X_TOKEN_EXCHANGE));
   }
 
-  private boolean isSpaceZone(String zone) {
+  private boolean isInternetFacingZone(String zone) {
 
-    return zone != null && Constants.SPACE_ZONES.contains(zone);
+    return zone != null && internetFacingZones.contains(zone);
   }
 
   private void addTracingInfo(ServerHttpRequest request) {

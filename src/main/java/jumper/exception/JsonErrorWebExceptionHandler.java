@@ -6,6 +6,7 @@ package jumper.exception;
 
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
+import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -151,7 +152,8 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     io.netty.channel.AbstractChannel$AnnotatedConnectException
      */
 
-    if (error instanceof java.net.ConnectException) {
+    if (error instanceof java.net.ConnectException
+        || error instanceof SslHandshakeTimeoutException) {
       logError(request, error);
       return HttpStatus.GATEWAY_TIMEOUT;
     }

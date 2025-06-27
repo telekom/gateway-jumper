@@ -8,6 +8,7 @@ import static jumper.config.Config.*;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
+import io.cucumber.java.en.Given;
 import io.cucumber.java.en.When;
 import java.time.Duration;
 import java.util.function.Consumer;
@@ -48,6 +49,11 @@ public class BaseSteps {
 
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
   private String stargateUrl;
+
+  @Given("I need an upstream server with TLS")
+  public void iNeedAnUpstreamServerWithTLS() {
+    mockUpstreamServer.secure();
+  }
 
   @And("API provider set to respond with a {int} status code")
   public void apiProviderWillRespondWithAStatusCode(int statusCode) {

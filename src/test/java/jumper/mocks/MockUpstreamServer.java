@@ -36,6 +36,10 @@ public class MockUpstreamServer {
     mockServerClient = new MockServerClient(upstreamLocalHost, upstreamLocalPort);
   }
 
+  public void secure() {
+    mockServer.withSecure(true);
+  }
+
   public void stopServer() {
     mockServer.stop();
   }

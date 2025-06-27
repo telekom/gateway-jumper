@@ -8,6 +8,7 @@ import static jumper.config.Config.*;
 import static jumper.util.JumperConfigUtil.addIdSuffix;
 import static jumper.util.TokenUtil.getConsumerAccessTokenWithAud;
 
+import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import jumper.util.RoutingConfigUtil;
@@ -17,6 +18,11 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class HeaderSteps {
   private final BaseSteps baseSteps;
+
+  @ParameterType(value = "true|True|TRUE|false|False|FALSE")
+  public Boolean booleanValue(String value) {
+    return Boolean.valueOf(value);
+  }
 
   @Given("ProxyRoute headers are set")
   public void proxyRouteHeadersSet() {
@@ -33,7 +39,22 @@ public class HeaderSteps {
   @Given("RealRoute headers are set")
   public void realRouteHeadersSet() {
     baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken()));
+        TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken(), false));
+  }
+
+  @Given("RealRoute headers are set with RemoteApiUrl over TLS {booleanValue}")
+  public void realRouteHeadersSet(boolean tls) {
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken(), tls));
+  }
+
+  @Given("request header {word} is set to {word}")
+  public void specificRequestHeaderSet(String header, String value) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              httpHeaders.set(header, value);
+            }));
   }
 
   @Given("request header {word} is set to {word}")

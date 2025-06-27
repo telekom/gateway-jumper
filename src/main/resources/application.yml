@@ -105,6 +105,7 @@ jumper:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
   zone:
     name: ${JUMPER_ZONE_NAME:default}
+    internetFacingZones: ${JUMPER_INTERNET_FACING_ZONES:space,canis,aries} # list all zones in the mesh that are internet facing
     health:
       enabled: ${ZONE_HEALTH_ENABLED:false}
       defaultZoneHealth: ${ZONE_HEALTH_DEFAULT:true}
