@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom IT GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+ort:
+  # Allows defining package configs/curations in the repository's .ort.yml file
+  enableRepositoryPackageConfigurations: true
+  enableRepositoryPackageCurations: true
+
+  # These could be used to not treat warnings as severe issues
+  #severeIssueThreshold: ERROR
+  #severeRuleViolationThreshold: ERROR
+
+  # Force overwriting of existing reports
+  forceOverwrite: true
+
+  analyzer:
+    # Allow version ranges in dependency specifications
+    allowDynamicVersions: true
+    skipExcluded: true
+  downloader:
+    skipExcluded: true
+    # Allow downloads using symbolic names that point to moving revisions, like Git branches
+    allowMovingRevisions: true
+  scanner:
+    storages:
+      # Read/write results to actions cache
+      local:
+        backend:
+          localFileStorage:
+            directory: /home/ort/.ort/scanner/results
+            compression: false
+      # Read/write results to OpenSource@DTIT ORT cache on artifactory
+      artifactory:
+        backend:
+          httpFileStorage:
+            url: "https://artifactory.devops.telekom.de/artifactory/open-source-dtit-ort-generic/ort/scan-results"
+            headers:
+              Authorization: "Bearer ${ORT_ARTIFACTORY_TOKEN}"
+      # ClearlyDefined is disabled because it only produces 404s...
+    storageReaders: ["local", "artifactory"]
+    storageWriters: ["artifactory", "local"]
+    skipExcluded: true
+  advisor:
+    skipExcluded: true
+

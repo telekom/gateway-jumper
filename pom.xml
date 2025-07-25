@@ -334,17 +334,5 @@ SPDX-License-Identifier: Apache-2.0
 		</plugins>
 	</build>
 
-	<distributionManagement>
-		<repository>
-			<id>hyperion-releases</id>
-			<name>MagentaCICD - Artifactory-releases</name>
-			<url>https://artifactory.devops.telekom.de/artifactory/hyperion-maven</url>
-		</repository>
-		<snapshotRepository>
-			<id>hyperion-snapshots</id>
-			<name>MagentaCICD - Artifactory-snapshots</name>
-			<url>https://artifactory.devops.telekom.de/artifactory/hyperion-maven</url>
-		</snapshotRepository>
-	</distributionManagement>
 
 </project>
