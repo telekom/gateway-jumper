@@ -9,6 +9,8 @@ name: CI
 # - REGISTRY_HOST: Container registry host (e.g. mtr.devops.telekom.de)
 # - REGISTRY_REPO: Repository path (e.g. /tardis-internal/gateway/jumper-sse)
 # - REGISTRY_USER: Container registry username
+# - JAVA_VERSION: Java version to use (defaults to '17' if not specified)
+# - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'temurin' if not specified)
 #
 # Required secrets:
 # - REGISTRY_TOKEN: Container registry token/password
@@ -30,6 +32,10 @@ on:
 
 permissions:
   contents: read
+
+env:
+  JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'temurin' }}
 
 jobs:
   # ------------
@@ -77,8 +83,8 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
           cache: 'maven'
       - name: Check code formatting with Spotless
         run: mvn com.diffplug.spotless:spotless-maven-plugin:check
@@ -141,8 +147,8 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
           cache: 'maven'
       - name: Cache compiled classes
         uses: actions/cache@v4
@@ -178,8 +184,8 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
           cache: 'maven'
       - name: Cache compiled classes
         uses: actions/cache@v4
