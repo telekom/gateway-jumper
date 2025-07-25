@@ -133,6 +133,38 @@ jumper:
     dir: /keypair
     pk-file: tls.key
     kid-file: tls.kid
+    tls:
+      additional-allowed-cipher-suites: [ ]
+      default-allowed-cipher-suites:
+        # tls 13
+        - TLS_AES_256_GCM_SHA384
+        - TLS_CHACHA20_POLY1305_SHA256
+        - TLS_AES_128_GCM_SHA256
+        # tls12
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_DHE_DSS_WITH_AES_256_GCM_SHA384
+        - TLS_DHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_DHE_DSS_WITH_AES_128_GCM_SHA256
+        - TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
+        # tls 12 old for existing systems
+        - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384
+        - TLS_DHE_DSS_WITH_AES_256_CBC_SHA256
+        - TLS_DHE_RSA_WITH_AES_256_CBC_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256	
+        - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256	
+        - TLS_DHE_DSS_WITH_AES_128_CBC_SHA256
+        - TLS_DHE_RSA_WITH_AES_128_CBC_SHA256
+        #intentionally-disabled-cipher-suites:
+        #  - TLS_DHE_RSA_WITH_AES_128_CCM # unsupported by used jvm
+        #  - TLS_DHE_RSA_WITH_AES_256_CCM # unsupported by used jvm
+        #  - TLS_DHE_RSA_WITH_CHACHA20POLY1305_SHA256 # unsupported by used jvm
+        #  - TLS_ECDHE_ECDSA_WITH_AES_128_CCM # unsupported by used jvm
+        #  - TLS_ECDHE_ECDSA_WITH_AES_256_CCM # unsupported by used jvm
+        #  - TLS_AES_128_CCM_SHA256 # unsupported by used jvm
   tokencache:
     ttlOffset: 10
     maxSize: 10000

@@ -10,7 +10,6 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import java.time.Duration;
-import java.util.List;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
 import lombok.RequiredArgsConstructor;
@@ -33,9 +32,6 @@ import reactor.netty.transport.ProxyProvider;
 @Slf4j
 public class HttpClientConfiguration {
 
-  @Value("${CUSTOM_CIPHERS:}")
-  List<String> customCiphers;
-
   @Value("${spring.cloud.oauth.connect-timeout:10000}")
   private int oauthConnectTimeout;
 
@@ -49,6 +45,7 @@ public class HttpClientConfiguration {
   private boolean oauthPoolMetrics;
 
   private final HttpClientProperties properties;
+  private final TlsHardeningConfiguration tlsHardeningConfiguration;
 
   @Bean
   public HttpClientCustomizer httpClientCustomizer() throws SSLException {
@@ -76,44 +73,21 @@ public class HttpClientConfiguration {
 
   private SslContext createSslContextWithCustomizedCiphers() throws SSLException {
 
-    List<String> dtCiphers =
-        List.of(
-            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-            "TLS_DHE_DSS_WITH_AES_256_GCM_SHA384",
-            "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
-            "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
-            "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
-            "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
-            // ,"TLS_ECDHE_ECDSA_WITH_AES_256_CCM"
-            // ,"TLS_DHE_RSA_WITH_AES_256_CCM"
-            ,
-            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-            "TLS_DHE_DSS_WITH_AES_128_GCM_SHA256",
-            "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
-            // ,"TLS_ECDHE_ECDSA_WITH_AES_128_CCM"
-            // ,"TLS_DHE_RSA_WITH_AES_128_CCM"
-            ,
-            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
-            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
-            "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256",
-            "TLS_DHE_RSA_WITH_AES_256_CBC_SHA256",
-            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
-            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
-            "TLS_DHE_DSS_WITH_AES_128_CBC_SHA256",
-            "TLS_DHE_RSA_WITH_AES_128_CBC_SHA256",
-            "TLS_AES_256_GCM_SHA384",
-            "TLS_CHACHA20_POLY1305_SHA256",
-            "TLS_AES_128_GCM_SHA256"
-            // ,"TLS_AES_128_CCM_SHA256"
-            );
+    if (tlsHardeningConfiguration.getDefaultAllowedCipherSuites() == null
+        || tlsHardeningConfiguration.getDefaultAllowedCipherSuites().isEmpty()) {
+      throw new SSLException("allowedCipherSuites must not be empty, check configuration");
+    }
 
     return SslContextBuilder.forClient()
         .trustManager(InsecureTrustManagerFactory.INSTANCE)
         .protocols("TLSv1.2", "TLSv1.3")
         .sslProvider(SslProvider.JDK)
-        .ciphers(Stream.concat(dtCiphers.stream(), customCiphers.stream()).distinct().toList())
+        .ciphers(
+            Stream.concat(
+                    tlsHardeningConfiguration.getDefaultAllowedCipherSuites().stream(),
+                    tlsHardeningConfiguration.getAdditionalAllowedCipherSuites().stream())
+                .distinct()
+                .toList())
         .build();
   }
 
