@@ -2,21 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-FROM eclipse-temurin:17-jre-alpine
+ARG BASE_IMAGE=eclipse-temurin:17-jre-alpine
+FROM ${BASE_IMAGE}
 
-RUN apk add --update  \
-  curl  \
-  && rm -rf /var/cache/apk/*
-
-RUN addgroup -g 1000 -S app
-RUN adduser -u 1000 -D -H -S -G app app
-
-USER 1000:1000
-
-EXPOSE 8080 8082
+EXPOSE 8080
 
 COPY target/*.jar /usr/share/app.jar
 
-WORKDIR /usr/share/
-
-CMD java $JVM_OPTS -jar /usr/share/app.jar
+CMD ["java", "-jar", "/usr/share/app.jar"]

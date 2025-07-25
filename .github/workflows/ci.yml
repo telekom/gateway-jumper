@@ -35,7 +35,7 @@ permissions:
 
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION || '17' }}
-  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'temurin' }}
+  JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
 
 jobs:
   # ------------
@@ -226,7 +226,7 @@ jobs:
         uses: rlespinasse/github-slug-action@v5
       - name: Determine tag
         id: tag
-        run: |
+        run: | # TODO: metadata-action
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             echo "This workflow was triggered by workflow_dispatch."
             export TAG=${{ github.event.inputs.release_version }}
@@ -261,7 +261,10 @@ jobs:
           tags: ${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}:${{ steps.tag.outputs.image-tag }}
           cache-from: type=registry,ref=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}:latest
           cache-to: type=inline
+          build-args: |
+            BASE_IMAGE=mtr.devops.telekom.de/tardis-internal/distroless:java-17
           push: true
+          platforms: linux/amd64
 
   scan-image:
     name: Scan image
