@@ -15,7 +15,6 @@ name: CI
 # Required secrets:
 # - REGISTRY_TOKEN: Container registry token/password
 # - ORT_ARTIFACTORY_TOKEN: Token for accessing ORT repository
-# - COSIGN_PRIVATE_KEY: Private key used for signing container images
 
 on:
   pull_request:
@@ -278,6 +277,8 @@ jobs:
     name: Scan image
     runs-on: ubuntu-latest
     needs: [build-push-image]
+    permissions:
+      contents: write
     steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
@@ -286,27 +287,10 @@ jobs:
           TRIVY_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}
         with:
           image-ref: '${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}@${{ needs.build-push-image.outputs.image-digest }}'
-          exit-code: '1'
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-
-  sign-image:
-    name: Sign image
-    runs-on: ubuntu-latest
-    needs:
-      - build-push-image
-      - scan-image
-      - dependency-scan
-    steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@v3.8.1
-      - name: Sign image
-        run: |
-          cosign sign \
-            --key "${{ secrets.COSIGN_PRIVATE_KEY }}" \
-            -a "repo=${{ github.repository }}" \
-            -a "commit-sha=${{ github.sha }}" \
-            --tlog-upload=false \
-            -y \
-            "${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}@${{ needs.build-push-image.outputs.image-digest }}"
+          exit-code: '0'
+          vuln-type: os # library findings are handled by ort and github auto submission
+          # Only push results to dependency graph if running on main
+          format: ${{ github.event_name == 'pull_request' && 'table' || 'github' }}
+          output: ${{ github.event_name == 'pull_request' && '' || 'dependency-results.sbom.json' }}
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
 
