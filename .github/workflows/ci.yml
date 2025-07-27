@@ -132,8 +132,16 @@ jobs:
             scanner,
             advisor,
             evaluator,
-            reporter,
-            upload-results
+            reporter
+        # We're not using the built-in upload functionality of the ort action,
+        # because it is not executed if one of the previous stages fails with a
+        # non-zero exit code
+      - name: Manually upload ORT results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ort-results
+          path: ${{ steps.ort.outputs.results-path }}
       - name: Submit SBOM to dependency graph
         if: always()
         uses: advanced-security/spdx-dependency-submission-action@v0.1.1
