@@ -6,27 +6,36 @@ SPDX-License-Identifier: CC0-1.0
 
 # Jumper
 
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 ## About
 
 Jumper is a cloud-native scalable API Gateway expected to run as a sidecar of Kong API Gateway.
-Is based on [Spring Cloud Gateway](https://spring.io/projects/spring-cloud-gateway).
-Its purpose is mainly advanced token (OAuth 2.0) handling, enables support for:
-* mesh functionality
-* external authorization
-* own Gateway tokens
-* customizing headers
-* listening on given service (creates events for issued traffic) 
+It is based on [Spring Cloud Gateway](https://spring.io/projects/spring-cloud-gateway).
 
-On incoming side is called by Kong. On outgoing side is the last component, which calls provider.
-For its functionality relies on information provided by Kong component using headers, itself is stateless.  
+Its purpose is mainly advanced token (OAuth 2.0) handling, enabling support for:
+* Mesh functionality
+* External authorization
+* Gateway token generation
+* Header customization
+* Service event listening (creates events for issued traffic) 
+
+On the incoming side, it is called by Kong. On the outgoing side, it is the last component that calls the provider.
+For its functionality, it relies on information provided by the Kong component using headers, while remaining stateless itself.
 
 ![flow!](pictures/jumper1_flow.png "usual flow")
 
-## Code of Conduct
+## Getting Started
+
+The easiest way to get started is to build your own Jumper image using the [one-step multi-stage Dockerfile](#one-step-multi-stage-build).
+
+Once you have that, refer to the [Configuration](#configuration) section to find out how to use Jumper locally or deploy it using the [Stargate Helm Chart](https://github.com/telekom/gateway-kong-charts).
+
+## Contributing
 
 This project has adopted the [Contributor Covenant](https://www.contributor-covenant.org/) in version 2.1 as our code of conduct. Please see the details in our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). All contributors must abide by the code of conduct.
 
-By participating in this project, you agree to abide by its [Code of Conduct](./CODE_OF_CONDUCT.md) at all times.
+By participating in this project, you agree to abide by its Code of Conduct at all times.
 
 ## Licensing
 
@@ -35,59 +44,98 @@ Each file contains copyright and license information, and license texts can be f
 
 ## Building
 
-### Packaging the application
+### Packaging the Application
 
 This project is built with [Maven](https://maven.apache.org/). It is validated to be compatible with version 3.9.x. To build the project, run:
 
 ```bash
-  ./mvnw clean package
+./mvnw clean package
 ```
 
 This will build the project and run all tests. The resulting artifacts will be placed in the `target` directory.
 
-### Building the Docker image
+### Docker Builds
 
-The project contains a Dockerfile that can be used to build a Docker image. To build the image, run:
+#### Standard Docker Build
 
-```bash
-  docker build --platform linux/amd64 -t jumper .
-```
-
-This will build the image and tag it as `jumper:latest`.
-
-### Multi-stage Docker build
-
-Alternatively, you can use the multi-stage Docker build to build the image. This will build the application in a Maven container and then copy the resulting artifacts into a smaller container.  
-**It will, however, skip the Maven unit test stage due to some issues with Testcontainers.** To build the image, run:
+The project contains a Dockerfile that can be used to build a Docker image after packaging the application:
 
 ```bash
-  docker build --platform linux/amd64 -t jumper -f Dockerfile.multi-stage .
+docker build --platform linux/amd64 -t jumper .
 ```
 
-## Scenarios
-Scenarios from various aspects of Jumper functionality perspective. <b>Scenarios from different perspective can be overlapping!</b>
+#### Customizing the Base Image
 
-### Scenarios from outgoing token perspective
+The Dockerfile supports customization via build arguments to specify a custom base image:
 
-#### One token
-Most common scenario, request is forwarded to provider, while jumper combines information from incoming token and headers, creates and signs new oauth token.
 
-Headers expected on incoming side:
-* remote_api_url - url, to which is request forwarded
-* api_base_path - base path of Kong service from the same Gateway initially called, passed as requestPath claim
-* realm - for setting correct issuer
-* environment - passed as env claim
-* access_token_forwarding - false, used to determine scenario
+```bash
+docker build --platform linux/amd64 -t jumper --build-arg BASE_IMAGE=<your-preferred-base-image> .
+```
 
-Structure of the created token (aka One token):  
-``
+By default, the Dockerfile uses `eclipse-temurin:17-jre-alpine`.
+
+#### One-Step Multi-Stage Build
+
+For a simpler development workflow, you can use `Dockerfile.multi-stage` to build the image in a single step without needing a local Maven installation:
+
+```bash
+docker build --platform linux/amd64 -t jumper -f Dockerfile.multi-stage .
+```
+
+This approach builds the application in a Maven container and then copies the resulting artifacts into a smaller runtime container, all in one command. **It will, however, skip the Maven unit test stage due to some issues with Testcontainers.**
+
+## Configuration
+
+Jumper is typically deployed as part of the Gateway Helm chart, which provides all necessary configuration parameters and sensible defaults.
+
+### Helm Deployment
+
+For production deployments, refer to the jumper section in the Gateway Helm chart's values.yaml file in the [official repository](https://github.com/telekom/gateway-kong-charts).
+
+### Local Configuration
+
+For local development and testing, Jumper uses Spring Boot's configuration mechanism with properties defined in [`application.yml`](src/main/resources/application.yml). The application can be configured through environment variables that are referenced in this configuration file.
+
+For additional standard Spring Boot properties, refer to the [Spring Boot documentation](https://docs.spring.io/spring-boot/appendix/application-properties/index.html).
+
+## Usage Scenarios
+
+Jumper supports various token handling and routing scenarios.  
+**Note: Scenarios may overlap across different perspectives.**
+
+### Glossary
+
+* **Gateway** - Set of Kong + Jumper + Issuer service
+* **Spacegate** - Gateway accessible from/having access to (after firewall clearance) Internet
+* **jumper_config** - Base64 encoded structure used to pass various information
+
+### Token Handling Scenarios
+
+The following describes different scenarios for token handling in Jumper.
+
+"Required Headers" refers to headers coming from Kong to Jumper, while "Outgoing Headers" refers to headers that Jumper sends to the upstream service.
+
+#### One Token
+
+The most common scenario where Jumper creates a new OAuth token by combining information from the incoming token and headers.
+
+**Required Headers:**
+- `remote_api_url` - Target URL for request forwarding
+- `api_base_path` - Base path of the Kong service in the initial zone. Passed as `requestPath` claim.
+- `realm` - Used to set the correct issuer
+- `environment` - Passed as `env` claim
+- `access_token_forwarding` - Used to determine the scenario. Set to `false` in this case.
+
+**Token Structure (One Token):**
+```
 {
   "kid": "<matching certificate available on Issuer service>",
   "typ": "JWT",
   "alg": "RS256"
 }
-``  
-``
+```
+```
 {
   "sub": "<taken from incoming token>",
   "clientId": "<taken from incoming token>",   
@@ -102,30 +150,27 @@ Structure of the created token (aka One token):
   "exp": <taken from incoming token>,
   "iat": <taken from incoming token>
 }
-``
+```
 
-Relevant headers on outgoing side:
-* Authorization - One token
+**Outgoing Headers:**
+- `Authorization` - Contains the newly created token
 
-#### Last Mile security token
-Legacy scenario, request is forwarded to provider with 2 tokens, original incoming and merged one (as an <i>X-Gateway-Token</i> header).  
+#### Last Mile Security Token (Legacy)
 
-Headers expected on incoming side:
-* remote_api_url - url, to which is request forwarded
-* api_base_path - base path of Kong service from the same Gateway initially called, passed as requestPath claim
-* realm - for setting correct issuer
-* environment - passed as env claim
-* access_token_forwarding - true, used to determine scenario
+A legacy scenario where Jumper forwards both the original token and a new LMS token (in an `X-Gateway-Token` header).
 
-Structure of the created token (aka LMS token)
-``
+**Required Headers:**
+- Same as One Token scenario, but with `access_token_forwarding` set to `true`
+
+**Structure of LMS Token:**
+```
 {
   "kid": "<matching certificate available on Issuer service>",
   "typ": "JWT",
   "alg": "RS256"
 }
-``  
-``
+```
+```
 {
   "sub": "<taken from incoming token>",
   "clientId": "<taken from incoming token>",
@@ -140,128 +185,106 @@ Structure of the created token (aka LMS token)
   "exp": <taken from incoming token>,
   "iat": <taken from incoming token>
 }
-``
+```
 
-Relevant headers on outgoing side:
-* Authorization - original incoming token
-* X-Gateway-Token - LMS token
+**Outgoing Headers:**
+- `Authorization` - Original incoming token
+- `X-Gateway-Token` - New LMS token
 
-#### Mesh token
-Scenario with multiple Gateway instances involved. Jumper fetches oauth token from other zone identity provider (aka mesh token), 
-while original authorization token is passed as a <i>consumer-token</i> header. Mesh token is cached, so fetching is performed only if valid token is not available.
+#### Mesh Token
 
-![mesh flow!](pictures/jumper2_mesh.png "mesh flow")  
+Scenario with multiple Gateway instances involved.
+Jumper fetches an OAuth token from another zone's identity provider (so-called Mesh Token),
+while the original authorization token is passed in a `Consumer-Token` header.
 
-Headers expected on incoming side:
-* remote_api_url - url (including service base path) of other zone Gateway, to which is request forwarded
-* issuer - issuer of other zone identity provider
-* client_id - client id with dedicated client on other zone identity provider
-* client_secret - client secret with dedicated client on other zone identity provider
+Mesh tokens are cached, so fetching is performed only if a valid token is not available.
 
-Relevant headers on outgoing side:
-* Authorization - mesh token
-* consumer-token - original incoming token
+![mesh flow!](pictures/jumper2_mesh.png "mesh flow")
 
-#### External authorization token
-Request is forwarded to provider with authorization token fetched from identity provider defined by provider itself.
-Available only for Spacegate.
+**Required Headers:**
+- `remote_api_url` - URL (including service base path) of the other zone's Gateway, to which the request is forwarded
+- `issuer` - Issuer of the other zone's identity provider
+- `client_id` - Client ID for dedicated client on the other zone's identity provider
+- `client_secret` - Client secret for dedicated client on the other zone's identity provider
+
+**Outgoing Headers:**
+- `Authorization` - Mesh token
+- `Consumer-Token` - Original incoming token
+
+#### External Authorization Token
+
+Jumper forwards requests with tokens fetched from provider-defined identity providers (Spacegate only).
+
 ![oauth flow!](pictures/jumper3_external.png "oauth flow")
 
-Headers expected on incoming side:
-* remote_api_url - url, to which is request forwarded
-* token_endpoint - external identity provider to fetch token from  
-if credentials are defined on provider level
-* client_id - client id of external identity provider to fetch token from
-* client_secret  - client secret of external identity provider to fetch token from
-if credentials differs per consumer
-* jumper_config with following content:  
-``
+**Required Headers:**
+- `remote_api_url` - Target URL
+- `token_endpoint` - Endpoint of external identity provider
+- `client_id` - Client ID for external identity provider
+- `client_secret` - Client Secret for external IdP
+
+If credentials differ per consumer, the following `jumper_config` can be used instead of `client_id` and `client_secret`:
+```
 {
   "oauth": {
   "<consumer matching the one from incoming token>": {
-  "clientId": "<client id to query token from externail idp>",
-  "clientSecret": "<client secret to query token from externail idp>"
-  }
+    "clientId": "<client id to query token from external idp>",
+    "clientSecret": "<client secret to query token from external idp>"
+    }
   }
 }
-``
+```
 
-#### Basic auth token
-To support legacy systems also Basic Authorization can be passed to provider. Authorization can be defined globally for provider,
-or per consumer basis. Available only for Spacegate.  
+#### Basic Auth Token
 
-Headers expected on incoming side:
-* remote_api_url - url, to which is request forwarded
-* jumper_config with following content:  
-``
+Supports legacy systems requiring Basic Authorization (Spacegate only). Authorization can be defined globally for a provider, or on a per consumer basis.
+
+**Required Headers:**
+- `remote_api_url` - Target URL
+- `jumper_config` - Contains Basic Auth configuration with the following format:
+```
 {
   "basicAuth": {
   "default/<consumer name>": {
-  "username": "<username>",
-  "password": "<password>"
-  }
+    "username": "<username>",
+    "password": "<password>"
+    }
   }
 }
-``
+```
 
-#### X-Token-Exchange header
-Spacegate allows for more flexibility by supporting the Authorization header token exchange. A consumer can set the "X-Token-Exchange" header containing an external provider specific token while calling an exposed external API. Jumper will then store value of the X-Token-Exchange header in the Authorization header field of the external API request and forward it to the provider. Available only for Spacegate.
-``
-### Scenarios from used route perspective
-#### Proxy route
-Default route to be used for processing majority off traffic. All scenarios described within "token perspective" are supported.
-Following filters with respective order are involved:
-![proxy route!](pictures/jumperRoute1_proxy.png "proxy route")
-* RequestFilter - most of the logic, like token, header handling, routing here
-* RemoveRequestHeaderFilter - defined header list is removed, mainly headers passing information from Kong to Jumper
-* ResponseFilter - minor tracing adjustment
+#### X-Token-Exchange
 
-#### Listener route
-In addition to proxy route functionality also enables interface listening support aka Spectre.  
-Following filters with respective order are involved:
-![listener route!](pictures/jumperRoute2_listener.png "listener route")
-* RequestFilter - most of the logic, like token, header handling, routing here
-* RemoveRequestHeaderFilter - defined header list is removed, mainly headers passing information from Kong to Jumper
-* ResponseFilter - minor tracing adjustment
-* RequestTransformationFilter - store request body for future use
-* SpectreRequestFilter - decision for creating Spectre request event for given consumer/API combination
-* ResponseTransformationFilter - store response body for future use
-* SpectreResponseFilter - decision for creating Spectre response event for given consumer/API combination
+Allows passing external provider-specific tokens via the `X-Token-Exchange` header (Spacegate only).
 
-#### auto_event_route_post
-Route used only for Spectre. On incoming side receive callback. Generic event type is modified to listener specific
-and forwarded to Horizon for further processing.  
-Following filters with respective order are involved:  
-![spectre route!](pictures/jumperRoute3_spectrePost.png "spectre post route")
-* SpectreRoutingFilter - set authorization token and adapt routing path to Horizon
-* removeRequestParameter - remove no longer needed parameter
-* SpectreRequestModify - adapt event content from generic, to listener specific
+When a consumer sets the `X-Token-Exchange` header containing an external provider-specific token, Jumper will use this value as the `Authorization` header in the request forwarded to the provider.
 
-#### auto_event_route_head
-Route used only for Spectre. Callback consumer has to support HEAD request for possible healthcheck.  
-Following filters with respective order are involved:  
-![spectre route!](pictures/jumperRoute4_spectreHead.png "spectre head route")
-* SpectreRoutingFilter - set authorization token and adapt routing path to Horizon
-* removeRequestParameter - remove no longer needed parameter
+### Additional Features
 
-### Spectre
-Spectre enables a third party, the so-called listener application, to listen to the payload of a communication between consumer and provider for a specific API.
-Prerequisite is to have correctly configured <i>horizon.publishEventUrl</i>  
-Mandatory headers on incoming side:
-* jumper_config with following content:  
-``
+#### Spectre Event Listening
+
+Spectre allows a third-party listener application to monitor communication between consumer and provider for specific APIs.
+
+**Prerequisites:**
+- Configured `horizon.publishEventUrl` in application properties
+- Properly configured `jumper_config` header with listener settings
+
+```json
 {
   "routeListener": {
-  "<consumer matching the one from incoming token>": {
-  "issue": "<value passed to created event, means API>",
-  "serviceOwner": "<value passed to created event, means service name>"
-  }
+    "<consumer>": {
+      "issue": "<API identifier>",
+      "serviceOwner": "<service name>"
+    }
   }
 }
-``
+```
 
-Request/Response events are created, if consumer/API combination matches.  Created event structure:  
-``
+Horizon events are created for matching consumer/provider combinations.
+The events contain request/response details including headers and payload.
+The created event structure is:
+
+```
 {
 "time" : "<timestamp>",
 "id" : "<event id>",
@@ -270,43 +293,88 @@ Request/Response events are created, if consumer/API combination matches.  Creat
 "specversion" : "1.0",
 "datacontenttype" : "application/json",
 "data" : {
-"consumer" : "<consumer, value from incoming token>",
-"provider" : "service name, value from jumper config",
-"issue" : "<API, value from jumper config>",
-"kind" : "REQUEST/RESPONSE",
-"method" : "<method>",
-"header" : {
-<headers of processed request>
-},
-"payload" : <procesed request body>
+  "consumer" : "<consumer, value from incoming token>",
+  "provider" : "service name, value from jumper config",
+  "issue" : "<API, value from jumper config>",
+  "kind" : "REQUEST/RESPONSE",
+  "method" : "<method>",
+  "header" : {
+    <headers of processed request>
+  },
+  "payload" : <processed request body>
+  }
 }
-}
-``
+```
 
-### Zone failover
-If enabled, Jumper ensures that in case of a zone failure requests to that zone are re-routed to the configured failover-zone.
-Following picture depicts how Jumper processes requests in case of zone failover:
+#### Zone Failover
+
+If enabled, Jumper can route requests to a failover zone when the primary zone fails.
+
+The following diagram shows how Jumper processes requests in case of an active failover:
 
 ![jumper request processing with failover!](pictures/jumper_request_processing_with_failover.png)
-``
 
-### Header enhancement/manipulation
-* X-Spacegate-Token - if any Spacegate is involved, incoming token is copied to <i>X-Spacegate-Token</i> header
-* X-Forwarded-Host/Port/Proto - to avoid additional reporting Kong + Jumper as separate hop, these headers needs to be adapted
-* X-Origin-Stargate - shows, which Gateway host was originally called (mesh concept)
-* X-Origin-Zone - shows, which Gateway zone was originally called (mesh concept)
+#### Header Enhancement
 
-### Tracing support
-* [b3 zipkin propagation](https://github.com/openzipkin/b3-propagation) supported. Prerequisite is to set valid <i>spring.zipkin.baseUrl</i>
+Jumper enriches the request with additional headers, depending on the situation.
 
-### Miscellaneous
-* scopes - if scopes claim present within incoming token, information is passed to OneToken, which allows fine-grained/resource level authorization 
-* x-pubsub-publisher-id - Horizon callback integration, publisher id header is passed to OneToken
-* x-pubsub-subscriber-id - Horizon callback integration, subscriber id header is passed to OneToken
+| Header | Purpose |
+|--------|--------|
+| X-Spacegate-Token | Copy of incoming token when Spacegate is involved |
+| X-Forwarded-* | Adapted to avoid reporting Kong + Jumper as separate hops |
+| X-Origin-Stargate | Shows which Gateway host was originally called |
+| X-Origin-Zone | Shows which Gateway zone was originally called |
 
+#### And more
 
-### Glossary
-* <b>Gateway</b> - set of Kong + Jumper + Issuer service
-* <b>Spacegate</b> - Gateway accessible from/having access to (after firewall clearance) Internet
-* <b>jumper_config</b> - base64 encoded structure used to pass various information
+- **Tracing**: [B3 Zipkin propagation](https://github.com/openzipkin/b3-propagation) support (requires `spring.zipkin.baseUrl` configuration)
+- **Scope Handling**: If a `scopes` claim is present, scopes are passed to upstream in OneToken for fine-grained authorization
+- **Horizon Integration**: `x-pubsub-publisher-id` and `x-pubsub-subscriber-id` headers are passed in OneToken
+
+### Route Types
+
+The following describes the different types of routes implemented in Jumper.
+
+Routes are implemented using varying sets of filters. Here is a short overview:
+
+Filters for standard processing:
+- `RequestFilter` - Main processing logic
+- `RemoveRequestHeaderFilter` - Removes headers used for passing information from Kong to Jumper
+- `ResponseFilter` - Minor tracing adjustments
+
+Spectre-specific filters:
+- `RequestTransformationFilter` - Transforms request body
+- `SpectreRequestFilter` - Creates Spectre request event (if configured for given consumer/provider combination)
+- `ResponseTransformationFilter` - Transforms response body
+- `SpectreResponseFilter` - Creates Spectre response event (if configured for given consumer/provider combination)
+- `SpectreRoutingFilter` - Sets authorization header and adapts routing path to Horizon
+
+To understand the filter chains per route, please refer to the route implementation in [Application.java](src/main/java/jumper/Application.java).
+The images below give some guidance, but the actual filters used in the current implementation can vary.
+
+#### Proxy Route (`jumper_route`)
+
+The default route type that processes the majority of traffic. All token handling scenarios are supported.
+
+![proxy route!](pictures/jumperRoute1_proxy.png "proxy route")
+
+#### Listener Route (`listener_route`)
+
+Supports payload listening via *Spectre* in addition to the basic functionality of the proxy route.
+
+![listener route!](pictures/jumperRoute2_listener.png "listener route")
+
+#### Spectre POST Route (`auto_event_route_post`)
+
+Receives event callback from Horizon. Only required for *Spectre*.
+The generic event type is modified to a listener specific one and forwarded to Horizon for further processing.
+
+![spectre route!](pictures/jumperRoute3_spectrePost.png "spectre post route")
+
+#### Spectre HEAD Route (`auto_event_route_head`)
+
+Because Jumper acts as a Horizon callback consumer, it has to support a HEAD request for possible healthchecks.
+Only required for *Spectre*.
+
+![spectre route!](pictures/jumperRoute4_spectreHead.png "spectre head route")
 
