@@ -11,6 +11,7 @@ name: Build
 # - REGISTRY_USER: Container registry username
 # - JAVA_VERSION: Java version to use (defaults to '17' if not specified)
 # - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'temurin' if not specified)
+# - BASE_IMAGE: The base image used for the Docker build
 #
 # Required secrets:
 # - REGISTRY_TOKEN: Container registry token/password
@@ -171,8 +172,7 @@ jobs:
           tags: ${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}:${{ steps.tag.outputs.image-tag }}
           cache-from: type=registry,ref=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}:latest
           cache-to: type=inline
-          build-args: |
-            BASE_IMAGE=mtr.devops.telekom.de/tardis-internal/distroless:java-17
+          build-args: ${{ vars.BASE_IMAGE != '' && format('BASE_IMAGE={0}', vars.BASE_IMAGE) || '' }}
           push: true
           platforms: linux/amd64
 
