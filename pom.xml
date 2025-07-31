@@ -13,7 +13,8 @@ SPDX-License-Identifier: Apache-2.0
 
 	<groupId>de.telekom.ei.jumper</groupId>
 	<artifactId>jumper-sse</artifactId>
-	<version>4.1.1</version>
+    <!-- versioning is handled using git tags -->
+    <version>0.0.0</version>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -334,17 +335,5 @@ SPDX-License-Identifier: Apache-2.0
 		</plugins>
 	</build>
 
-	<distributionManagement>
-		<repository>
-			<id>hyperion-releases</id>
-			<name>MagentaCICD - Artifactory-releases</name>
-			<url>https://artifactory.devops.telekom.de/artifactory/hyperion-maven</url>
-		</repository>
-		<snapshotRepository>
-			<id>hyperion-snapshots</id>
-			<name>MagentaCICD - Artifactory-snapshots</name>
-			<url>https://artifactory.devops.telekom.de/artifactory/hyperion-maven</url>
-		</snapshotRepository>
-	</distributionManagement>
 
 </project>

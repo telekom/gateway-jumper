@@ -1,5 +1,8 @@
 # Changelog
 
+> [!WARNING]
+> This changelog is an archive. Future changes are documented in the projects [GitHub releases](https://github.com/telekom/gateway-jumper/releases).
+
 ## [4.1.0](https://gitlab.devops.telekom.de/dhei/teams/hyperion/dev/src/jumper-sse/compare/4.0.1...4.1.0) (2025-06-27)
 
 ### 🚀 Features
