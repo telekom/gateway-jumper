@@ -53,7 +53,7 @@ jobs:
           git config --global url.https://github.com/.insteadOf ssh://git@github.com/
           git config --global url.https://github.com/.insteadOf git://github.com/
       - name: Checkout project
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Prepare ORT config
         run: |
           # Move into default config dir
