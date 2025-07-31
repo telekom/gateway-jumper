@@ -184,7 +184,7 @@ jobs:
       contents: write
     steps:
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.32.0
         env:
           TRIVY_USERNAME: ${{ vars.REGISTRY_USER }}
           TRIVY_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}
