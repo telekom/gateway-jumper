@@ -5,10 +5,12 @@
 package jumper;
 
 import static jumper.config.Config.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 import java.time.Duration;
 import java.util.function.Consumer;
@@ -22,6 +24,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +37,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 @Setter
 public class BaseSteps {
 
+  private static final Logger log = LoggerFactory.getLogger(BaseSteps.class);
   private MockUpstreamServer mockUpstreamServer;
   private MockIrisServer mockIrisServer;
   private MockHorizonServer mockHorizonServer;
@@ -93,7 +98,7 @@ public class BaseSteps {
         .jsonPath("$.method")
         .isEqualTo("GET")
         .jsonPath("$.service")
-        .isEqualTo("Jumper")
+        .isEqualTo("jumper")
         .jsonPath("$.message")
         .isEqualTo(msg)
         .jsonPath("$.error")
@@ -257,6 +262,25 @@ public class BaseSteps {
     requestExchange = webTestClient.get().uri("/proxy").headers(httpHeadersOfRequest).exchange();
   }
 
+  @Then("metrics result does not contain {}")
+  public void metricsDoesntContain(String word) {
+    webTestClient
+        .get()
+        .uri("/actuator/prometheus")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .consumeWith(
+            response -> {
+              String body = response.getResponseBody();
+              // log.info(body);
+              if (body != null) {
+                assertFalse(body.contains(word));
+              }
+            });
+  }
+
   @When("consumer calls the proxy route and runs into timeout")
   public void consumerCallsTheAPIAndProviderRunsIntoTimeout() {
     mockUpstreamServer.callbackRequestWithTimeout();
@@ -378,7 +402,7 @@ public class BaseSteps {
         break;
       case "encodedQueryParam":
         setBasePathHeader("/base");
-        uri += "/path?validAt=2020-11-30T23%3A00%3A00%2B01%3A00";
+        uri += "/path?validAt=2020-11-30T23%3A00%3A00%2B01%3A00&sig=123";
         mockUpstreamServer.testEndpoint(id, "/path");
         break;
       default:

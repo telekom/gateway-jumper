@@ -24,7 +24,7 @@ public class RequestTransformationFilter implements GatewayFilter, Ordered {
   private final ModifyRequestBodyGatewayFilterFactory modifyRequestBodyFilter;
   private final RequestBodyRewrite requestBodyRewrite;
 
-  @Value("${spring.codec.max-in-memory-size}")
+  @Value("${spring.http.codecs.max-in-memory-size}")
   private int limit;
 
   public static final int REQUEST_TRANSFORM_FILTER_ORDER =

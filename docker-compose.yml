@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# file only for local debugging of tracing etc
+
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.3.0
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"
+      - "9411:9411"
+    volumes:
+      - "./docker-support/jaeger.yml:/etc/jaeger/config.yml"
+    command: [ "--config", "/etc/jaeger/config.yml" ]
+    networks:
+      - jaeger
+    links:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    volumes:
+      - "./docker-support/prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    networks:
+      - jaeger
+
+  echo:
+    image: mendhak/http-https-echo:latest
+    platform: linux/amd64
+    ports:
+      - "8081:8080"
+    networks:
+      - jaeger
+
+  redis:
+    image: 'bitnami/redis:latest@sha256:65f55fefc0acd7f1a1da44b39be3044bcfbc03f4a49c4689453097f929f07132'
+    environment:
+      - REDIS_PASSWORD=foobar
+    ports:
+      - '6379:6379'
+    networks:
+      - jaeger
+
+networks:
+  jaeger:

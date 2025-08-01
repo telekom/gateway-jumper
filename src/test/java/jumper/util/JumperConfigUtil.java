@@ -6,7 +6,7 @@ package jumper.util;
 
 import static jumper.config.Config.*;
 import static jumper.config.Config.CONSUMER;
-import static jumper.model.config.JumperConfig.toBase64;
+import static jumper.model.config.JumperConfig.toJsonBase64;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,7 +23,7 @@ public class JumperConfigUtil {
     oauth.put(CONSUMER, oc);
     JumperConfig jc = new JumperConfig();
     jc.setOauth(oauth);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getJcBasicAuthConsumer(String id) {
@@ -34,7 +34,7 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(CONSUMER, ba);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getJcBasicAuthProvider(String id) {
@@ -45,7 +45,7 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(Constants.BASIC_AUTH_PROVIDER_KEY, ba);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getJcBasicAuthConsumerAndProvider(String id) {
@@ -60,7 +60,7 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(Constants.BASIC_AUTH_PROVIDER_KEY, baProvider);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getJcBasicAuthOtherConsumer(String id) {
@@ -71,7 +71,7 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(CONSUMER_GATEWAY, ba);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getJcLoadBalancing() {
@@ -82,7 +82,7 @@ public class JumperConfigUtil {
 
     JumperConfig jc = new JumperConfig();
     jc.setLoadBalancing(loadBalancing);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getEmptyJcLoadBalancing() {
@@ -91,13 +91,13 @@ public class JumperConfigUtil {
 
     JumperConfig jc = new JumperConfig();
     jc.setLoadBalancing(loadBalancing);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String getJcRemoveHeaders(List<String> values) {
     JumperConfig jc = new JumperConfig();
     jc.setRemoveHeaders(values);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public enum JcOauthConfig {
@@ -122,7 +122,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypePost(String id) {
@@ -135,7 +135,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypePassword(String id) {
@@ -149,7 +149,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypePasswordOnly(String id) {
@@ -161,7 +161,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public String getJcOauth(String id) {
@@ -172,7 +172,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public String getJcOauthWithScope(String id) {
@@ -184,7 +184,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypeWithKey(String id) {
@@ -196,7 +196,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toBase64(jc);
+      return toJsonBase64(jc);
     }
 
     public void setJcOauthKeyType(String clientKey) {
@@ -231,7 +231,7 @@ public class JumperConfigUtil {
     GatewayClient gc = new GatewayClient();
     gc.setIssuer("realms/default");
     jc.setGatewayClient(gc);
-    return toBase64(jc);
+    return toJsonBase64(jc);
   }
 
   public static String addIdSuffix(String from, String id) {
