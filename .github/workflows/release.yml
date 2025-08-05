@@ -21,6 +21,10 @@ jobs:
     name: Run semantic-release
     if: ${{ github.ref == 'refs/heads/main' && github.event.inputs.do_release == 'yes' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     outputs:
       new-release-published: ${{ steps.semantic-release.outputs.new-release-published }}
       new-release-version: ${{ steps.semantic-release.outputs.new-release-version }}
@@ -30,6 +34,18 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: 'true'
+      - name: Create temporary release.config.js
+        run: |
+          cat > release.config.js << 'EOF'
+          module.exports = {
+              plugins: [
+                  '@semantic-release/commit-analyzer',
+                  'semantic-release-export-data',
+                  '@semantic-release/release-notes-generator',
+                  '@semantic-release/github',
+              ],
+          };
+          EOF
       - name: Semantic Release
         id: semantic-release
         uses: cycjimmy/semantic-release-action@v4
