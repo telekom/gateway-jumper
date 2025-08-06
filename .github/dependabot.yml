@@ -22,3 +22,5 @@ updates:
       # Ignore major version updates to spring-boot-starter-parent
       - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "org.springframework.cloud:spring-cloud-dependencies"
+        update-types: ["version-update:semver-major"]
