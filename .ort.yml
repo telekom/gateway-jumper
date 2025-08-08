@@ -85,14 +85,6 @@ package_configurations:
     reason: "INCORRECT"
     comment: "Did not recognize license"
 
-- id: "Maven:org.testcontainers:junit-jupiter:1.+"
-  license_finding_curations:
-  - path: "core/src/main/java/org/testcontainers/utility/LicenseAcceptance.java"
-    detected_license: "NOASSERTION"
-    concluded_license: "MIT"
-    reason: "NOT_DETECTED"
-    comment: "License missing but package declares MIT in license file"
-
 - id: "Maven:com.google.errorprone:error_prone_annotations:2.+"
   license_finding_curations:
   - path: "**/pom.xml"
@@ -119,6 +111,12 @@ package_configurations:
 ### REPO SPECIFIC
 
 - id: "Maven:org.testcontainers:junit-jupiter:1.+"
+  license_finding_curations:
+  - path: "core/src/main/java/org/testcontainers/utility/LicenseAcceptance.java"
+    detected_license: "NOASSERTION"
+    concluded_license: "MIT"
+    reason: "NOT_DETECTED"
+    comment: "License missing but package declares MIT in license file"
   path_excludes:
   - pattern: "modules/neo4j/**"
     reason: "OTHER"
