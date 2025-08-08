@@ -49,7 +49,7 @@ ort:
     #      #
     #      # this is currently the only way to exclude files for all dependencies
     #      # see: https://github.com/oss-review-toolkit/ort/issues/2972
-    #      commandLine: '--copyright,--license,--info,--strip-root,--timeout,300,--ignore,CONTRIBUTING.md'
+    #      commandLine: '--copyright,--license,--info,--strip-root,--timeout,300,--ignore,CONTRIBUTING*,--ignore,README*,--ignore,readme*,--ignore,NOTICE*'
   advisor:
     skipExcluded: true
 
