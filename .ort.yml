@@ -1,0 +1,13 @@
+# we can configure everything here, except
+# - copyright garbage
+# - evaluator rules
+# - fix text provider
+# - classifications
+# - reporter templates
+
+excludes:
+  paths:
+  - pattern: "**/README*"
+    reason: "DOCUMENTATION_OF"
+    comment: >-
+      This is a README file, which is not part of the source code.
