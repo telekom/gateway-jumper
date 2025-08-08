@@ -5,6 +5,8 @@
  */
 
 val orgName = "Deutsche Telekom AG"
+val orgScanIssueTrackerName = "the telekom/ort-config issue tracker"
+val orgScanIssueTrackerMdLink = "[$orgScanIssueTrackerName](https://github.com/telekom/ort-config/issues)"
 
 /**
  * Import the license classifications from license-classifications.yml.
