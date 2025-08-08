@@ -69,6 +69,9 @@ jobs:
           if [ -f "${GITHUB_WORKSPACE}/.github/ort/config.yml" ]; then
             cp ${GITHUB_WORKSPACE}/.github/ort/config.yml ${ORT_CONFIG_DIR}
           fi
+          if [ -f "${GITHUB_WORKSPACE}/.github/ort/evaluator.rules.kts" ]; then
+            cp ${GITHUB_WORKSPACE}/.github/ort/evaluator.rules.kts ${ORT_CONFIG_DIR}
+          fi
       - name: Run GitHub Action for ORT
         id: ort
         uses: oss-review-toolkit/ort-ci-github-action@v1
