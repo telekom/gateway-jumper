@@ -14,9 +14,8 @@ excludes:
 
 package_configurations:
 - id: "*"
-  excludes:
-    paths:
-    - pattern: "**/README*"
-      reason: "DOCUMENTATION_OF"
-      comment: >-
-        This is a README file, which is not part of the source code.
+  path_excludes:
+  - pattern: "**/README*"
+    reason: "DOCUMENTATION_OF"
+    comment: >-
+      This is a README file, which is not part of the source code.
