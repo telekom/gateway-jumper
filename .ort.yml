@@ -17,12 +17,19 @@
 #- readme*.html
 #- NOTICE.txt
 #- NOTICE.md
+#- PULL_REQUEST_TEMPLATE.md
 
 package_configurations:
 
 ### GENERIC
 
 - id: "Maven:org.springframework:spring-test:5.+"
+  path_excludes:
+  - pattern: "src/docs/dist/license.txt"
+    reason: "DOCUMENTATION_OF"
+    comment: "Documentation of licenses of subcomponents"
+
+- id: "Maven:org.springframework:spring-webflux:5.+"
   path_excludes:
   - pattern: "src/docs/dist/license.txt"
     reason: "DOCUMENTATION_OF"
@@ -65,6 +72,12 @@ package_configurations:
     reason: "INCORRECT"
     comment: "Did not recognize license"
 
+- id: "Maven:org.springframework.data:spring-data-redis:2.+"
+  path_excludes:
+  - pattern: "CI.adoc"
+    reason: "DOCUMENTATION_OF"
+    comment: "Documentation of CI"
+
 - id: "Maven:org.springframework.boot:spring-boot:2.+"
   path_excludes:
   - pattern: "spring-boot-project/spring-boot-cli/src/main/content/legal/open_source_licenses.txt"
@@ -85,6 +98,24 @@ package_configurations:
     reason: "INCORRECT"
     comment: "Did not recognize license"
 
+- id: "Maven:io.swagger:swagger-models:1.+"
+  license_finding_curations:
+  - path: "io/swagger/models/Info.java"
+    detected_license: "LicenseRef-scancode-proprietary-license"
+    concluded_license: "NONE"
+    reason: "CODE"
+    comment: "Scanner matches License type"
+  - path: "io/swagger/models/License.java"
+    detected_license: "LicenseRef-scancode-proprietary-license"
+    concluded_license: "NONE"
+    reason: "CODE"
+    comment: "Scanner matches License type"
+  - path: "io/swagger/models/License.java"
+    detected_license: "NOASSERTION"
+    concluded_license: "NONE"
+    reason: "INCORRECT"
+    comment: "No license in file"
+
 - id: "Maven:com.google.errorprone:error_prone_annotations:2.+"
   license_finding_curations:
   - path: "**/pom.xml"
@@ -93,9 +124,47 @@ package_configurations:
     reason: "INCORRECT"
     comment: "Did not recognize license"
 
+- id: "Maven:io.zipkin.zipkin2:zipkin:2.+"
+  license_finding_curations:
+  - path: "pom.xml"
+    detected_license: "GPL-2.0-only WITH LicenseRef-scancode-mysql-floss-exception-2.0"
+    concluded_license: "Apache-2.0"
+    reason: "INCORRECT"
+    comment: "Recognized incorrect license"
+
+- id: "Maven:org.apache.logging.log4j:log4j-to-slf4j:2.+"
+  license_finding_curations:
+  - path: "doap_log4j2.rdf"
+    detected_license: "NOASSERTION"
+    concluded_license: "Apache-2.0"
+    reason: "INCORRECT"
+    comment: "Recognized incorrect license"
+  - path: "src/site/xdoc/manual/index.xml"
+    detected_license: "NOASSERTION"
+    concluded_license: "Apache-2.0"
+    reason: "INCORRECT"
+    comment: "Recognized incorrect license"
+  - path: "src/site/xdoc/manual/runtime-dependencies.xml"
+    detected_license: "NOASSERTION"
+    concluded_license: "Apache-2.0"
+    reason: "INCORRECT"
+    comment: "Recognized incorrect license"
+
 - id: "Maven:org.junit.platform:junit-platform-suite-commons:1.+"
   path_excludes:
   - pattern: "LICENSE-notice.md"
+    reason: "DOCUMENTATION_OF"
+    comment: "License Notice"
+
+- id: "Maven:org.junit.jupiter:junit-jupiter-params:5.+"
+  path_excludes:
+  - pattern: "LICENSE-notice.md"
+    reason: "DOCUMENTATION_OF"
+    comment: "License Notice"
+
+- id: "Maven:org.junit.platform:junit-platform-suite-engine:1.+"
+  path_excludes:
+  - pattern: "META-INF/LICENSE-notice.md"
     reason: "DOCUMENTATION_OF"
     comment: "License Notice"
 
@@ -107,6 +176,21 @@ package_configurations:
     reason: "INCORRECT"
     comment: "Recognized incorrect license"
 
+- id: "Maven:org.projectlombok:lombok:1.+"
+  license_finding_curations:
+  - path: "src/core/lombok/core/Main.java"
+    detected_license: "NOASSERTION"
+    concluded_license: "MIT"
+    reason: "INCORRECT"
+    comment: "Did not recognize MIT license"
+
+- id: "Maven:org.springframework.security:spring-security-core:5.+"
+  license_finding_curations:
+  - path: "buildSrc/src/main/graphql/org/springframework/security/convention/versions/schema.json"
+    detected_license: "NOASSERTION"
+    concluded_license: "Apache-2.0"
+    reason: "NOT_DETECTED"
+    comment: "License missing but package declares Apache 2.0 in license file"
 
 ### REPO SPECIFIC
 
@@ -124,3 +208,14 @@ package_configurations:
   - pattern: "modules/elasticsearch/**"
     reason: "OTHER"
     comment: "Module is not used"
+
+curations:
+  packages:
+  - id: "Maven:com.github.java-json-tools:json-patch:1.+"
+    curations:
+      comment: "Package does not declare licenses in source files. Declares dual license in LICENSE file."
+    concluded_license: "LGPL-3.0-or-later AND Apache-2.0"
+  - id: "Maven:com.github.java-json-tools:json-patch:1.+"
+    curations:
+      comment: "Package declares dual license in LICENSE and most/all source files."
+    concluded_license: "LGPL-3.0-or-later AND Apache-2.0"
