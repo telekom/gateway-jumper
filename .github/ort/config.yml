@@ -41,15 +41,15 @@ ort:
     storageReaders: ["local", "artifactory"]
     storageWriters: ["artifactory", "local"]
     skipExcluded: true
-    config:
-      ScanCode:
-        options:
-          # changing these causes the cache key to change!
-          # see https://github.com/oss-review-toolkit/ort/blob/main/model/src/main/resources/reference.yml#L232
-          #
-          # this is currently the only way to exclude files for all dependencies
-          # see: https://github.com/oss-review-toolkit/ort/issues/2972
-          commandLine: '--copyright,--license,--info,--strip-root,--timeout,300,--ignore,README*,--ignore,**/README.md'
+    #config:
+    #  ScanCode:
+    #    options:
+    #      # changing these causes the cache key to change!
+    #      # see https://github.com/oss-review-toolkit/ort/blob/main/model/src/main/resources/reference.yml#L232
+    #      #
+    #      # this is currently the only way to exclude files for all dependencies
+    #      # see: https://github.com/oss-review-toolkit/ort/issues/2972
+    #      commandLine: '--copyright,--license,--info,--strip-root,--timeout,300,--ignore,CONTRIBUTING*,--ignore,README*,--ignore,readme*,--ignore,NOTICE*'
   advisor:
     skipExcluded: true
 
