@@ -214,8 +214,8 @@ curations:
   - id: "Maven:com.github.java-json-tools:json-patch:1.+"
     curations:
       comment: "Package does not declare licenses in source files. Declares dual license in LICENSE file."
-    concluded_license: "LGPL-3.0-or-later AND Apache-2.0"
+      concluded_license: "LGPL-3.0-or-later AND Apache-2.0"
   - id: "Maven:com.github.java-json-tools:json-patch:1.+"
     curations:
       comment: "Package declares dual license in LICENSE and most/all source files."
-    concluded_license: "LGPL-3.0-or-later AND Apache-2.0"
+      concluded_license: "LGPL-3.0-or-later AND Apache-2.0"
