@@ -63,7 +63,7 @@ jobs:
           # Checkout default config repo
           git init -q
           git remote add origin https://github.com/luispflamminger/ort-config.git
-          git fetch -q --depth 1 origin main
+          git fetch -q --depth 1 origin feat/jumper-curations
           git checkout -q feat/jumper-curations
           # Copy custom config into config dir if it exists
           if [ -f "${GITHUB_WORKSPACE}/.github/ort/config.yml" ]; then
