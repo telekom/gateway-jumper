@@ -62,15 +62,12 @@ jobs:
           cd ${ORT_CONFIG_DIR}
           # Checkout default config repo
           git init -q
-          git remote add origin https://github.com/oss-review-toolkit/ort-config.git
+          git remote add origin https://github.com/luispflamminger/ort-config.git
           git fetch -q --depth 1 origin main
-          git checkout -q FETCH_HEAD
+          git checkout -q feat/jumper-curations
           # Copy custom config into config dir if it exists
           if [ -f "${GITHUB_WORKSPACE}/.github/ort/config.yml" ]; then
             cp ${GITHUB_WORKSPACE}/.github/ort/config.yml ${ORT_CONFIG_DIR}
-          fi
-          if [ -f "${GITHUB_WORKSPACE}/.github/ort/evaluator.rules.kts" ]; then
-            cp ${GITHUB_WORKSPACE}/.github/ort/evaluator.rules.kts ${ORT_CONFIG_DIR}
           fi
       - name: Run GitHub Action for ORT
         id: ort
