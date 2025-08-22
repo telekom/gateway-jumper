@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-ARG BASE_IMAGE=gcr.io/distroless/java17-debian12
+ARG BASE_IMAGE=gcr.io/distroless/java17-debian12:nonroot
 FROM ${BASE_IMAGE}
 
 EXPOSE 8080
