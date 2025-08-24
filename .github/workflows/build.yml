@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -60,7 +60,7 @@ jobs:
       version: ${{ steps.extract-version.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -94,7 +94,7 @@ jobs:
     needs: [build-maven]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -127,7 +127,7 @@ jobs:
       image-tag: ${{ steps.tag.outputs.image-tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Download Maven build artifacts
         uses: actions/download-artifact@v4
         with:
