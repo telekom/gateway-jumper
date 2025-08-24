@@ -124,6 +124,40 @@ jumper:
     dir: /keypair
     pk-file: tls.key
     kid-file: tls.kid
+    tls:
+      allowed-named-groups: "brainpoolP512r1,secp521r1,x448,brainpoolP384r1,secp384r1,brainpoolP256r1,secp256r1,x25519,ffdhe4096,ffdhe3072"
+      additional-allowed-cipher-suites: []
+      default-allowed-cipher-suites:
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_CHACHA20POLY1305_SHA256
+        - TLS_ECDHE_RSA_WITH_CHACHA20POLY1305_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_256_CCM
+        - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_ECDSA_WITH_AES_128_CCM
+        - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+        - TLS_DHE_DSS_WITH_AES_256_GCM_SHA384
+        - TLS_DHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_DHE_RSA_WITH_CHACHA20POLY1305_SHA256
+        - TLS_DHE_RSA_WITH_AES_256_CCM
+        - TLS_DHE_DSS_WITH_AES_128_GCM_SHA256
+        - TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_DHE_RSA_WITH_AES_128_CCM
+        - TLS_DHE_DSS_WITH_AES_256_CBC_SHA256
+        - TLS_DHE_RSA_WITH_AES_256_CBC_SHA256
+        - TLS_DHE_DSS_WITH_AES_128_CBC_SHA256
+        - TLS_DHE_RSA_WITH_AES_128_CBC_SHA256
+      #former-disabled-cipher-suites:
+      #  - TLS_DHE_RSA_WITH_AES_128_CCM
+      #  - TLS_DHE_RSA_WITH_AES_256_CCM
+      #  - TLS_DHE_RSA_WITH_CHACHA20POLY1305_SHA256
+      #  - TLS_ECDHE_ECDSA_WITH_AES_128_CCM
+      #  - TLS_ECDHE_ECDSA_WITH_AES_256_CCM
+      #  - TLS_AES_128_CCM_SHA256
 
 jumpercache.ttlOffset: 10
 jumpercache.cleanCacheInSeconds: 3600
