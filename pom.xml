@@ -30,7 +30,7 @@ SPDX-License-Identifier: Apache-2.0
 		<reactor-bom.version>2020.0.47</reactor-bom.version>
 		<netty.version>4.1.112.Final</netty.version>
 		<junit.jupiter.version>5.9.3</junit.jupiter.version>
-		<junit.platform.version>1.10.0</junit.platform.version>
+		<junit.platform.version>1.13.4</junit.platform.version>
 		<testcontainers.version>1.21.3</testcontainers.version>
 	</properties>
 
