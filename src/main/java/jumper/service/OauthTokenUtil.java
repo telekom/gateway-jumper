@@ -46,6 +46,9 @@ public class OauthTokenUtil {
   private final TokenGeneratorService tokenGenerator;
   private final BasicAuthUtil basicAuthUtil;
 
+  private static final JwtParser jwtParser =
+      Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build();
+
   public static String getTokenWithoutSignature(String consumerToken) {
 
     if (Objects.isNull(consumerToken)) {
@@ -80,10 +83,7 @@ public class OauthTokenUtil {
   public static Jwt<Header, Claims> getAllClaimsFromToken(String consumerToken) {
 
     try {
-      return Jwts.parserBuilder()
-          .setAllowedClockSkewSeconds(3600)
-          .build()
-          .parseClaimsJwt(consumerToken);
+      return jwtParser.parseClaimsJwt(consumerToken);
     } catch (SignatureException e) {
       log.error("SignatureException", e);
     } catch (ExpiredJwtException e) {
