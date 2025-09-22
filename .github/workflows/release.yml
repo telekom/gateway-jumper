@@ -65,7 +65,7 @@ jobs:
     if: needs.release.outputs.new-release-published == 'true'
     steps:
       - name: Trigger build
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({
@@ -87,7 +87,7 @@ jobs:
     if: needs.release.outputs.new-release-published == 'true'
     steps:
       - name: Trigger build
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({
