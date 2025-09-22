@@ -23,15 +23,18 @@ public class CachingConfig {
 
   @Bean
   @Qualifier("caffeineCacheManager")
-  public CacheManager cacheManager() {
+  public CacheManager caffeineCacheManager() {
     CaffeineCacheManager manager = new CaffeineCacheManager();
+    manager.setAllowNullValues(false);
     cacheConfigProperties.getCaffeineCaches().forEach(cc -> createCaffeineCache(manager, cc));
     return manager;
   }
 
   private void createCaffeineCache(
-      CaffeineCacheManager manager, CacheConfigProperties.CaffeineCache caffeineCache) {
-    Cache<Object, Object> cache = Caffeine.from(caffeineCache.getSpec()).build();
-    caffeineCache.getCacheNames().forEach(cn -> manager.registerCustomCache(cn, cache));
+      CaffeineCacheManager manager, CacheConfigProperties.CaffeineCache cfg) {
+    for (String cacheName : cfg.getCacheNames()) {
+      Cache<Object, Object> cache = Caffeine.from(cfg.getSpec()).recordStats().build();
+      manager.registerCustomCache(cacheName, cache);
+    }
   }
 }
