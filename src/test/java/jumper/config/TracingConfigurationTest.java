@@ -7,6 +7,7 @@ package jumper.config;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 public class TracingConfigurationTest {
@@ -15,7 +16,9 @@ public class TracingConfigurationTest {
   void filterQueryParams() {
     String alreadyEncodedUri =
         "http://localhost:8080/actuator/health?sig=57DjUa%2F9u6KdgCgTZVrHzsm9ZOQA0U%2B3K%2BvqQ7PRrgc%3D";
-    String filtered = TracingConfiguration.filterQueryParams(alreadyEncodedUri, List.of("nothing"));
+    String filtered =
+        new TracingConfiguration()
+            .filterQueryParams(alreadyEncodedUri, List.of(Pattern.compile("nothing")));
 
     assertEquals(alreadyEncodedUri, filtered);
   }
@@ -24,7 +27,8 @@ public class TracingConfigurationTest {
   void filterQueryParamsUnencodedEvenIfUrlIsInvalid() {
     String rawUri =
         "http://localhost:8080/actuator/health?sig=57DjUa/9u6KdgCgTZVrHzsm9ZOQA0U+3K+vqQ7PRrgc=";
-    String filtered = TracingConfiguration.filterQueryParams(rawUri, List.of("nothing"));
+    String filtered =
+        new TracingConfiguration().filterQueryParams(rawUri, List.of(Pattern.compile("nothing")));
 
     assertEquals(rawUri, filtered);
   }
@@ -33,7 +37,9 @@ public class TracingConfigurationTest {
   void filterBlacklistedQueryParameters() {
     String alreadyEncodedUri =
         "http://localhost:8080/actuator/health?sig-b=57DjUa%2F9u6KdgCgTZVrHzsm9ZOQA0U%2B3K%2BvqQ7PRrgc%3D";
-    String filtered = TracingConfiguration.filterQueryParams(alreadyEncodedUri, List.of("sig-.*"));
+    String filtered =
+        new TracingConfiguration()
+            .filterQueryParams(alreadyEncodedUri, List.of(Pattern.compile("sig-.*")));
 
     assertEquals("http://localhost:8080/actuator/health", filtered);
   }

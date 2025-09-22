@@ -26,8 +26,13 @@ public class TracingConfiguration {
   @Value("${jumper.tracing.filter-param-list:}")
   List<String> queryFilterList;
 
+  private List<Pattern> compiledQueryFilterPatterns;
+
   @Bean
   public ObservationFilter customSpanNameFilter() {
+    // Pre-compile regex patterns for better performance
+    compiledQueryFilterPatterns = queryFilterList.stream().map(Pattern::compile).toList();
+
     return (observationContext) -> {
       // Modify the span name
       switch (observationContext.getName()) {
@@ -50,7 +55,8 @@ public class TracingConfiguration {
             gatewayContext.setContextualName("outgoing request: " + spanName);
             gatewayContext.addHighCardinalityKeyValue(
                 KeyValue.of(
-                    "http.uri", filterQueryParams(request.getURI().toString(), queryFilterList)));
+                    "http.uri",
+                    filterQueryParams(request.getURI().toString(), compiledQueryFilterPatterns)));
 
             gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
             gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.uri");
@@ -69,13 +75,11 @@ public class TracingConfiguration {
     };
   }
 
-  protected static String filterQueryParams(String urlString, List<String> patterns) {
+  protected String filterQueryParams(String urlString, List<Pattern> compiledPatterns) {
     // first check, if there is something to do
-    if (!urlString.contains("?") || patterns.isEmpty()) {
+    if (!urlString.contains("?") || compiledPatterns.isEmpty()) {
       return urlString;
     }
-
-    List<Pattern> compiledPatterns = patterns.stream().map(Pattern::compile).toList();
 
     var uriComponents =
         UriComponentsBuilder.fromUriString(urlString).build(urlString.contains("%"));
