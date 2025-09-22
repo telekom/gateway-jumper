@@ -343,21 +343,30 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
     try {
       URI uri = request.getURI();
-      String queryParameterPart = uri.getRawQuery();
-      String fragmentPart = uri.getFragment();
-      String routingPath = uri.getRawPath().replaceFirst("^" + routePathPrefix, "");
+
+      String rawPath = uri.getRawPath();
+      String routingPath =
+          rawPath.startsWith(routePathPrefix)
+              ? rawPath.substring(routePathPrefix.length())
+              : rawPath;
 
       String requestPath = jumperConfig.getApiBasePath() + routingPath;
 
-      if (Objects.nonNull(queryParameterPart)) {
-        routingPath += "?" + queryParameterPart;
+      if (Objects.nonNull(uri.getRawQuery())) {
+        routingPath += "?" + uri.getRawQuery();
       }
 
-      if (Objects.nonNull(fragmentPart)) {
-        routingPath += "#" + fragmentPart;
+      if (Objects.nonNull(uri.getFragment())) {
+        routingPath += "#" + uri.getFragment();
       }
 
-      String finalApiUrl = jumperConfig.getRemoteApiUrl().replaceAll("/$", "") + routingPath;
+      String normalizedRemoteApiUrl =
+          jumperConfig.getRemoteApiUrl().endsWith("/")
+              ? jumperConfig
+                  .getRemoteApiUrl()
+                  .substring(0, jumperConfig.getRemoteApiUrl().length() - 1)
+              : jumperConfig.getRemoteApiUrl();
+      String finalApiUrl = normalizedRemoteApiUrl + routingPath;
 
       // add calculated stuff to jumperConfig
       jumperConfig.setRequestPath(requestPath);
