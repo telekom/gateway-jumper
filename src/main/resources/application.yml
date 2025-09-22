@@ -39,6 +39,8 @@ cache-manager:
   caffeine-caches:
     - cache-names: [ cache-key-info ]
       spec: maximumSize=1, expireAfterWrite=1m
+    - cache-names: [ cache-token-info ]
+      spec: maximumSize=${jumper.tokencache.maxSize:10000}, expireAfterWrite=${jumper.tokencache.expireAfterWriteMinutes:30}m
 
 spring:
   cache:
@@ -133,7 +135,8 @@ jumper:
     kid-file: tls.kid
   tokencache:
     ttlOffset: 10
-    cleanCacheInSeconds: 3600
+    maxSize: 10000
+    expireAfterWriteMinutes: 30
   horizon:
     publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
 
