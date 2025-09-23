@@ -10,6 +10,8 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
+import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import jumper.Constants;
@@ -169,7 +171,7 @@ public class OauthTokenUtil {
         new Date(System.currentTimeMillis()));
   }
 
-  public TokenInfo getInternalMeshAccessToken(JumperConfig jc) {
+  public Mono<TokenInfo> getInternalMeshAccessToken(JumperConfig jc) {
     return getAccessTokenWithClientCredentials(
         jc.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX,
         jc.getClientId(),
@@ -177,7 +179,7 @@ public class OauthTokenUtil {
         null);
   }
 
-  public TokenInfo getAccessTokenWithClientCredentials(
+  public Mono<TokenInfo> getAccessTokenWithClientCredentials(
       String tokenEndpoint, String clientID, String clientSecret, String scope) {
 
     final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, scope);
@@ -185,6 +187,7 @@ public class OauthTokenUtil {
     // try to get valid token from tokenCache...
     return tokenCache
         .getToken(tokenKey)
+        .map(Mono::just)
         .orElseGet(
             () -> { // ...otherwise retrieve a new one
               MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
@@ -202,7 +205,7 @@ public class OauthTokenUtil {
             });
   }
 
-  public TokenInfo getAccessTokenWithOauthCredentialsObject(
+  public Mono<TokenInfo> getAccessTokenWithOauthCredentialsObject(
       String tokenEndpoint, OauthCredentials oauthCredentials) {
 
     final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, oauthCredentials);
@@ -210,6 +213,7 @@ public class OauthTokenUtil {
     // try to get valid token from tokenCache...
     return tokenCache
         .getToken(tokenKey)
+        .map(Mono::just)
         .orElseGet(
             () -> { // ...otherwise retrieve a new one
               MultiValueMap<String, String> requestParameter = new LinkedMultiValueMap<>();
@@ -294,118 +298,87 @@ public class OauthTokenUtil {
         oauthCredentials.getClientKey());
   }
 
-  private TokenInfo getAccessTokenQuery(
+  private Mono<TokenInfo> getAccessTokenQuery(
       String tokenEndpoint,
       String tokenKey,
       MultiValueMap<String, String> formData,
       String basicAuthHeader) {
 
-    Mono<TokenInfo> tokenInfoMono =
-        oauthTokenUtilWebClient
-            .post()
-            .uri(tokenEndpoint)
-            .headers(
-                httpHeaders -> {
-                  httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-                  if (basicAuthHeader != null) httpHeaders.setBasicAuth(basicAuthHeader);
-                })
-            .body(BodyInserters.fromFormData(formData))
-            .retrieve()
-            .onStatus(
-                HttpStatusCode::is4xxClientError,
-                response -> {
-                  logClientErrorResponse(response, tokenKey);
-                  return Mono.error(
-                      new ResponseStatusException(
+    return oauthTokenUtilWebClient
+        .post()
+        .uri(tokenEndpoint)
+        .headers(
+            httpHeaders -> {
+              httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+              if (basicAuthHeader != null) httpHeaders.setBasicAuth(basicAuthHeader);
+            })
+        .body(BodyInserters.fromFormData(formData))
+        .retrieve()
+        .onStatus(
+            HttpStatusCode::is4xxClientError,
+            response -> {
+              logClientErrorResponse(response, tokenKey);
+              return Mono.error(
+                  new ResponseStatusException(
+                      HttpStatus.UNAUTHORIZED,
+                      "Failed to retrieve token from "
+                          + tokenEndpoint
+                          + ", original status: "
+                          + response.statusCode()));
+            })
+        .onStatus(
+            HttpStatusCode::is5xxServerError,
+            response -> {
+              logClientErrorResponse(response, tokenKey);
+              return Mono.error(
+                  new ResponseStatusException(
+                      HttpStatus.UNAUTHORIZED,
+                      "Failed to retrieve token from "
+                          + tokenEndpoint
+                          + ", original status: "
+                          + response.statusCode()));
+            })
+        .bodyToMono(TokenInfo.class)
+        .timeout(Duration.ofSeconds(15))
+        .onErrorMap(
+            TimeoutException.class,
+            throwable ->
+                new ResponseStatusException(
+                    HttpStatus.GATEWAY_TIMEOUT,
+                    "Timeout occurred while fetching token from " + tokenEndpoint))
+        .onErrorMap(
+            UnsupportedMediaTypeException.class,
+            throwable ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_ACCEPTABLE,
+                    "Failed while fetching token from "
+                        + tokenEndpoint
+                        + ": "
+                        + throwable.getMessage().replace("bodyType=jumper.model.", "")))
+        .doOnError(
+            throwable ->
+                log.error(
+                    "Error occurred class: {}, msg: {}",
+                    throwable.getClass().getSimpleName(),
+                    throwable.getMessage()))
+        .retryWhen(
+            Retry.max(2)
+                .filter(
+                    throwable ->
+                        throwable instanceof ConnectTimeoutException
+                            || throwable.getCause() instanceof SslHandshakeTimeoutException
+                            || throwable.getCause() instanceof PrematureCloseException
+                            || throwable.getCause() instanceof UnknownHostException)
+                .onRetryExhaustedThrow(
+                    (retryBackoffSpec, retrySignal) -> {
+                      throw new ResponseStatusException(
                           HttpStatus.UNAUTHORIZED,
-                          "Failed to retrieve token from "
+                          "Failed to connect to "
                               + tokenEndpoint
-                              + ", original status: "
-                              + response.statusCode()));
-                })
-            .onStatus(
-                HttpStatusCode::is5xxServerError,
-                response -> {
-                  logClientErrorResponse(response, tokenKey);
-                  return Mono.error(
-                      new ResponseStatusException(
-                          HttpStatus.UNAUTHORIZED,
-                          "Failed to retrieve token from "
-                              + tokenEndpoint
-                              + ", original status: "
-                              + response.statusCode()));
-                })
-            .bodyToMono(TokenInfo.class)
-            .doOnError(
-                throwable ->
-                    log.error(
-                        "XXX error occurred class: {}, msg: {}",
-                        throwable.getClass().getSimpleName(),
-                        throwable.getMessage()))
-            .retryWhen(
-                Retry.max(2)
-                    .filter(
-                        throwable ->
-                            throwable instanceof ConnectTimeoutException
-                                || throwable.getCause() instanceof SslHandshakeTimeoutException
-                                || throwable.getCause() instanceof PrematureCloseException)
-                    .onRetryExhaustedThrow(
-                        (retryBackoffSpec, retrySignal) -> {
-                          throw new ResponseStatusException(
-                              HttpStatus.UNAUTHORIZED,
-                              "Failed to connect to "
-                                  + tokenEndpoint
-                                  + ", cause: "
-                                  + retrySignal.failure().getMessage());
-                        }));
-
-    CompletableFuture<TokenInfo> tokenInfoCompletableFuture =
-        tokenInfoMono.toFuture().orTimeout(15, TimeUnit.SECONDS);
-
-    TokenInfo accessToken;
-
-    try {
-      accessToken = tokenInfoCompletableFuture.get();
-
-    } catch (ExecutionException e) {
-      String msg = e.getCause().getMessage();
-
-      if (e.getCause() instanceof ResponseStatusException) {
-        var statusCode =
-            HttpStatus.valueOf(((ResponseStatusException) e.getCause()).getStatusCode().value());
-        throw new ResponseStatusException(statusCode, msg);
-      }
-
-      if (e.getCause() instanceof TimeoutException) {
-        throw new ResponseStatusException(
-            HttpStatus.GATEWAY_TIMEOUT,
-            "Timeout occurred while fetching token from " + tokenEndpoint);
-      }
-
-      if (e.getCause().getCause() instanceof UnsupportedMediaTypeException) {
-        throw new ResponseStatusException(
-            HttpStatus.NOT_ACCEPTABLE,
-            "Failed while fetching token from "
-                + tokenEndpoint
-                + ": "
-                + e.getCause().getCause().getMessage().replace("bodyType=jumper.model.", ""));
-      }
-
-      throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg);
-
-    } catch (InterruptedException e) {
-      throw new ResponseStatusException(
-          HttpStatus.INTERNAL_SERVER_ERROR,
-          "Error occurred while fetching token from " + tokenEndpoint);
-    }
-
-    if (accessToken == null) {
-      throw new ResponseStatusException(
-          HttpStatus.NOT_ACCEPTABLE, "Empty response while fetching token from " + tokenEndpoint);
-    }
-
-    tokenCache.saveToken(tokenKey, accessToken);
-    return accessToken;
+                              + ", cause: "
+                              + retrySignal.failure().getMessage());
+                    }))
+        .doOnNext(tokenInfo -> tokenCache.saveToken(tokenKey, tokenInfo));
   }
 
   private void logClientErrorResponse(ClientResponse response, String tokenKey) {
