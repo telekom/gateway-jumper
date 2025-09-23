@@ -27,6 +27,7 @@ public class RoutingConfiguration {
   public RouteLocator proxyRoute(
       RouteLocatorBuilder builder,
       RequestFilter requestFilter,
+      UpstreamOAuthFilter upstreamOauthFilter,
       RemoveRequestHeaderFilter removeRequestHeader,
       ResponseFilter responseFilter,
       SpectreRequestFilter spectreRequestFilter,
@@ -68,6 +69,7 @@ public class RoutingConfiguration {
                                 .filter(
                                     requestFilter.apply(
                                         new RequestFilter.Config(Constants.PROXY_ROOT_PATH_PREFIX)))
+                                .filter(upstreamOauthFilter.apply(config -> {}))
                                 .filter(
                                     removeRequestHeader.apply(
                                         config -> config.setHeaders(headerRemovalList)))
@@ -84,6 +86,7 @@ public class RoutingConfiguration {
                                     requestFilter.apply(
                                         new RequestFilter.Config(
                                             Constants.LISTENER_ROOT_PATH_PREFIX)))
+                                .filter(upstreamOauthFilter.apply(config -> {}))
                                 .filter(
                                     removeRequestHeader.apply(
                                         config -> config.setHeaders(headerRemovalList)))
