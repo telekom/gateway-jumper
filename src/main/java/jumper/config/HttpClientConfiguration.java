@@ -57,12 +57,13 @@ public class HttpClientConfiguration {
   }
 
   @Bean("spectreServiceWebClient")
-  public WebClient createWebClientForSpectreService() {
-    return WebClient.create();
+  public WebClient createWebClientForSpectreService(WebClient.Builder webClientBuilder) {
+    return webClientBuilder.build();
   }
 
   @Bean("oauthTokenUtilWebClient")
-  public WebClient createWebClientForOauthTokenUtil() throws SSLException {
+  public WebClient createWebClientForOauthTokenUtil(WebClient.Builder webClientBuilder)
+      throws SSLException {
     SslContext sslContext = createSslContextWithCustomizedCiphers();
     HttpClient httpClient =
         HttpClient.create(getProvider())
@@ -70,7 +71,7 @@ public class HttpClientConfiguration {
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, oauthConnectTimeout);
     httpClient = configureProxy(httpClient);
 
-    return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+    return webClientBuilder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
   }
 
   private SslContext createSslContextWithCustomizedCiphers() throws SSLException {

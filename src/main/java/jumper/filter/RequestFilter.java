@@ -14,10 +14,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import jumper.Constants;
-import jumper.model.TokenInfo;
 import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
-import jumper.model.config.OauthCredentials;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.service.*;
@@ -86,33 +84,15 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           enrichTracingWithDataFrom(readOnlyRequest);
 
-          JumperConfig jumperConfig;
-          // failover logic if routing_config header present
-          if (readOnlyRequest.getHeaders().containsKey(Constants.HEADER_ROUTING_CONFIG)) {
-            // evaluate routingConfig for failover scenario
-            List<JumperConfig> jumperConfigList =
-                JumperConfig.parseJumperConfigListFrom(readOnlyRequest);
-            log.debug("failover case, routing_config: {}", jumperConfigList);
-            jumperConfig =
-                evaluateTargetZone(
-                    jumperConfigList,
-                    readOnlyRequest.getHeaders().getFirst(Constants.HEADER_X_FAILOVER_SKIP_ZONE));
-            jumperConfig.fillProcessingInfo(readOnlyRequest);
-            log.debug("failover case, enhanced jumper_config: {}", jumperConfig);
-
-          }
-
-          // no failover
-          else {
-            // Prepare and extract JumperConfigValues
-            jumperConfig = JumperConfig.parseAndFillJumperConfigFrom(readOnlyRequest);
-            log.debug("JumperConfig decoded: {}", jumperConfig);
-          }
+          JumperConfig jumperConfig = extractJumperConfig(readOnlyRequest);
 
           // calculate routing stuff and add it to exchange and JumperConfig
           URI finalApiUri =
               calculateFinalApiUri(readOnlyRequest, config.getRoutePathPrefix(), jumperConfig);
 
+          // ListenerRoute was called, jumperConfig is stored in exchange for later
+          // usage
+          // within Spectre
           if (config.getRoutePathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
             // ListenerRoute was called, jumperConfig is stored in exchange for later
             // usage
@@ -144,13 +124,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
               jumperInfoRequest.ifPresent(
                   i -> i.setInfoScenario(false, false, true, false, false, false));
 
-              TokenInfo meshTokenInfo = oauthTokenUtil.getInternalMeshAccessToken(jumperConfig);
-
-              // set gw and consumer tokens correctly
-              HeaderUtil.addHeader(
-                  requestMutationBuilder,
-                  Constants.HEADER_AUTHORIZATION,
-                  "Bearer " + meshTokenInfo.getAccessToken());
               HeaderUtil.addHeader(
                   requestMutationBuilder,
                   Constants.HEADER_CONSUMER_TOKEN,
@@ -160,6 +133,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   requestMutationBuilder,
                   jumperConfig.getConsumerOriginZone(),
                   jumperConfig.getConsumerToken());
+
+              setOAuthFilterNeeded(exchange, true);
 
             } else {
               // ALL NON MESH SCENARIOS
@@ -174,7 +149,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 addXtokenExchange(requestMutationBuilder, readOnlyRequest);
 
               } else {
-
                 Optional<BasicAuthCredentials> basicAuthCredentials =
                     jumperConfig.getBasicAuthCredentials();
                 if (basicAuthCredentials.isPresent()) {
@@ -196,33 +170,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                 } else {
 
                   if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
-                    // External Authorization with OAuth
-                    log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-                    log.debug(
-                        "Remote TokenEndpoint is set to: {}",
-                        jumperConfig.getExternalTokenEndpoint());
-                    jumperInfoRequest.ifPresent(
-                        i -> i.setInfoScenario(false, false, false, true, false, false));
 
-                    Optional<OauthCredentials> oauthCredentials =
-                        jumperConfig.getOauthCredentials();
-                    if (oauthCredentials.isPresent()
-                        && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
+                    setOAuthFilterNeeded(exchange, true);
 
-                      TokenInfo tokenInfo =
-                          oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
-                              jumperConfig.getExternalTokenEndpoint(), oauthCredentials.get());
-
-                      HeaderUtil.addHeader(
-                          requestMutationBuilder,
-                          Constants.HEADER_AUTHORIZATION,
-                          Constants.BEARER + " " + tokenInfo.getAccessToken());
-
-                    } else {
-                      getAccessTokenFromExternalIdpLegacy(requestMutationBuilder, jumperConfig);
-                    }
-
-                  } else if (Boolean.FALSE.equals(jumperConfig.getAccessTokenForwarding())) {
+                  } else {
                     // Enhanced Last Mile Security Token scenario
                     log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
                     jumperInfoRequest.ifPresent(
@@ -244,29 +195,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         Constants.HEADER_AUTHORIZATION,
                         Constants.BEARER + " " + enhancedLastmileSecurityToken);
                     log.debug("lastMileSecurityToken: " + enhancedLastmileSecurityToken);
-
-                  } else {
-                    // (Legacy) Last Mile Security Token scenario
-                    log.debug("----------------LAST MILE SECURITY (LEGACY)-------------");
-                    jumperInfoRequest.ifPresent(
-                        i -> i.setInfoScenario(true, false, false, false, false, false));
-
-                    String legacyLastmileSecurityToken =
-                        oauthTokenUtil.generateEnhancedLastMileGatewayToken(
-                            jumperConfig,
-                            String.valueOf(readOnlyRequest.getMethod()),
-                            localIssuerUrl + "/" + jumperConfig.getRealmName(),
-                            HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
-                            HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
-                            true);
-
-                    HeaderUtil.addHeader(
-                        requestMutationBuilder,
-                        Constants.HEADER_LASTMILE_SECURITY_TOKEN,
-                        Constants.BEARER + " " + legacyLastmileSecurityToken);
-                    log.debug("lastMileSecurityToken: " + legacyLastmileSecurityToken);
                   }
                 }
               }
@@ -314,6 +242,35 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           return chain.filter(finalExchange);
         },
         RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
+  }
+
+  private void setOAuthFilterNeeded(ServerWebExchange exchange, boolean isNeeded) {
+    exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_OAUTH_FILTER_NEEDED, isNeeded);
+  }
+
+  private JumperConfig extractJumperConfig(ServerHttpRequest readOnlyRequest) {
+    JumperConfig jumperConfig;
+    // failover logic if routing_config header present
+    if (readOnlyRequest.getHeaders().containsKey(Constants.HEADER_ROUTING_CONFIG)) {
+      // evaluate routingConfig for failover scenario
+      List<JumperConfig> jumperConfigList = JumperConfig.parseJumperConfigListFrom(readOnlyRequest);
+      log.debug("failover case, routing_config: {}", jumperConfigList);
+      jumperConfig =
+          evaluateTargetZone(
+              jumperConfigList,
+              readOnlyRequest.getHeaders().getFirst(Constants.HEADER_X_FAILOVER_SKIP_ZONE));
+      jumperConfig.fillProcessingInfo(readOnlyRequest);
+      log.debug("failover case, enhanced jumper_config: {}", jumperConfig);
+
+    }
+
+    // no failover
+    else {
+      // Prepare and extract JumperConfigValues
+      jumperConfig = JumperConfig.parseAndFillJumperConfigFrom(readOnlyRequest);
+      log.debug("JumperConfig decoded: {}", jumperConfig);
+    }
+    return jumperConfig;
   }
 
   private Optional<JumperInfoRequest> initializeJumperInfoRequest() {
@@ -378,111 +335,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     } catch (URISyntaxException e) {
       throw new RuntimeException("can not construct URL from " + request.getURI(), e);
     }
-  }
-
-  private void getAccessTokenFromExternalIdpLegacy(
-      ServerHttpRequest.Builder builder, JumperConfig jc) {
-
-    String consumer = jc.getConsumer();
-    String tokenEndpoint = jc.getExternalTokenEndpoint();
-
-    Optional<OauthCredentials> oauthCredentials = jc.getOauthCredentials();
-
-    String clientId = determineClientId(builder, jc, oauthCredentials);
-    String clientSecret = determineClientSecret(builder, jc, oauthCredentials);
-    String clientScope = determineClientScope(builder, jc, oauthCredentials);
-
-    log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
-    if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
-      TokenInfo tokenInfo =
-          oauthTokenUtil.getAccessTokenWithClientCredentials(
-              tokenEndpoint, clientId, clientSecret, clientScope);
-      HeaderUtil.addHeader(
-          builder,
-          Constants.HEADER_AUTHORIZATION,
-          Constants.BEARER + " " + tokenInfo.getAccessToken());
-
-    } else {
-      log.warn("not specified oauth config credentials for consumer: {}", consumer);
-      throw new ResponseStatusException(
-          HttpStatus.UNAUTHORIZED, "Missing oauth config credentials for consumer " + consumer);
-    }
-  }
-
-  private static String determineClientScope(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
-
-    String clientScope = "";
-    String xSpacegateScope = jc.getXSpacegateScope();
-
-    if (Objects.nonNull(xSpacegateScope)) {
-      log.debug("Using Scope from xSpacegateScope-Header");
-      clientScope = xSpacegateScope;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
-
-    } else if (oauthCredentials.isPresent()
-        && StringUtils.isNotBlank(oauthCredentials.get().getScopes())) {
-      clientScope = oauthCredentials.get().getScopes();
-
-    } else {
-      log.debug("Using default Provider scope");
-      if (StringUtils.isNotBlank(jc.getScopes())) {
-        clientScope = jc.getScopes();
-      }
-    }
-    return clientScope;
-  }
-
-  private static String determineClientSecret(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
-
-    String clientSecret = jc.getClientSecret();
-    String xSpacegateClientSecret = jc.getXSpacegateClientSecret();
-
-    if (Objects.nonNull(xSpacegateClientSecret)) {
-      log.debug("Using SubscriberClientSecret from xSpacegateClientSecret-Header");
-      clientSecret = xSpacegateClientSecret;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
-
-    } else if (oauthCredentials.isPresent()
-        && StringUtils.isNotBlank(oauthCredentials.get().getClientSecret())) {
-      log.debug("Using SubscriberClientSecret from JumperConfig");
-      clientSecret = oauthCredentials.get().getClientSecret();
-
-    } else {
-      log.debug("Using default ProviderClientSecret");
-    }
-    return clientSecret;
-  }
-
-  private static String determineClientId(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
-
-    String clientId = jc.getClientId();
-    String xSpacegateClientId = jc.getXSpacegateClientId();
-
-    if (StringUtils.isNotBlank(xSpacegateClientId)) {
-      log.debug("Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
-      clientId = xSpacegateClientId;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
-
-    } else if (oauthCredentials.isPresent()
-        && StringUtils.isNotBlank(oauthCredentials.get().getClientId())) {
-
-      log.debug(
-          "Using SubscriberClientId {} from JumperConfig", oauthCredentials.get().getClientId());
-      clientId = oauthCredentials.get().getClientId();
-
-    } else {
-      log.debug("Using default ProviderClientId {}", clientId);
-    }
-    return clientId;
   }
 
   private JumperConfig evaluateTargetZone(
