@@ -19,6 +19,7 @@ import jumper.model.config.OauthCredentials;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -41,7 +42,9 @@ import reactor.util.retry.Retry;
 @RequiredArgsConstructor
 public class OauthTokenUtil {
 
+  @Qualifier("oauthTokenUtilWebClient")
   private final WebClient oauthTokenUtilWebClient;
+
   private final TokenCacheService tokenCache;
   private final TokenGeneratorService tokenGenerator;
   private final BasicAuthUtil basicAuthUtil;
