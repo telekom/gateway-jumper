@@ -318,7 +318,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
   private Optional<JumperInfoRequest> initializeJumperInfoRequest() {
 
-    if (log.isInfoEnabled()) {
+    if (log.isDebugEnabled()) {
       JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
       return Optional.of(jumperInfoRequest);
     }
