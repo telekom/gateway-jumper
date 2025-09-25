@@ -59,12 +59,16 @@ public class SpectreResponseFilter
                           if (jumperConfig.isListenerMatched()) {
                             RouteListener listener =
                                 jumperConfig.getRouteListener().get(jumperConfig.getConsumer());
-                            spectreService.handleEvent(
-                                jumperConfig,
-                                exchange,
-                                exchange.getResponse(),
-                                listener,
-                                responseBody);
+                            // Fire-and-forget: publish event asynchronously without blocking the
+                            // response flow
+                            spectreService
+                                .handleEvent(
+                                    jumperConfig,
+                                    exchange,
+                                    exchange.getResponse(),
+                                    listener,
+                                    responseBody)
+                                .subscribe();
                           }
                         })),
         AUTO_EVENT_RESPONSE_FILTER_ORDER);
