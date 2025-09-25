@@ -8,7 +8,7 @@ server:
   netty:
     max-initial-line-length: 8192
     idle-timeout: 60000
-  max-http-request-header-size: 16384
+  max-http-request-header-size: 32768
   forward-headers-strategy: none
 
 management:
