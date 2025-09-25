@@ -48,7 +48,10 @@ public class SpectreRequestFilter
 
           RouteListener listener = jc.getRouteListener().get(jc.getConsumer());
 
-          spectreService.handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody);
+          // Fire-and-forget: publish event asynchronously without blocking the request flow
+          spectreService
+              .handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody)
+              .subscribe();
           return chain.filter(exchange);
         },
         AUTO_EVENT_REQUEST_FILTER_ORDER);

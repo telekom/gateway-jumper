@@ -59,13 +59,13 @@ public class SpectreService {
 
   @Autowired private SpectreConfiguration spectreConfiguration;
 
-  public void handleEvent(
+  public Mono<Void> handleEvent(
       JumperConfig jc,
       ServerWebExchange exchange,
       Object http,
       RouteListener listener,
       String payload) {
-    publishEvent(createEvent(jc, exchange, http, listener, payload), jc);
+    return publishEvent(createEvent(jc, exchange, http, listener, payload), jc);
   }
 
   private Spectre createEvent(
@@ -131,17 +131,21 @@ public class SpectreService {
     return event;
   }
 
-  private void publishEvent(Spectre event, JumperConfig jc) {
+  private Mono<Void> publishEvent(Spectre event, JumperConfig jc) {
 
     // determine environment for local issuer and routing path on qa
     String envName = determineEnvironment(jc);
 
-    publishEventMono(
+    return publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
             oauthTokenUtil.generateGatewayTokenForPublisher(
                 localIssuerUrl + "/" + envName, envName),
             event)
-        .subscribe();
+        .onErrorResume(
+            throwable -> {
+              log.error("Error publishing Spectre event", throwable);
+              return Mono.empty(); // Don't fail the main request flow
+            });
   }
 
   private String determineEnvironment(JumperConfig jc) {
