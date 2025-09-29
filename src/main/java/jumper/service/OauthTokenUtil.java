@@ -18,6 +18,7 @@ import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
+import jumper.util.BasicAuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -49,7 +50,6 @@ public class OauthTokenUtil {
 
   private final TokenCacheService tokenCache;
   private final TokenGeneratorService tokenGenerator;
-  private final BasicAuthUtil basicAuthUtil;
 
   private static final JwtParser jwtParser =
       Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build();
@@ -243,7 +243,7 @@ public class OauthTokenUtil {
                       oauthCredentials.getClientSecret());
                 } else {
                   basicAuth =
-                      basicAuthUtil.encodeBasicAuth(
+                      BasicAuthUtil.encodeBasicAuth(
                           oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
                 }
               }

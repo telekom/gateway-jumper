@@ -17,7 +17,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import jumper.model.TokenInfo;
-import jumper.service.ObjectMapperUtil;
+import jumper.util.ObjectMapperUtil;
 import jumper.util.AccessToken;
 import lombok.extern.slf4j.Slf4j;
 import org.mockserver.client.MockServerClient;
