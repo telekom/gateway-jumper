@@ -5,7 +5,7 @@
 package jumper.model.response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import jumper.service.ObjectMapperUtil;
+import jumper.util.ObjectMapperUtil;
 import lombok.Getter;
 import lombok.Setter;
 

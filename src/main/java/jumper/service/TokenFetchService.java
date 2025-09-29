@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+// SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,18 +6,17 @@ package jumper.service;
 
 import static jumper.Constants.TOKEN_REQUEST_METHOD_POST;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.SignatureException;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.TimeoutException;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
+import jumper.util.BasicAuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -39,137 +38,16 @@ import reactor.core.scheduler.Schedulers;
 import reactor.netty.http.client.PrematureCloseException;
 import reactor.util.retry.Retry;
 
-@Slf4j
 @Service
+@Slf4j
 @RequiredArgsConstructor
-public class OauthTokenUtil {
+public class TokenFetchService {
 
   @Qualifier("oauthTokenUtilWebClient")
   private final WebClient oauthTokenUtilWebClient;
 
   private final TokenCacheService tokenCache;
-  private final TokenGeneratorService tokenGenerator;
-  private final BasicAuthUtil basicAuthUtil;
-
-  private static final JwtParser jwtParser =
-      Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build();
-
-  public static String getTokenWithoutSignature(String consumerToken) {
-
-    if (Objects.isNull(consumerToken)) {
-      throw new IllegalStateException("Consumer token not provided, but expected");
-    }
-
-    String[] token = consumerToken.split(" ");
-    String[] splitToken = token[1].split("\\.");
-
-    return splitToken[0] + "." + splitToken[1] + ".";
-  }
-
-  private String getSignature(String consumerToken) {
-
-    if (Objects.isNull(consumerToken)) {
-      throw new IllegalStateException("Consumer token not provided, but expected");
-    }
-
-    String[] token = consumerToken.split(" ");
-    String[] splitToken = token[1].split("\\.");
-
-    return splitToken[2];
-  }
-
-  public static String getClaimFromToken(String consumerToken, String claimName) {
-    String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
-    return getAllClaimsFromToken(consumerTokenWithoutSignature)
-        .getBody()
-        .get(claimName, String.class);
-  }
-
-  public static Jwt<Header, Claims> getAllClaimsFromToken(String consumerToken) {
-
-    try {
-      return jwtParser.parseClaimsJwt(consumerToken);
-    } catch (SignatureException e) {
-      log.error("SignatureException", e);
-    } catch (ExpiredJwtException e) {
-      log.error("ExpiredJwtException", e);
-    } catch (UnsupportedJwtException e) {
-      log.error("UnsupportedJwtException", e);
-    } catch (MalformedJwtException e) {
-      log.error("MalformedJwtException", e);
-    } catch (IllegalArgumentException e) {
-      log.error("IllegalArgumentException", e);
-    }
-    throw new IllegalStateException("Was not able to parse consumer token");
-  }
-
-  public String generateEnhancedLastMileGatewayToken(
-      JumperConfig jc,
-      String operation,
-      String issuer,
-      String publisherId,
-      String subscriberId,
-      boolean legacy) {
-
-    String consumerTokenWithoutSignature = getTokenWithoutSignature(jc.getConsumerToken());
-
-    Jwt<Header, Claims> consumerTokenClaims = getAllClaimsFromToken(consumerTokenWithoutSignature);
-
-    Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
-    Date expiration = consumerTokenClaims.getBody().getExpiration();
-    String sub = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    String aud = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
-
-    HashMap<String, String> claims = new HashMap<>();
-    claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
-    claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
-    claims.put(Constants.TOKEN_CLAIM_SUB, sub);
-    claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
-    claims.put(Constants.TOKEN_CLAIM_OPERATION, operation);
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer());
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone());
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
-
-    if (legacy) {
-      String consumerTokenSignature = getSignature(jc.getConsumerToken());
-      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
-
-    } else {
-      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
-
-      if (Objects.nonNull(jc.getSecurityScopes())) {
-        claims.put(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
-      }
-
-      if (Objects.nonNull(publisherId)) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
-      }
-
-      if (Objects.nonNull(subscriberId)) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
-        claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
-      }
-    }
-
-    if (StringUtils.isNotBlank(aud)) {
-      claims.put(Constants.TOKEN_CLAIM_AUD, aud);
-    }
-
-    return tokenGenerator.fromRealm(claims, issuer, expiration, issuedAt);
-  }
-
-  public String generateGatewayTokenForPublisher(String issuer, String realm) {
-    HashMap<String, String> claims = new HashMap<>();
-    claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
-    claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, "gateway");
-
-    return tokenGenerator.fromRealm(
-        claims,
-        issuer,
-        new Date(System.currentTimeMillis() + 300 * 1000),
-        new Date(System.currentTimeMillis()));
-  }
+  private final TokenGeneratorService tokenGeneratorService;
 
   public Mono<TokenInfo> getInternalMeshAccessToken(JumperConfig jc) {
     return getAccessTokenWithClientCredentials(
@@ -243,7 +121,7 @@ public class OauthTokenUtil {
                       oauthCredentials.getClientSecret());
                 } else {
                   basicAuth =
-                      basicAuthUtil.encodeBasicAuth(
+                      BasicAuthUtil.encodeBasicAuth(
                           oauthCredentials.getClientId(), oauthCredentials.getClientSecret());
                 }
               }
@@ -290,7 +168,7 @@ public class OauthTokenUtil {
     claims.put(Constants.TOKEN_CLAIM_AUD, tokenEndpoint);
     claims.put(Constants.TOKEN_CLAIM_JTI, UUID.randomUUID().toString());
 
-    return tokenGenerator.fromKey(
+    return tokenGeneratorService.createJwtTokenFromKey(
         claims,
         oauthCredentials.getClientId(),
         new Date(System.currentTimeMillis() + 60 * 1000),

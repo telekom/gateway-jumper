@@ -15,7 +15,7 @@ import io.jsonwebtoken.Jwt;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
-import jumper.service.OauthTokenUtil;
+import jumper.util.OauthTokenUtil;
 import jumper.util.TokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

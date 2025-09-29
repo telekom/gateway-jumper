@@ -27,7 +27,7 @@ import jumper.Constants;
 import jumper.config.Config;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreKind;
-import jumper.service.ObjectMapperUtil;
+import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mockserver.integration.ClientAndServer;

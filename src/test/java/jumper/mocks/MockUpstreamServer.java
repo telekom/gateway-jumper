@@ -16,7 +16,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import java.util.concurrent.TimeUnit;
-import jumper.service.OauthTokenUtil;
+import jumper.util.OauthTokenUtil;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;

@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package jumper.service;
+package jumper.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;

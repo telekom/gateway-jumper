@@ -19,6 +19,8 @@ import jumper.model.config.JumperConfig;
 import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.service.*;
+import jumper.util.BasicAuthUtil;
+import jumper.util.HeaderUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,8 +41,7 @@ import org.springframework.web.server.ServerWebExchange;
 public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Config> {
 
   private final Tracer tracer;
-  private final OauthTokenUtil oauthTokenUtil;
-  private final BasicAuthUtil basicAuthUtil;
+  private final TokenGeneratorService tokenGeneratorService;
   private final JumperConfigService jumperConfigService;
 
   @Value("${jumper.issuer.url}")
@@ -52,21 +53,16 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   @Value("#{'${jumper.zone.internetFacingZones}'.toLowerCase().split(',')}")
   private List<String> internetFacingZones;
 
-  @Value("${spring.application.name}")
-  private String applicationName;
-
   public static final int REQUEST_FILTER_ORDER =
       RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1;
 
   public RequestFilter(
       Tracer tracer,
-      OauthTokenUtil oauthTokenUtil,
-      BasicAuthUtil basicAuthUtil,
+      TokenGeneratorService tokenGeneratorService,
       JumperConfigService jumperConfigService) {
     super(Config.class);
     this.tracer = tracer;
-    this.oauthTokenUtil = oauthTokenUtil;
-    this.basicAuthUtil = basicAuthUtil;
+    this.tokenGeneratorService = tokenGeneratorService;
     this.jumperConfigService = jumperConfigService;
   }
 
@@ -150,7 +146,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                       i -> i.setInfoScenario(false, false, false, false, true, false));
 
                   String encodedBasicAuth =
-                      basicAuthUtil.encodeBasicAuth(
+                      BasicAuthUtil.encodeBasicAuth(
                           basicAuthCredentials.get().getUsername(),
                           basicAuthCredentials.get().getPassword());
 
@@ -172,7 +168,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        oauthTokenUtil.generateEnhancedLastMileGatewayToken(
+                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),

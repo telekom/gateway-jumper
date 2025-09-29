@@ -7,7 +7,6 @@ package jumper.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
-import java.util.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -19,6 +18,7 @@ import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
+import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +42,7 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class SpectreService {
 
-  private final OauthTokenUtil oauthTokenUtil;
+  private final TokenGeneratorService tokenGeneratorService;
   private final Tracer tracer;
 
   @Qualifier("spectreServiceWebClient")
@@ -138,7 +138,7 @@ public class SpectreService {
 
     return publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
-            oauthTokenUtil.generateGatewayTokenForPublisher(
+            tokenGeneratorService.generateGatewayTokenForPublisher(
                 localIssuerUrl + "/" + envName, envName),
             event)
         .onErrorResume(

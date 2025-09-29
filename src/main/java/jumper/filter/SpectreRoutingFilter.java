@@ -7,7 +7,8 @@ package jumper.filter;
 import java.net.URI;
 import java.util.Objects;
 import jumper.Constants;
-import jumper.service.OauthTokenUtil;
+import jumper.service.TokenGeneratorService;
+import jumper.util.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
 
-  private final OauthTokenUtil oauthTokenUtil;
+  private final TokenGeneratorService tokenGeneratorService;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -44,7 +45,7 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
       // minimalistic token with correct issuer
       String spectreToken =
           "Bearer "
-              + oauthTokenUtil.generateGatewayTokenForPublisher(
+              + tokenGeneratorService.generateGatewayTokenForPublisher(
                   localIssuerUrl + "/" + envName, envName);
 
       // routing path is no longer fixed, so we set it here
