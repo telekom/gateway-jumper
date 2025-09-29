@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.PropertyMapper;
@@ -29,6 +30,7 @@ import reactor.netty.transport.ProxyProvider;
 
 @Configuration
 @RequiredArgsConstructor
+@Slf4j
 public class HttpClientConfiguration {
 
   @Value("${CUSTOM_CIPHERS:}")
@@ -55,12 +57,13 @@ public class HttpClientConfiguration {
   }
 
   @Bean("spectreServiceWebClient")
-  public WebClient createWebClientForSpectreService() {
-    return WebClient.create();
+  public WebClient createWebClientForSpectreService(WebClient.Builder webClientBuilder) {
+    return webClientBuilder.build();
   }
 
   @Bean("oauthTokenUtilWebClient")
-  public WebClient createWebClientForOauthTokenUtil() throws SSLException {
+  public WebClient createWebClientForOauthTokenUtil(WebClient.Builder webClientBuilder)
+      throws SSLException {
     SslContext sslContext = createSslContextWithCustomizedCiphers();
     HttpClient httpClient =
         HttpClient.create(getProvider())
@@ -68,7 +71,7 @@ public class HttpClientConfiguration {
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, oauthConnectTimeout);
     httpClient = configureProxy(httpClient);
 
-    return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+    return webClientBuilder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
   }
 
   private SslContext createSslContextWithCustomizedCiphers() throws SSLException {
@@ -118,6 +121,7 @@ public class HttpClientConfiguration {
 
     // configure proxy only if proxy host is set.
     if (StringUtils.isNotBlank((properties.getProxy().getHost()))) {
+      log.info("Configuring Proxy: {}", properties.getProxy());
       HttpClientProperties.Proxy proxyProperties = properties.getProxy();
       httpClient =
           httpClient.proxy(proxySpec -> configureProxyProvider(proxyProperties, proxySpec));

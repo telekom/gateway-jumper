@@ -9,23 +9,24 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
+import jakarta.validation.constraints.NotNull;
 import java.util.*;
-import javax.validation.constraints.NotNull;
 import jumper.Constants;
-import jumper.service.HeaderUtil;
 import jumper.service.OauthTokenUtil;
+import jumper.util.ObjectMapperUtil;
+import jumper.util.HeaderUtil;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Slf4j
 public class JumperConfig {
 
   private HashMap<String, OauthCredentials> oauth;
@@ -71,33 +72,31 @@ public class JumperConfig {
   Boolean secondaryFailover = false;
 
   @JsonIgnore
-  public static String toBase64(Object o) {
+  public static String toJsonBase64(Object o) {
     String jsonConfigBase64 = null;
     try {
-      String decodedJson = new ObjectMapper().writeValueAsString(o);
+      String decodedJson = ObjectMapperUtil.getInstance().writeValueAsString(o);
       jsonConfigBase64 = Base64.getEncoder().encodeToString(decodedJson.getBytes());
     } catch (JsonProcessingException e) {
-      e.printStackTrace();
+      log.error("can not base64encode object: " + o);
     }
 
     return jsonConfigBase64;
   }
 
   @JsonIgnore
-  private static <T> T fromBase64(String jsonConfigBase64, TypeReference<T> typeReference) {
+  private static <T> T fromJsonBase64(String jsonConfigBase64, TypeReference<T> typeReference) {
     String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
     try {
-      return new ObjectMapper()
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-          .readValue(decodedJson, typeReference);
+      return ObjectMapperUtil.getInstance().readValue(decodedJson, typeReference);
     } catch (JsonProcessingException e) {
       throw new RuntimeException("can not base64decode header: " + jsonConfigBase64);
     }
   }
 
-  private static JumperConfig fromBase64(String jsonConfigBase64) {
+  private static JumperConfig fromJsonBase64(String jsonConfigBase64) {
     if (StringUtils.isNotBlank(jsonConfigBase64)) {
-      return JumperConfig.fromBase64(jsonConfigBase64, new TypeReference<>() {});
+      return JumperConfig.fromJsonBase64(jsonConfigBase64, new TypeReference<>() {});
     } else {
       return new JumperConfig();
     }
@@ -181,7 +180,7 @@ public class JumperConfig {
 
     // Spectre stuff
     JumperConfig jc =
-        JumperConfig.fromBase64(
+        JumperConfig.fromJsonBase64(
             HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
     this.setRouteListener(jc.getRouteListener());
     this.setGatewayClient(jc.getGatewayClient());
@@ -200,7 +199,7 @@ public class JumperConfig {
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ROUTING_CONFIG);
 
     if (StringUtils.isNotBlank(routingConfigBase64)) {
-      return JumperConfig.fromBase64(routingConfigBase64, new TypeReference<>() {});
+      return JumperConfig.fromJsonBase64(routingConfigBase64, new TypeReference<>() {});
     }
 
     throw new RuntimeException("can not base64decode header: " + routingConfigBase64);
@@ -210,7 +209,7 @@ public class JumperConfig {
   public static JumperConfig parseAndFillJumperConfigFrom(ServerHttpRequest request) {
 
     JumperConfig jc =
-        JumperConfig.fromBase64(
+        JumperConfig.fromJsonBase64(
             HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
 
     jc.fillWithLegacyHeaders(
@@ -222,7 +221,7 @@ public class JumperConfig {
   @JsonIgnore
   public static JumperConfig parseJumperConfigFrom(ServerWebExchange exchange) {
 
-    return JumperConfig.fromBase64(exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG));
+    return JumperConfig.fromJsonBase64(exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG));
   }
 
   public boolean isListenerMatched() {

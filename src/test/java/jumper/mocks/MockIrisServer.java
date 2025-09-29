@@ -12,11 +12,12 @@ import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import jumper.model.TokenInfo;
+import jumper.util.ObjectMapperUtil;
 import jumper.util.AccessToken;
 import lombok.extern.slf4j.Slf4j;
 import org.mockserver.client.MockServerClient;
@@ -25,7 +26,6 @@ import org.mockserver.model.Header;
 import org.mockserver.model.HttpError;
 import org.mockserver.model.RegexBody;
 import org.springframework.http.HttpHeaders;
-import org.springframework.util.Base64Utils;
 
 @Slf4j
 public class MockIrisServer {
@@ -207,8 +207,10 @@ public class MockIrisServer {
                 .withHeader(
                     "Authorization",
                     "Basic "
-                        + Base64Utils.encodeToString(
-                            (addIdSuffix("external_configured", id) + ":" + "secret").getBytes())),
+                        + Base64.getEncoder()
+                            .encodeToString(
+                                (addIdSuffix("external_configured", id) + ":" + "secret")
+                                    .getBytes())),
             exactly(1))
         .respond(
             response()
@@ -232,8 +234,10 @@ public class MockIrisServer {
                 .withHeader(
                     "Authorization",
                     "Basic "
-                        + Base64Utils.encodeToString(
-                            (addIdSuffix("external_configured", id) + ":" + "secret").getBytes()))
+                        + Base64.getEncoder()
+                            .encodeToString(
+                                (addIdSuffix("external_configured", id) + ":" + "secret")
+                                    .getBytes()))
                 .withBody("username=username&password=geheim&grant_type=password"),
             exactly(1))
         .respond(
@@ -401,8 +405,7 @@ public class MockIrisServer {
     headersList.add(new Header(HttpHeaders.HOST, irisLocalHost + ":" + irisLocalPort));
     headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
     headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, "86"));
-    headersList.add(
-        new Header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded;charset=UTF-8"));
+    headersList.add(new Header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded"));
     return headersList;
   }
 
@@ -417,10 +420,9 @@ public class MockIrisServer {
     tokenInfo.setSessionState("69fc4e8-77e9-45f9-93e4-646a34f802cc");
     tokenInfo.setScope("profile email");
 
-    ObjectMapper mapper = new ObjectMapper();
     String tokenInfoJson = null;
     try {
-      tokenInfoJson = mapper.writeValueAsString(tokenInfo);
+      tokenInfoJson = ObjectMapperUtil.getInstance().writeValueAsString(tokenInfo);
     } catch (JsonProcessingException e) {
       log.error(e.getMessage());
     }

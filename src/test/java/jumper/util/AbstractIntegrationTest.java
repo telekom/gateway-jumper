@@ -27,8 +27,8 @@ public class AbstractIntegrationTest {
 
   @DynamicPropertySource
   static void dynamicProperties(DynamicPropertyRegistry registry) {
-    registry.add("spring.redis.host", REDIS_CONTAINER::getHost);
-    registry.add("spring.redis.port", () -> REDIS_CONTAINER.getMappedPort(REDIS_PORT));
+    registry.add("spring.data.redis.host", REDIS_CONTAINER::getHost);
+    registry.add("spring.data.redis.port", () -> REDIS_CONTAINER.getMappedPort(REDIS_PORT));
     registry.add("jumper.zone.health.enabled", () -> true);
   }
 }

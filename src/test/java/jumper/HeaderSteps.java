@@ -36,6 +36,13 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithXtokenExchange(baseSteps));
   }
 
+  @Given("A header {word} header is set with value {word}")
+  public void tardisTraceIdSet(String headerName, String headerValue) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> httpHeaders.add(headerName, headerValue)));
+  }
+
   @Given("RealRoute headers are set")
   public void realRouteHeadersSet() {
     baseSteps.setHttpHeadersOfRequest(
@@ -137,9 +144,7 @@ public class HeaderSteps {
   public void setAuthorizationWithAud() {
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> {
-              httpHeaders.setBearerAuth(getConsumerAccessTokenWithAud());
-            }));
+            httpHeaders -> httpHeaders.setBearerAuth(getConsumerAccessTokenWithAud())));
   }
 
   @And("technical headers added")
@@ -161,8 +166,7 @@ public class HeaderSteps {
   public void setSkipZoneHeader() {
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> {
-              httpHeaders.set(Constants.HEADER_X_FAILOVER_SKIP_ZONE, REMOTE_ZONE_NAME);
-            }));
+            httpHeaders ->
+                httpHeaders.set(Constants.HEADER_X_FAILOVER_SKIP_ZONE, REMOTE_ZONE_NAME)));
   }
 }

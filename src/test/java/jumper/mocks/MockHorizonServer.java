@@ -27,6 +27,7 @@ import jumper.Constants;
 import jumper.config.Config;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreKind;
+import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.mockserver.integration.ClientAndServer;
@@ -75,7 +76,8 @@ public class MockHorizonServer {
     String seResponseString = recordedRequests[1].getBodyAsString();
 
     ObjectMapper om =
-        new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        ObjectMapperUtil.getInstance()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     try {
       assertSpectreEvent(om.readValue(seRequestString, Spectre.class), method, true, stargateUrl);
@@ -93,13 +95,21 @@ public class MockHorizonServer {
     String seRequestString = recordedRequests[0].getBodyAsString();
     String seResponseString = recordedRequests[1].getBodyAsString();
 
-    ObjectMapper om =
-        new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
     try {
-      Object expected = om.readValue(getTestJson().toString(), LinkedHashMap.class);
-      assertEquals(expected, om.readValue(seRequestString, Spectre.class).getData().getPayload());
-      assertEquals(expected, om.readValue(seResponseString, Spectre.class).getData().getPayload());
+      Object expected =
+          ObjectMapperUtil.getInstance().readValue(getTestJson().toString(), LinkedHashMap.class);
+      assertEquals(
+          expected,
+          ObjectMapperUtil.getInstance()
+              .readValue(seRequestString, Spectre.class)
+              .getData()
+              .getPayload());
+      assertEquals(
+          expected,
+          ObjectMapperUtil.getInstance()
+              .readValue(seResponseString, Spectre.class)
+              .getData()
+              .getPayload());
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
@@ -144,12 +154,10 @@ public class MockHorizonServer {
 
     String seEventString = recordedRequests[0].getBodyAsString();
 
-    ObjectMapper om =
-        new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
     try {
       assertEquals(
-          "de.telekom.ei.listener.spectre", om.readValue(seEventString, Spectre.class).getType());
+          "de.telekom.ei.listener.spectre",
+          ObjectMapperUtil.getInstance().readValue(seEventString, Spectre.class).getType());
     } catch (JsonProcessingException e) {
       throw new RuntimeException(e);
     }
