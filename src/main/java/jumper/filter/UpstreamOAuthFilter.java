@@ -10,9 +10,9 @@ import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
-import jumper.service.HeaderUtil;
 import jumper.service.JumperConfigService;
-import jumper.service.OauthTokenUtil;
+import jumper.service.TokenFetchService;
+import jumper.util.HeaderUtil;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -33,13 +33,13 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   public static final int UPSTREAM_OAUTH_FILTER_ORDER = RequestFilter.REQUEST_FILTER_ORDER + 1;
 
-  private final OauthTokenUtil oauthTokenUtil;
+  private final TokenFetchService tokenFetchService;
   private final JumperConfigService jumperConfigService;
 
   public UpstreamOAuthFilter(
-      OauthTokenUtil oauthTokenUtil, JumperConfigService jumperConfigService) {
+      TokenFetchService tokenFetchService, JumperConfigService jumperConfigService) {
     super(Config.class);
-    this.oauthTokenUtil = oauthTokenUtil;
+    this.tokenFetchService = tokenFetchService;
     this.jumperConfigService = jumperConfigService;
   }
 
@@ -101,7 +101,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
       // Gateway-to-Gateway mesh token: JWT generated internally for inter-gateway communication
       log.debug("----------------GATEWAY MESH-------------");
-      return oauthTokenUtil.getInternalMeshAccessToken(jumperConfig);
+      return tokenFetchService.getInternalMeshAccessToken(jumperConfig);
 
     } else if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
       // External OAuth token: Fetch from external identity provider using client credentials
@@ -116,7 +116,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
         // Use OAuth credentials with explicit grant type (modern approach)
         log.debug("fetching token with OauthCredentials");
         tokenMono =
-            oauthTokenUtil.getAccessTokenWithOauthCredentialsObject(
+            tokenFetchService.getAccessTokenWithOauthCredentialsObject(
                 jumperConfig.getExternalTokenEndpoint(), oauthCredentials.get());
       } else {
         // Fallback to legacy header-based credentials extraction
@@ -149,7 +149,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
     log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
     if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
-      return oauthTokenUtil.getAccessTokenWithClientCredentials(
+      return tokenFetchService.getAccessTokenWithClientCredentials(
           tokenEndpoint, clientId, clientSecret, clientScope);
     } else {
       log.warn("not specified oauth config credentials for consumer: {}", consumer);

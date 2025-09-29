@@ -2,18 +2,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package jumper.service;
+package jumper.util;
 
 import java.util.Base64;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 
-@Service
-@RequiredArgsConstructor
 public class BasicAuthUtil {
 
-  public String encodeBasicAuth(String username, String password) {
+  public static String encodeBasicAuth(String username, String password) {
     Assert.notNull(username, "Username must not be null");
     Assert.doesNotContain(username, ":", "Username must not contain a colon");
     Assert.notNull(password, "Password must not be null");

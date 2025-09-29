@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.Objects;
 import jumper.Constants;
 import jumper.model.config.Spectre;
-import jumper.service.ObjectMapperUtil;
+import jumper.util.ObjectMapperUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
