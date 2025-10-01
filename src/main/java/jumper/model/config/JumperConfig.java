@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import jakarta.validation.constraints.NotNull;
 import java.util.*;
@@ -155,7 +154,7 @@ public class JumperConfig {
     // processing
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<Header, Claims> consumerTokenClaims =
+    Jwt<?, Claims> consumerTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(
             OauthTokenUtil.getTokenWithoutSignature(consumerToken));
     setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
@@ -169,7 +168,7 @@ public class JumperConfig {
   public void fillProcessingInfo(ServerHttpRequest request) {
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<Header, Claims> consumerTokenClaims =
+    Jwt<?, Claims> consumerTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(
             OauthTokenUtil.getTokenWithoutSignature(consumerToken));
     setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));

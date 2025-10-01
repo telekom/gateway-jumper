@@ -96,7 +96,7 @@ public class TokenGeneratorService {
     String consumerTokenWithoutSignature =
         OauthTokenUtil.getTokenWithoutSignature(jc.getConsumerToken());
 
-    Jwt<Header, Claims> consumerTokenClaims =
+    Jwt<?, Claims> consumerTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(consumerTokenWithoutSignature);
 
     Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
