@@ -28,6 +28,7 @@ import org.mockserver.model.RegexBody;
 import org.springframework.http.HttpHeaders;
 
 @Slf4j
+@SuppressWarnings("resource") // MockServerClient is managed by test framework
 public class MockIrisServer {
 
   private ClientAndServer mockServer;

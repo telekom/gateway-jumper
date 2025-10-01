@@ -65,9 +65,9 @@ public class GatewayForwardRepoApplicationTest {
 
     assertEquals(HttpStatus.OK, result.getStatusCode(), "Body\n%s".formatted(result.getBody()));
     assertNotNull(result.getBody());
-    assertTrue(
-        result.getBody().contains("a nice response"),
-        "Contained instead\n%s".formatted(result.getBody()));
+    var body = result.getBody();
+    assertNotNull(body);
+    assertTrue(body.contains("a nice response"), "Contained instead\n%s".formatted(body));
   }
 
   @Test
@@ -86,7 +86,8 @@ public class GatewayForwardRepoApplicationTest {
 
     assertEquals(HttpStatus.OK, result.getStatusCode(), "Body\n%s".formatted(result.getBody()));
     assertNotNull(result.getBody());
-    assertTrue(
-        result.getBody().contains("a nice response"), "Body\n%s".formatted(result.getBody()));
+    var body = result.getBody();
+    assertNotNull(body);
+    assertTrue(body.contains("a nice response"), "Body\n%s".formatted(body));
   }
 }

@@ -11,6 +11,7 @@ import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
+@SuppressWarnings("resource") // Container is managed by Testcontainers framework
 public class AbstractIntegrationTest {
 
   private static final GenericContainer<?> REDIS_CONTAINER;
