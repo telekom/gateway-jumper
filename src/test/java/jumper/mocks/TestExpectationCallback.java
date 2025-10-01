@@ -24,7 +24,7 @@ public class TestExpectationCallback implements ExpectationResponseCallback {
           .withBody(httpRequest.getBodyAsString())
           .withStatusCode(Integer.parseInt(httpRequest.getFirstQueryStringParameter("statusCode")));
     } else if (httpRequest.getPath().getValue().endsWith("/v1/events")
-        && List.of("HEAD", "POST").contains(httpRequest.getMethod())) {
+        && List.of("HEAD", "POST").contains(httpRequest.getMethod().getValue())) {
       return response()
           .withStatusCode(Integer.parseInt(httpRequest.getFirstQueryStringParameter("statusCode")));
     } else {
