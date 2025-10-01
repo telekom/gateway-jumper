@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 public class Spectre {
   private String specversion;
   private String type; // listener.ei.telekom.de.listener
-  private String source = "RouteListener";
+  private String source;
   private UUID id;
   private String datacontenttype;
   private SpectreData data;
