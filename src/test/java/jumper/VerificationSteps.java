@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import java.util.Base64;
 import java.util.regex.Pattern;
@@ -193,7 +192,7 @@ public class VerificationSteps {
   }
 
   private void checkOneToken(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
@@ -212,7 +211,7 @@ public class VerificationSteps {
   }
 
   private void checkOneTokenSimple(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
@@ -229,7 +228,7 @@ public class VerificationSteps {
   }
 
   private void checkPubSub(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
@@ -238,21 +237,21 @@ public class VerificationSteps {
   }
 
   private void checkScopes(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals(SCOPES, claimsFromToken.getBody().get("scope", String.class));
   }
 
   private void checkAud(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals("testAudience", claimsFromToken.getBody().get("aud", String.class));
   }
 
   private void checkMeshToken(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
@@ -268,7 +267,7 @@ public class VerificationSteps {
   }
 
   private void checkExternalConfigured(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals(
@@ -277,7 +276,7 @@ public class VerificationSteps {
   }
 
   private void checkExternalHeader(String token) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals(CONSUMER_EXTERNAL_HEADER, claimsFromToken.getBody().get("clientId", String.class));

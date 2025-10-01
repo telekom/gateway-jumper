@@ -51,7 +51,7 @@ public final class OauthTokenUtil {
         .get(claimName, String.class);
   }
 
-  public static Jwt<Header, Claims> getAllClaimsFromToken(String consumerToken) {
+  public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
 
     try {
       return jwtParser.parseClaimsJwt(consumerToken);
