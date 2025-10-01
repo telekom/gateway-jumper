@@ -34,13 +34,13 @@ management:
   zipkin:
     tracing:
       endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
-
-cache-manager:
-  caffeine-caches:
-    - cache-names: [ cache-key-info ]
-      spec: maximumSize=1, expireAfterWrite=1m
-    - cache-names: [ cache-token-info ]
-      spec: maximumSize=${jumper.tokencache.maxSize:10000}, expireAfterWrite=${jumper.tokencache.expireAfterWriteMinutes:30}m
+  cache:
+    key-info:
+      max-size: 1
+      expire-after-write-minutes: 1
+    token-info:
+      max-size: ${jumper.tokencache.maxSize:10000}
+      expire-after-write-minutes: ${jumper.tokencache.expireAfterWriteMinutes:30}
 
 spring:
   cache:

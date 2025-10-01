@@ -6,8 +6,9 @@ package jumper.config;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
-import lombok.RequiredArgsConstructor;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCacheManager;
@@ -16,25 +17,42 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableCaching
-@RequiredArgsConstructor
 public class CachingConfig {
 
-  private final CacheConfigProperties cacheConfigProperties;
+  @Bean
+  @Qualifier("cacheKeyInfo")
+  public Cache<Object, Object> cacheKeyInfo(
+      @Value("${jumper.cache.key-info.max-size:1}") int maxSize,
+      @Value("${jumper.cache.key-info.expire-after-write-minutes:1}") int expireAfterWriteMinutes) {
+    return Caffeine.newBuilder()
+        .maximumSize(maxSize)
+        .expireAfterWrite(expireAfterWriteMinutes, TimeUnit.MINUTES)
+        .recordStats()
+        .build();
+  }
+
+  @Bean
+  @Qualifier("cacheTokenInfo")
+  public Cache<Object, Object> cacheTokenInfo(
+      @Value("${jumper.cache.token-info.max-size:10000}") int maxSize,
+      @Value("${jumper.cache.token-info.expire-after-write-minutes:30}")
+          int expireAfterWriteMinutes) {
+    return Caffeine.newBuilder()
+        .maximumSize(maxSize)
+        .expireAfterWrite(expireAfterWriteMinutes, TimeUnit.MINUTES)
+        .recordStats()
+        .build();
+  }
 
   @Bean
   @Qualifier("caffeineCacheManager")
-  public CacheManager caffeineCacheManager() {
+  public CacheManager caffeineCacheManager(
+      @Qualifier("cacheKeyInfo") Cache<Object, Object> cacheKeyInfo,
+      @Qualifier("cacheTokenInfo") Cache<Object, Object> cacheTokenInfo) {
     CaffeineCacheManager manager = new CaffeineCacheManager();
     manager.setAllowNullValues(false);
-    cacheConfigProperties.getCaffeineCaches().forEach(cc -> createCaffeineCache(manager, cc));
+    manager.registerCustomCache("cache-key-info", cacheKeyInfo);
+    manager.registerCustomCache("cache-token-info", cacheTokenInfo);
     return manager;
-  }
-
-  private void createCaffeineCache(
-      CaffeineCacheManager manager, CacheConfigProperties.CaffeineCache cfg) {
-    for (String cacheName : cfg.getCacheNames()) {
-      Cache<Object, Object> cache = Caffeine.from(cfg.getSpec()).recordStats().build();
-      manager.registerCustomCache(cacheName, cache);
-    }
   }
 }
