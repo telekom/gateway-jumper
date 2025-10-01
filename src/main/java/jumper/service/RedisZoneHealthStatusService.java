@@ -23,6 +23,8 @@ import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.retry.support.RetryTemplateBuilder;
 import org.springframework.stereotype.Component;
 
@@ -53,7 +55,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
   }
 
   @Override
-  public void onMessage(Message message, byte[] pattern) {
+  public void onMessage(@NonNull Message message, @Nullable byte[] pattern) {
     try {
       ZoneHealthMessage zoneHealthMessage =
           objectMapper.readValue(message.toString(), ZoneHealthMessage.class);
@@ -92,8 +94,12 @@ public class RedisZoneHealthStatusService implements MessageListener {
                         return false;
                       }
 
-                      var connection =
-                          redisMessageListenerContainer.getConnectionFactory().getConnection();
+                      var connectionFactory = redisMessageListenerContainer.getConnectionFactory();
+                      if (connectionFactory == null) {
+                        log.debug("Connection factory is null, skipping initialization");
+                        return false;
+                      }
+                      var connection = connectionFactory.getConnection();
                       if (connection.isSubscribed()) {
                         log.debug("Redis connection already subscribed, skipping initialization");
                         return false;

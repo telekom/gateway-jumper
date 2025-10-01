@@ -44,11 +44,13 @@ public class TracingConfiguration {
           String spanName = "unknown";
           if (observationContext instanceof ClientRequestObservationContext clientRequestContext) {
             ClientRequest request = clientRequestContext.getRequest();
+            if (request == null) {
+              break;
+            }
 
-            if (request != null && request.url().getPath().contains("token")) {
+            if (request.url().getPath().contains("token")) {
               spanName = "idp";
-            } else if (request != null
-                && request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
+            } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
               spanName = "gateway";
             }
 
