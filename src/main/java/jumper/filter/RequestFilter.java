@@ -222,11 +222,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           ServerWebExchange finalExchange = exchange.mutate().request(finalRequest).build();
           log.debug("final RequestFilter uri: {}", finalExchange.getRequest().getURI());
+          var gatewayRequestUrl =
+              finalExchange.getAttribute(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR);
           log.debug(
               "final exchange attribute GatewayRequestUrlAttr: {}",
-              finalExchange
-                  .getAttribute(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR)
-                  .toString());
+              gatewayRequestUrl != null ? gatewayRequestUrl.toString() : "null");
           return chain.filter(finalExchange);
         },
         RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
