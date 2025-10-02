@@ -100,7 +100,8 @@ public class RedisZoneHealthStatusService implements MessageListener {
                       }
                     } catch (Exception e) {
                       log.error(
-                          "Connection failure occurred. Restarting subscription task after 5000 ms");
+                          "Connection failure occurred. Restarting subscription task after 5000"
+                              + " ms");
                       throw e;
                     }
                     redisMessageListenerContainer.addMessageListener(

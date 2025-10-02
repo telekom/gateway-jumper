@@ -235,13 +235,9 @@ SPDX-License-Identifier: Apache-2.0
 							<include>src/main/java/**/*.java</include>
 							<include>src/test/java/**/*.java</include>
 						</includes>
-						<importOrder/>
-						<removeUnusedImports/>
-						<toggleOffOn/>
-						<trimTrailingWhitespace/>
-						<endWithNewline/>
 						<googleJavaFormat>
 							<version>1.28.0</version>
+                            <reflowLongStrings>true</reflowLongStrings>
 						</googleJavaFormat>
 					</java>
 				</configuration>

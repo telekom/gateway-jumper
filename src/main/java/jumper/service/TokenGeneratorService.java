@@ -80,7 +80,8 @@ public class TokenGeneratorService {
     } catch (WeakKeyException e) {
       throw new ResponseStatusException(
           HttpStatus.UNAUTHORIZED,
-          "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used with RS256 MUST have a size >= 2048 bits.");
+          "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used"
+              + " with RS256 MUST have a size >= 2048 bits.");
     }
   }
 
