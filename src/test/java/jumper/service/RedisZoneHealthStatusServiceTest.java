@@ -47,7 +47,8 @@ class RedisZoneHealthStatusServiceTest extends AbstractIntegrationTest {
 
   @Test
   @DisplayName(
-      "Test if a zone is marked correctly after receiving message via redis with a unhealthy status message")
+      "Test if a zone is marked correctly after receiving message via redis with a unhealthy status"
+          + " message")
   void getZoneUnhealthyWithRedisPubSubListener() throws JsonProcessingException {
     // given
     String zoneToTest = "zoneToTest";
@@ -68,20 +69,21 @@ class RedisZoneHealthStatusServiceTest extends AbstractIntegrationTest {
 
   @ParameterizedTest
   @DisplayName(
-      "Test if a zone is marked correctly healthy after receiving a incompatible message via redis with a unhealthy status message")
+      "Test if a zone is marked correctly healthy after receiving a incompatible message via redis"
+          + " with a unhealthy status message")
   @ValueSource(
       strings = {
         """
-			{
-			"zone": "%s",
-			"status": "UNHEALTHYHELLO"
-			}
-	""",
+        		{
+        		"zone": "%s",
+        		"status": "UNHEALTHYHELLO"
+        		}
+        """,
         """
-			{
-			"status": "UNHEALTHY"
-			}
-			"""
+        {
+        "status": "UNHEALTHY"
+        }
+        """
       })
   void getZoneHealthyWithRedisPubSubListenerForMalformedMessage(String messageTemplate) {
     // given

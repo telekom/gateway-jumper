@@ -131,7 +131,8 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       return Mono.error(
           new ResponseStatusException(
               HttpStatus.UNAUTHORIZED,
-              "No token endpoint configured (neither internal nor external), this should not happen"));
+              "No token endpoint configured (neither internal nor external), this should not"
+                  + " happen"));
     }
   }
 

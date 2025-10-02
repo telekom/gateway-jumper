@@ -107,13 +107,9 @@ public class MockIrisServer {
                     RegexBody.regex(
                         ".*("
                             + addIdSuffix("client_id=external_configured", id)
-                            + "|"
-                            + "client_assertion=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9."
-                            + "|"
+                            + "|client_assertion=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.|"
                             + "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-                            + "|"
-                            + "grant_type=client_credentials"
-                            + ")+")),
+                            + "|grant_type=client_credentials)+")),
             exactly(1))
         .respond(
             response()
@@ -291,10 +287,11 @@ public class MockIrisServer {
                     new Header("Cache-Control", "no-store"))
                 .withBody(
                     """
-								{
-								\t"error": "unauthorized_client",
-								\t"error_description": "Invalid client or Invalid client credentials"
-								}"""));
+                    {
+                    \t"error": "unauthorized_client",
+                    \t"error_description": "Invalid client or Invalid client credentials"
+                    }\
+                    """));
   }
 
   public void createExpectationDropConnection(String id) {
