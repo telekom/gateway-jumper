@@ -6,6 +6,8 @@ package jumper.exception;
 
 import static org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR;
 
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.util.Date;
 import java.util.HashMap;
@@ -19,10 +21,6 @@ import org.springframework.boot.autoconfigure.web.WebProperties.Resources;
 import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWebExceptionHandler;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
 import org.springframework.boot.web.reactive.error.ErrorAttributes;
-import org.springframework.cloud.sleuth.CurrentTraceContext;
-import org.springframework.cloud.sleuth.Span;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
@@ -43,7 +41,6 @@ import reactor.core.publisher.Mono;
 public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandler {
 
   private final Tracer tracer;
-  private final CurrentTraceContext currentTraceContext;
 
   @Value("${spring.application.name}")
   private String applicationName;
@@ -55,12 +52,10 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
       Resources resources,
       ErrorProperties errorProperties,
       ApplicationContext applicationContext,
-      Tracer tracer,
-      CurrentTraceContext currentTraceContext) {
+      Tracer tracer) {
 
     super(errorAttributes, resources, errorProperties, applicationContext);
     this.tracer = tracer;
-    this.currentTraceContext = currentTraceContext;
   }
 
   @Override
@@ -82,7 +77,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     errorAttributes.put("message", determineMessage(error, responseStatusAnnotation));
     errorAttributes.put("error", errorStatus.getReasonPhrase());
     errorAttributes.put("status", errorStatus.value());
-    errorAttributes.put("method", request.methodName());
+    errorAttributes.put("method", request.method().name());
 
     errorAttributes.put(
         "traceId",
@@ -96,11 +91,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
             ? request.headers().firstHeader(Constants.HEADER_X_TARDIS_TRACE_ID)
             : "");
 
-    WebFluxSleuthOperators.withSpanInScope(
-        tracer,
-        currentTraceContext,
-        request.exchange(),
-        () -> writeErrorSpan(error, errorAttributes));
+    writeErrorSpan(error, errorAttributes);
 
     // should also evaluate include options (stacktrace, message, bindingErrors)
     return errorAttributes;
@@ -144,7 +135,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     customResponseHeaders = new HashMap<>();
 
     if (error instanceof ResponseStatusException) {
-      return ((ResponseStatusException) error).getStatus();
+      return HttpStatus.valueOf(((ResponseStatusException) error).getStatusCode().value());
     }
 
     /*
@@ -169,21 +160,8 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
         .orElse(INTERNAL_SERVER_ERROR);
   }
 
-  @Override
-  protected void logError(ServerRequest request, ServerResponse response, Throwable throwable) {
-    WebFluxSleuthOperators.withSpanInScope(
-        tracer,
-        currentTraceContext,
-        request.exchange(),
-        () -> super.logError(request, response, throwable));
-  }
-
   private void logError(ServerRequest request, Throwable throwable) {
-    WebFluxSleuthOperators.withSpanInScope(
-        tracer,
-        currentTraceContext,
-        request.exchange(),
-        () -> log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request)));
+    log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request));
   }
 
   private String formatError(Throwable ex, ServerRequest request) {
@@ -210,7 +188,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
 
   private void writeErrorSpan(Throwable error, Map<String, Object> errorAttributes) {
     Span errorSpan = this.tracer.nextSpan().name("error").start();
-    tracer.withSpan(errorSpan);
 
     errorSpan.tag("message", (String) errorAttributes.get("message"));
     errorSpan.tag("http.status_code", errorAttributes.get("status").toString());

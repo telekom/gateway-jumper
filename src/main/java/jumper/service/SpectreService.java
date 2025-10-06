@@ -5,8 +5,12 @@
 package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.*;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 import jumper.Constants;
 import jumper.config.SpectreConfiguration;
 import jumper.model.config.JumperConfig;
@@ -14,15 +18,14 @@ import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
+import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.sleuth.CurrentTraceContext;
-import org.springframework.cloud.sleuth.Span;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.cloud.sleuth.instrument.web.WebFluxSleuthOperators;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -39,9 +42,10 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class SpectreService {
 
-  private final OauthTokenUtil oauthTokenUtil;
+  private final TokenGeneratorService tokenGeneratorService;
   private final Tracer tracer;
-  private final CurrentTraceContext currentTraceContext;
+
+  @Qualifier("spectreServiceWebClient")
   private final WebClient spectreServiceWebClient;
 
   @Value("${jumper.stargate.url}")
@@ -50,22 +54,18 @@ public class SpectreService {
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
 
-  @Value("${horizon.publishEventUrl}")
+  @Value("${jumper.horizon.publishEventUrl}")
   private String publishEventUrl;
 
   @Autowired private SpectreConfiguration spectreConfiguration;
 
-  public void handleEvent(
+  public Mono<Void> handleEvent(
       JumperConfig jc,
       ServerWebExchange exchange,
       Object http,
       RouteListener listener,
       String payload) {
-    WebFluxSleuthOperators.withSpanInScope(
-        tracer,
-        currentTraceContext,
-        exchange,
-        () -> publishEvent(createEvent(jc, exchange, http, listener, payload), jc));
+    return publishEvent(createEvent(jc, exchange, http, listener, payload), jc);
   }
 
   private Spectre createEvent(
@@ -118,10 +118,7 @@ public class SpectreService {
             .data(data)
             .build();
 
-    String finalSpanName = spanName;
-
-    Span newSpan = this.tracer.nextSpan().name(finalSpanName).start();
-    tracer.withSpan(newSpan);
+    Span newSpan = this.tracer.nextSpan().name(spanName).start();
 
     event.setSpanId(newSpan.context().spanId());
 
@@ -134,17 +131,21 @@ public class SpectreService {
     return event;
   }
 
-  private void publishEvent(Spectre event, JumperConfig jc) {
+  private Mono<Void> publishEvent(Spectre event, JumperConfig jc) {
 
     // determine environment for local issuer and routing path on qa
     String envName = determineEnvironment(jc);
 
-    publishEventMono(
+    return publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
-            oauthTokenUtil.generateGatewayTokenForPublisher(
+            tokenGeneratorService.generateGatewayTokenForPublisher(
                 localIssuerUrl + "/" + envName, envName),
             event)
-        .subscribe();
+        .onErrorResume(
+            throwable -> {
+              log.error("Error publishing Spectre event", throwable);
+              return Mono.empty(); // Don't fail the main request flow
+            });
   }
 
   private String determineEnvironment(JumperConfig jc) {
@@ -175,6 +176,7 @@ public class SpectreService {
                         Constants.HEADER_X_B3_TRACE_ID, currentSpan.context().traceId());
                     httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, event.getSpanId());
                   }
+
                   // pass Spectre related info also as a header
                   httpHeaders.set(Constants.HEADER_X_SPECTRE_ISSUE, event.getData().getIssue());
                   httpHeaders.set(
@@ -186,7 +188,7 @@ public class SpectreService {
             .body(BodyInserters.fromValue(event))
             .retrieve()
             .onStatus(
-                HttpStatus::isError,
+                HttpStatusCode::isError,
                 response -> {
                   log.error("while publishing event got error status: {}", response.statusCode());
                   logDebugResponse(response);
@@ -225,7 +227,7 @@ public class SpectreService {
       log.debug("json compatible content-type, will try to parse as json payload");
       try {
         // try to return payload as json
-        return new ObjectMapper().readTree(payload);
+        return ObjectMapperUtil.getInstance().readTree(payload);
       } catch (JsonProcessingException e) {
         log.error("error while parsing json payload for spectre", e);
       }

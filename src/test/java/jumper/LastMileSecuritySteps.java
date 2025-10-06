@@ -10,12 +10,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
-import jumper.service.OauthTokenUtil;
+import jumper.util.OauthTokenUtil;
 import jumper.util.TokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,7 +81,7 @@ public class LastMileSecuritySteps {
   }
 
   private void checkConsumerToken(String consumerToken) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(
             OauthTokenUtil.getTokenWithoutSignature(consumerToken));
 
@@ -90,7 +89,7 @@ public class LastMileSecuritySteps {
   }
 
   private void checkGatewayToken(String gatewayToken) {
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(gatewayToken));
 
     assertEquals(

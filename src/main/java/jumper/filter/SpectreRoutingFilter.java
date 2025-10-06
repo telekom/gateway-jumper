@@ -7,7 +7,8 @@ package jumper.filter;
 import java.net.URI;
 import java.util.Objects;
 import jumper.Constants;
-import jumper.service.OauthTokenUtil;
+import jumper.service.TokenGeneratorService;
+import jumper.util.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -20,20 +21,21 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
 
-  private final OauthTokenUtil oauthTokenUtil;
+  private final TokenGeneratorService tokenGeneratorService;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
 
-  @Value("${horizon.publishEventUrl}")
+  @Value("${jumper.horizon.publishEventUrl}")
   private String publishEventUrl;
 
   public GatewayFilter apply() {
     return (exchange, chain) -> {
-      ServerHttpRequest req = exchange.getRequest();
+      ServerHttpRequest readOnlyRequest = exchange.getRequest();
+      ServerHttpRequest.Builder requestMutationBuilder = readOnlyRequest.mutate();
 
       // no environment info sent from kong, so we dig it from token
-      String consumerToken = req.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
+      String consumerToken = readOnlyRequest.getHeaders().getFirst(Constants.HEADER_AUTHORIZATION);
       String envName = Constants.DEFAULT_REALM;
       if (Objects.nonNull(consumerToken)) {
         envName =
@@ -43,25 +45,23 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
       // minimalistic token with correct issuer
       String spectreToken =
           "Bearer "
-              + oauthTokenUtil.generateGatewayTokenForPublisher(
+              + tokenGeneratorService.generateGatewayTokenForPublisher(
                   localIssuerUrl + "/" + envName, envName);
 
       // routing path is no longer fixed, so we set it here
-      ServerHttpRequest request =
-          req.mutate()
-              .headers(httpHeaders -> httpHeaders.set(Constants.HEADER_AUTHORIZATION, spectreToken))
-              // placeholder is expected just on virtual environments like qa
-              .path(
-                  URI.create(
-                          publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName))
-                      .getPath())
-              .build();
+      requestMutationBuilder
+          .headers(httpHeaders -> httpHeaders.set(Constants.HEADER_AUTHORIZATION, spectreToken))
+          // placeholder is expected just on virtual environments like qa
+          .path(
+              URI.create(publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName))
+                  .getPath())
+          .build();
 
       exchange
           .getAttributes()
-          .put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, request.getURI());
+          .put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, readOnlyRequest.getURI());
 
-      return chain.filter(exchange.mutate().request(request).build());
+      return chain.filter(exchange.mutate().request(requestMutationBuilder.build()).build());
     };
   }
 }

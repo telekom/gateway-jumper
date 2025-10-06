@@ -4,11 +4,19 @@
 
 package jumper;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.platform.suite.api.IncludeEngines;
 import org.junit.platform.suite.api.SelectClasspathResource;
 import org.junit.platform.suite.api.Suite;
+import reactor.blockhound.BlockHound;
 
 @Suite
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features")
-public class RunCucumberTest {}
+public class RunCucumberTest {
+
+  @BeforeAll
+  static void beforeAll() {
+    BlockHound.install();
+  }
+}

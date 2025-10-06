@@ -13,10 +13,9 @@ import static org.mockserver.model.HttpResponse.response;
 import static org.mockserver.model.Parameter.param;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Header;
 import io.jsonwebtoken.Jwt;
 import java.util.concurrent.TimeUnit;
-import jumper.service.OauthTokenUtil;
+import jumper.util.OauthTokenUtil;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
@@ -90,7 +89,7 @@ public class MockUpstreamServer {
     HttpRequest[] recordedRequests = mockServerClient.retrieveRecordedRequests(request());
 
     String token = recordedRequests[0].getFirstHeader("Authorization");
-    Jwt<Header, Claims> claimsFromToken =
+    Jwt<?, Claims> claimsFromToken =
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
     assertEquals(expectedValue, claimsFromToken.getBody().get(claim, String.class));
   }

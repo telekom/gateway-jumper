@@ -11,12 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class AuditLogService {
-  public static void logInfo(String msg) {
-    log.info(msg);
-  }
 
   public static void writeFailoverAuditLog(JumperConfig jumperConfig) {
-    logInfo(
+    log.info(
         AuditLog.builder()
             .upstreamPath(jumperConfig.getFinalApiUrl())
             .apiBasePath(jumperConfig.getApiBasePath())

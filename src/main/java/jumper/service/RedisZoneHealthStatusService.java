@@ -6,7 +6,12 @@ package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.context.ContextExecutorService;
+import io.micrometer.context.ContextSnapshotFactory;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import jumper.config.RedisConfig;
 import jumper.model.config.HealthStatus;
 import jumper.model.config.ZoneHealthMessage;
@@ -18,6 +23,8 @@ import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.retry.support.RetryTemplateBuilder;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +55,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
   }
 
   @Override
-  public void onMessage(Message message, byte[] pattern) {
+  public void onMessage(@NonNull Message message, @Nullable byte[] pattern) {
     try {
       ZoneHealthMessage zoneHealthMessage =
           objectMapper.readValue(message.toString(), ZoneHealthMessage.class);
@@ -67,6 +74,10 @@ public class RedisZoneHealthStatusService implements MessageListener {
   }
 
   void lazyInitializeRedisMessageListenerContainer() {
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    ContextSnapshotFactory contextSnapshotFactory = ContextSnapshotFactory.builder().build();
+    Executor wrappedExecutor = ContextExecutorService.wrap(executorService, contextSnapshotFactory);
+
     CompletableFuture.supplyAsync(
             () -> {
               var template =
@@ -83,15 +94,20 @@ public class RedisZoneHealthStatusService implements MessageListener {
                         return false;
                       }
 
-                      var connection =
-                          redisMessageListenerContainer.getConnectionFactory().getConnection();
+                      var connectionFactory = redisMessageListenerContainer.getConnectionFactory();
+                      if (connectionFactory == null) {
+                        log.debug("Connection factory is null, skipping initialization");
+                        return false;
+                      }
+                      var connection = connectionFactory.getConnection();
                       if (connection.isSubscribed()) {
                         log.debug("Redis connection already subscribed, skipping initialization");
                         return false;
                       }
                     } catch (Exception e) {
                       log.error(
-                          "Connection failure occurred. Restarting subscription task after 5000 ms");
+                          "Connection failure occurred. Restarting subscription task after 5000"
+                              + " ms");
                       throw e;
                     }
                     redisMessageListenerContainer.addMessageListener(
@@ -101,7 +117,8 @@ public class RedisZoneHealthStatusService implements MessageListener {
                         context.getRetryCount());
                     return true;
                   });
-            })
+            },
+            wrappedExecutor)
         .exceptionally(
             throwable -> {
               log.error(

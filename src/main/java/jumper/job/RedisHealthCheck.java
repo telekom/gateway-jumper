@@ -65,7 +65,7 @@ public class RedisHealthCheck {
     if (connection instanceof RedisClusterConnection) {
       ((RedisClusterConnection) connection).clusterGetClusterInfo();
     } else {
-      connection.info("server");
+      connection.serverCommands().info("server");
     }
   }
 
