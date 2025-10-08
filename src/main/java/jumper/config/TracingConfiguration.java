@@ -21,6 +21,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientRequestObservationContext;
+import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Configuration(proxyBeanMethods = false)
@@ -99,28 +100,45 @@ public class TracingConfiguration {
       return urlString;
     }
 
-    var uriComponents =
-        UriComponentsBuilder.fromUriString(urlString).build(urlString.contains("%"));
+    try {
+      // Determine if URL is already encoded by checking for % character
+      boolean encoded = urlString.contains("%");
+      UriComponents uriComponents = UriComponentsBuilder.fromUriString(urlString).build(encoded);
 
-    MultiValueMap<String, String> filteredParams = new LinkedMultiValueMap<>();
+      MultiValueMap<String, String> filteredParams = new LinkedMultiValueMap<>();
+      uriComponents
+          .getQueryParams()
+          .forEach(
+              (key, values) -> {
+                if (compiledPatterns.stream().noneMatch(p -> p.matcher(key).matches())) {
+                  filteredParams.put(key, values);
+                }
+              });
 
-    uriComponents
-        .getQueryParams()
-        .forEach(
-            (key, values) -> {
-              if (compiledPatterns.stream().noneMatch(p -> p.matcher(key).matches())) {
-                filteredParams.put(key, values);
-              }
-            });
+      return UriComponentsBuilder.newInstance()
+          .scheme(uriComponents.getScheme())
+          .host(uriComponents.getHost())
+          .port(uriComponents.getPort())
+          .path(Optional.ofNullable(uriComponents.getPath()).orElse(""))
+          .queryParams(filteredParams)
+          .fragment(uriComponents.getFragment())
+          .build()
+          .toUriString();
+    } catch (IllegalArgumentException e) {
+      // If URL parsing fails due to invalid URL format or illegal characters in query params,
+      // strip all query parameters and return the base URL to avoid breaking tracing
+      log.warn(
+          "Failed to parse URL for query parameter filtering: {}. Stripping all query parameters."
+              + " Error: {}",
+          urlString,
+          e.getMessage());
 
-    return UriComponentsBuilder.newInstance()
-        .scheme(uriComponents.getScheme())
-        .host(uriComponents.getHost())
-        .port(uriComponents.getPort())
-        .path(Optional.ofNullable(uriComponents.getPath()).orElse(""))
-        .queryParams(filteredParams)
-        .fragment(uriComponents.getFragment())
-        .build()
-        .toUriString();
+      // Strip query parameters by removing everything after '?'
+      int queryStartIndex = urlString.indexOf('?');
+      if (queryStartIndex > 0) {
+        return urlString.substring(0, queryStartIndex);
+      }
+      return urlString;
+    }
   }
 }

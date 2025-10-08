@@ -43,4 +43,33 @@ public class TracingConfigurationTest {
 
     assertEquals("http://localhost:8080/actuator/health", filtered);
   }
+
+  @Test
+  void testFilterQueryParams() {
+    // Test with unencoded URL containing spaces and special characters
+    String unencodedUrl =
+        "http://localhost:8080/foobar?$expand=ResourceToCharacteristic,ResourceToRelatedParty&$filter=ResourceType"
+            + " eq 'FOO' and ResourceFilter eq 'ABC=8558 and DE=12' ";
+    String filteredUnencoded =
+        new TracingConfiguration()
+            .filterQueryParams(unencodedUrl, List.of(Pattern.compile("sig-.*")));
+
+    // Should return the URL with filtered query params (spaces preserved as-is, no sig-* params to
+    // filter)
+    assertEquals(
+        "http://localhost:8080/foobar?$expand=ResourceToCharacteristic,ResourceToRelatedParty&$filter=ResourceType"
+            + " eq 'FOO' and ResourceFilter eq 'ABC=8558 and DE=12' ",
+        filteredUnencoded);
+
+    // Test with encoded URL containing invalid characters in query param values
+    // The '=' character in the encoded value causes IllegalArgumentException
+    String encodedUrlWithInvalidChars =
+        "http://localhost:8080/foobar?%24expand=ResourceToCharacteristic%2CResourceToRelatedParty&%24filter=ResourceType+eq+%27FOO%27+and+ResourceFilter+eq+%27ABC=8558+and+DE=12%27";
+    String filteredEncoded =
+        new TracingConfiguration()
+            .filterQueryParams(encodedUrlWithInvalidChars, List.of(Pattern.compile("sig-.*")));
+
+    // Should strip all query params when parsing fails due to invalid characters
+    assertEquals("http://localhost:8080/foobar", filteredEncoded);
+  }
 }
