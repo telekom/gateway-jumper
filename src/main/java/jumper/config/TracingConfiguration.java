@@ -69,7 +69,7 @@ public class TracingConfiguration {
             gatewayContext.setContextualName("outgoing request: provider");
             gatewayContext.addHighCardinalityKeyValue(
                 KeyValue.of(
-                    "http.url",
+                    "http.uri",
                     filterQueryParams(request.getURI().toString(), compiledQueryFilterPatterns)));
 
             gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
