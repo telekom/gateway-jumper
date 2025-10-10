@@ -88,3 +88,9 @@ Feature: proper routingPath and token requestPath is used for provider call
     And API consumer receives a 200 status code
     And verify token requestPath value /base/path
     And verify query param validAt for value 2020-11-30T23%3A00%3A00%2B01%3A00
+
+  Scenario: Consumer calls proxy route with matrix parameters in path, path not manipulated for provider
+    Given RealRoute headers are set
+    When consumer calls the proxy route with semicolonInPath
+    And API consumer receives a 200 status code
+    And verify token requestPath value /base/path;somekey=somevalue;otherkey=othervalue

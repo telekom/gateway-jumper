@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
+import org.springframework.security.web.server.firewall.StrictServerWebExchangeFirewall;
 import org.springframework.web.server.session.WebSessionManager;
 import reactor.core.publisher.Mono;
 
@@ -24,6 +25,30 @@ public class SecurityConfiguration {
         .logout(ServerHttpSecurity.LogoutSpec::disable)
         .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
         .build();
+  }
+
+  /**
+   * Configures a custom ServerWebExchangeFirewall that allows semicolons in URLs.
+   *
+   * <p>Some applications use semicolons for matrix parameters. This is also discussed in RFC 3986.
+   * Semicolons are thus legitimate in URI paths and we need to support them.
+   *
+   * <p>The default StrictServerWebExchangeFirewall blocks them as potentially malicious, but we
+   * need to support them for proper URI handling.
+   *
+   * @see <a
+   *     href="https://docs.spring.io/spring-framework/reference/web/webflux/controller/ann-methods/matrix-variables.html">Matrix
+   *     Variables in Spring Framework Reference</a>
+   * @see <a
+   *     href="https://docs.spring.io/spring-security/reference/reactive/exploits/firewall.html">Spring
+   *     Security Firewall Documentation</a>
+   * @return StrictServerWebExchangeFirewall configured to allow semicolons
+   */
+  @Bean
+  public StrictServerWebExchangeFirewall httpFirewall() {
+    StrictServerWebExchangeFirewall firewall = new StrictServerWebExchangeFirewall();
+    firewall.setAllowSemicolon(true);
+    return firewall;
   }
 
   /**

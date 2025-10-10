@@ -402,6 +402,11 @@ public class BaseSteps {
         uri += "/path?validAt=2020-11-30T23%3A00%3A00%2B01%3A00&sig=123";
         mockUpstreamServer.testEndpoint(id, "/path");
         break;
+      case "matrixParameterInPath":
+        setBasePathHeader("/base");
+        uri += "/path;somekey=somevalue;otherkey=othervalue";
+        mockUpstreamServer.testEndpoint(id, "/path;somekey=somevalue;otherkey=othervalue");
+        break;
       default:
         fail("scenario not defined");
     }
