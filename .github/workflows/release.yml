@@ -33,28 +33,14 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          fetch-tags: 'true'
-      - name: Create temporary release.config.js
-        run: |
-          cat > release.config.js << 'EOF'
-          module.exports = {
-              plugins: [
-                  '@semantic-release/commit-analyzer',
-                  'semantic-release-export-data',
-                  '@semantic-release/release-notes-generator',
-                  '@semantic-release/github',
-              ],
-          };
-          EOF
+          fetch-tags: "true"
       - name: Semantic Release
         id: semantic-release
         uses: cycjimmy/semantic-release-action@v5
         with:
-          branches: |
-            ['main']
-          tag_format: '${version}'
           extra_plugins: |
             semantic-release-export-data
+            conventional-changelog-conventionalcommits
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
