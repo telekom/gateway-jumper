@@ -167,6 +167,16 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
 
+  Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with consumer credentials provided via post
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "consumer grant_type client_credentials client_secret_post method" set
+    And IDP set to provide external token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via post
     Given RealRoute headers are set
     And oauth tokenEndpoint set
