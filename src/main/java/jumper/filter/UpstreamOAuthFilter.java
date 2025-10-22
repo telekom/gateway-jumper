@@ -12,6 +12,7 @@ import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.service.JumperConfigService;
 import jumper.service.TokenFetchService;
+import jumper.util.ExchangeStateManager;
 import jumper.util.HeaderUtil;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -50,7 +50,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           ServerHttpRequest readOnlyRequest = exchange.getRequest();
 
           // Early exit for localhost issuer service
-          if (!oauthFilterNeeded(exchange)) {
+          if (!ExchangeStateManager.isOAuthFilterRequired(exchange)) {
             log.debug("Skipping UpstreamOAuthFilter for localhost issuer service");
             return chain.filter(exchange.mutate().request(readOnlyRequest).build());
           }
@@ -76,11 +76,6 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
                   });
         },
         UPSTREAM_OAUTH_FILTER_ORDER);
-  }
-
-  private boolean oauthFilterNeeded(ServerWebExchange exchange) {
-    return exchange.getAttributes().get(Constants.GATEWAY_ATTRIBUTE_OAUTH_FILTER_NEEDED) != null
-        && (Boolean) exchange.getAttributes().get(Constants.GATEWAY_ATTRIBUTE_OAUTH_FILTER_NEEDED);
   }
 
   public static class Config {}
