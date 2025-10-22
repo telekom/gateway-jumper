@@ -4,6 +4,8 @@
 
 package jumper.filter.rewrite;
 
+import jumper.util.ExchangeStateManager;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
@@ -13,6 +15,7 @@ import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ResponseBodyRewrite extends AbstractBodyRewrite
     implements RewriteFunction<byte[], byte[]> {
 
@@ -20,12 +23,10 @@ public class ResponseBodyRewrite extends AbstractBodyRewrite
   public Publisher<byte[]> apply(ServerWebExchange exchange, byte[] originalBody) {
 
     if (originalBody != null) {
-      exchange
-          .getAttributes()
-          .put(
-              "cachedResponseBodyObject",
-              getBodyForContentType(
-                  exchange.getResponse().getHeaders().getContentType(), originalBody));
+      ExchangeStateManager.setCachedResponseBody(
+          exchange,
+          getBodyForContentType(
+              exchange.getResponse().getHeaders().getContentType(), originalBody));
       return Mono.just(originalBody);
     } else {
       return Mono.empty();

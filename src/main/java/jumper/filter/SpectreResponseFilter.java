@@ -8,6 +8,7 @@ import java.util.Objects;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.service.SpectreService;
+import jumper.util.ExchangeStateManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.NettyWriteResponseFilter;
@@ -45,7 +46,8 @@ public class SpectreResponseFilter
                 .then(
                     Mono.fromRunnable(
                         () -> {
-                          String responseBody = exchange.getAttribute("cachedResponseBodyObject");
+                          String responseBody =
+                              ExchangeStateManager.getCachedResponseBody(exchange).orElse(null);
 
                           log.debug(
                               "Response: status={}, headers={}, payload={}",
@@ -55,7 +57,8 @@ public class SpectreResponseFilter
                               responseBody);
 
                           // use jumperConfig passed with exchange
-                          JumperConfig jumperConfig = JumperConfig.parseJumperConfigFrom(exchange);
+                          JumperConfig jumperConfig =
+                              ExchangeStateManager.getJumperConfig(exchange).orElse(null);
                           if (jumperConfig.isListenerMatched()) {
                             RouteListener listener =
                                 jumperConfig.getRouteListener().get(jumperConfig.getConsumer());

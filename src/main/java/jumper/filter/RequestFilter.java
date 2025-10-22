@@ -20,6 +20,7 @@ import jumper.model.request.IncomingRequest;
 import jumper.model.request.JumperInfoRequest;
 import jumper.service.*;
 import jumper.util.BasicAuthUtil;
+import jumper.util.ExchangeStateManager;
 import jumper.util.HeaderUtil;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -85,9 +86,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           // ListenerRoute was called, jumperConfig is stored in exchange for usage with Spectre
           if (config.getRoutePathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
-            exchange
-                .getAttributes()
-                .put(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toJsonBase64(jumperConfig));
+            ExchangeStateManager.setJumperConfig(exchange, jumperConfig);
           }
 
           if (jumperConfig.getSecondaryFailover()) {
@@ -122,7 +121,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   jumperConfig.getConsumerOriginZone(),
                   jumperConfig.getConsumerToken());
 
-              upstreamOAuthRequired(exchange);
+              ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
             } else {
               // ALL NON MESH SCENARIOS
@@ -159,7 +158,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                   if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
 
-                    upstreamOAuthRequired(exchange);
+                    ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
                   } else {
                     // Enhanced Last Mile Security Token scenario
@@ -230,10 +229,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           return chain.filter(finalExchange);
         },
         RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
-  }
-
-  private void upstreamOAuthRequired(ServerWebExchange exchange) {
-    exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_OAUTH_FILTER_NEEDED, true);
   }
 
   private Optional<JumperInfoRequest> initializeJumperInfoRequest() {

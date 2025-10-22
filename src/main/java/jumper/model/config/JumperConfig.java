@@ -21,7 +21,6 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
-import org.springframework.web.server.ServerWebExchange;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -93,7 +92,7 @@ public class JumperConfig {
     }
   }
 
-  private static JumperConfig fromJsonBase64(String jsonConfigBase64) {
+  public static JumperConfig fromJsonBase64(String jsonConfigBase64) {
     if (StringUtils.isNotBlank(jsonConfigBase64)) {
       return JumperConfig.fromJsonBase64(jsonConfigBase64, new TypeReference<>() {});
     } else {
@@ -215,12 +214,6 @@ public class JumperConfig {
         request); // TODO: remove as soon we have completely shifted to json_config
 
     return jc;
-  }
-
-  @JsonIgnore
-  public static JumperConfig parseJumperConfigFrom(ServerWebExchange exchange) {
-
-    return JumperConfig.fromJsonBase64(exchange.getAttribute(Constants.HEADER_JUMPER_CONFIG));
   }
 
   public boolean isListenerMatched() {

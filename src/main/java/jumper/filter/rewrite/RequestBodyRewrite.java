@@ -5,6 +5,7 @@
 package jumper.filter.rewrite;
 
 import java.util.Objects;
+import jumper.util.ExchangeStateManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
@@ -23,12 +24,9 @@ public class RequestBodyRewrite extends AbstractBodyRewrite
   public Publisher<byte[]> apply(ServerWebExchange exchange, byte[] originalBody) {
 
     if (Objects.nonNull(originalBody)) {
-      exchange
-          .getAttributes()
-          .put(
-              "cachedRequestBodyObject",
-              getBodyForContentType(
-                  exchange.getRequest().getHeaders().getContentType(), originalBody));
+      ExchangeStateManager.setCachedRequestBody(
+          exchange,
+          getBodyForContentType(exchange.getRequest().getHeaders().getContentType(), originalBody));
       return Mono.just(originalBody);
 
     } else {
