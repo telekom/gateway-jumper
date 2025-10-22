@@ -7,6 +7,7 @@ package jumper.filter;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.service.SpectreService;
+import jumper.util.ExchangeStateManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
@@ -20,13 +21,16 @@ public class SpectreRequestFilter
     extends AbstractGatewayFilterFactory<SpectreRequestFilter.Config> {
 
   private final SpectreService spectreService;
+  private final ExchangeStateManager exchangeStateManager;
 
   public static final int AUTO_EVENT_REQUEST_FILTER_ORDER =
       RequestTransformationFilter.REQUEST_TRANSFORM_FILTER_ORDER + 1;
 
-  public SpectreRequestFilter(SpectreService spectreService) {
+  public SpectreRequestFilter(
+      SpectreService spectreService, ExchangeStateManager exchangeStateManager) {
     super(Config.class);
     this.spectreService = spectreService;
+    this.exchangeStateManager = exchangeStateManager;
   }
 
   @Override
@@ -35,13 +39,13 @@ public class SpectreRequestFilter
         (exchange, chain) -> {
           ServerHttpRequest request = exchange.getRequest();
 
-          String requestBody = exchange.getAttribute("cachedRequestBodyObject");
+          String requestBody = exchangeStateManager.getCachedRequestBody(exchange).orElse(null);
           log.debug(
               "Request: headers={}, payload={}",
               request.getHeaders().toSingleValueMap(),
               requestBody);
 
-          JumperConfig jc = JumperConfig.parseJumperConfigFrom(exchange);
+          JumperConfig jc = exchangeStateManager.getJumperConfig(exchange).orElse(null);
           if (!jc.isListenerMatched()) {
             return chain.filter(exchange.mutate().request(request).build());
           }
