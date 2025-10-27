@@ -27,6 +27,7 @@ SPDX-License-Identifier: Apache-2.0
 		<spring-cloud.version>2025.0.0</spring-cloud.version>
 
 		<cucumber.version>7.30.0</cucumber.version>
+		<junit-platform.version>1.14.0</junit-platform.version>
 		<mockserver.version>5.15.0</mockserver.version>
 		<jsonwebtoken.version>0.11.5</jsonwebtoken.version>
 	</properties>
@@ -37,6 +38,13 @@ SPDX-License-Identifier: Apache-2.0
 				<groupId>org.springframework.cloud</groupId>
 				<artifactId>spring-cloud-dependencies</artifactId>
 				<version>${spring-cloud.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.junit</groupId>
+				<artifactId>junit-bom</artifactId>
+				<version>5.14.0</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -216,6 +224,27 @@ SPDX-License-Identifier: Apache-2.0
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<excludes>
+						<exclude>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</exclude>
+					</excludes>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
