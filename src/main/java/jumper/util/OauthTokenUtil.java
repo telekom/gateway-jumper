@@ -4,7 +4,13 @@
 
 package jumper.util;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.SignatureException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 public final class OauthTokenUtil {
 
   private static final JwtParser jwtParser =
-      Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build();
+      Jwts.parser().unsecured().clockSkewSeconds(3600).build();
 
   // Private constructor to prevent instantiation
   private OauthTokenUtil() {
@@ -54,7 +60,7 @@ public final class OauthTokenUtil {
   public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
 
     try {
-      return jwtParser.parseClaimsJwt(consumerToken);
+      return jwtParser.parseUnsecuredClaims(consumerToken);
     } catch (SignatureException e) {
       log.error("SignatureException", e);
     } catch (ExpiredJwtException e) {
