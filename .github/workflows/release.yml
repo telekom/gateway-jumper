@@ -61,6 +61,8 @@ jobs:
   trigger-build:
     name: Trigger build
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     needs: release
     if: needs.release.outputs.new-release-published == 'true'
     steps:
@@ -83,6 +85,8 @@ jobs:
   trigger-ort:
     name: Trigger ORT
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
     needs: release
     if: needs.release.outputs.new-release-published == 'true'
     steps:
