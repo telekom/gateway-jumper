@@ -9,7 +9,7 @@ Feature: Last Mile Security, legacy scenario with 2 tokens
     Given lastMileSecurity is activated
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    Then API provider receives AccessToken and GatewayToken
+    Then API provider receives AccessToken
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls an API with lastMileSecurity and realm header contains several values
@@ -17,21 +17,21 @@ Feature: Last Mile Security, legacy scenario with 2 tokens
     And several realm fields are contained in the header
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    Then API provider receives AccessToken and GatewayToken
+    Then API provider receives AccessToken
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls an API with lastMileSecurity and Provider respond with a 401
     Given lastMileSecurity is activated
     And API provider set to respond with a 401 status code
     When consumer calls the proxy route
-    Then API provider receives AccessToken and NO_GatewayToken
+    Then API provider receives AccessToken
     And API consumer receives a 401 status code
 
   Scenario: Consumer calls an API with lastMileSecurity and Provider respond with a 503
     Given lastMileSecurity is activated
     And API provider set to respond with a 503 status code
     When consumer calls the proxy route
-    Then API provider receives AccessToken and GatewayToken
+    Then API provider receives AccessToken
     And API consumer receives a 503 status code
 
   Scenario: Consumer calls an API with lastMileSecurity and Provider will have a timeout

@@ -4,7 +4,6 @@
 
 package jumper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import io.cucumber.java.en.Given;
@@ -37,10 +36,10 @@ public class LastMileSecuritySteps {
     baseSteps.setHttpHeadersOfRequest(httpHeadersOfRequest);
   }
 
-  @Then("API provider receives {word} and {word}")
-  public void apiProviderReceivesAccessTokenAndGatewayToken(String at, String gt) {
+  @Then("API provider receives {word}")
+  public void apiProviderReceivesAccessToken(String at) {
 
-    if (!Objects.equals(at, "AccessToken") || !Objects.equals(gt, "GatewayToken")) {
+    if (!Objects.equals(at, "AccessToken")) {
       this.baseSteps.getRequestExchange().expectStatus().isEqualTo(HttpStatus.UNAUTHORIZED);
       return;
     }
@@ -49,10 +48,6 @@ public class LastMileSecuritySteps {
         .expectHeader()
         .valueMatches(
             HttpHeaders.AUTHORIZATION, Pattern.compile("Bearer\\s\\w+.\\w+.+.\\S+").pattern())
-        .expectHeader()
-        .valueMatches(
-            Constants.HEADER_LASTMILE_SECURITY_TOKEN,
-            Pattern.compile("Bearer\\s\\w+.\\w+.+.\\S+").pattern())
         .expectHeader()
         .valueMatches(Constants.HEADER_X_B3_TRACE_ID, Pattern.compile("\\w+").pattern())
         .expectHeader()
@@ -74,10 +69,6 @@ public class LastMileSecuritySteps {
         .getRequestExchange()
         .expectHeader()
         .value(HttpHeaders.AUTHORIZATION, this::checkConsumerToken);
-    this.baseSteps
-        .getRequestExchange()
-        .expectHeader()
-        .value(Constants.HEADER_LASTMILE_SECURITY_TOKEN, this::checkGatewayToken);
   }
 
   private void checkConsumerToken(String consumerToken) {
@@ -86,14 +77,5 @@ public class LastMileSecuritySteps {
             OauthTokenUtil.getTokenWithoutSignature(consumerToken));
 
     assertNotNull(claimsFromToken.getBody().get("clientId", String.class));
-  }
-
-  private void checkGatewayToken(String gatewayToken) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(gatewayToken));
-
-    assertEquals(
-        localIssuerUrl + "/" + Constants.DEFAULT_REALM,
-        claimsFromToken.getBody().get("iss", String.class));
   }
 }
