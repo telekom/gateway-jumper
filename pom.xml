@@ -272,24 +272,23 @@ SPDX-License-Identifier: Apache-2.0
 							<include>src/main/java/**/*.java</include>
 							<include>src/test/java/**/*.java</include>
 						</includes>
-						<googleJavaFormat>
-							<version>1.28.0</version>
-                            <reflowLongStrings>true</reflowLongStrings>
-						</googleJavaFormat>
-					</java>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<configuration>
-					<excludedGroups>ignore</excludedGroups>
-					<useManifestOnlyJar>true</useManifestOnlyJar>
-					<argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
-				</configuration>
-			</plugin>
-		</plugins>
-	</build>
-
+            <googleJavaFormat>
+              <version>1.28.0</version>
+              <reflowLongStrings>true</reflowLongStrings>
+            </googleJavaFormat>
+          </java>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <excludedGroups>ignore</excludedGroups>
+          <argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>

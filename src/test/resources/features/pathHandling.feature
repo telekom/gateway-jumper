@@ -91,6 +91,6 @@ Feature: proper routingPath and token requestPath is used for provider call
 
   Scenario: Consumer calls proxy route with matrix parameters in path, path not manipulated for provider
     Given RealRoute headers are set
-    When consumer calls the proxy route with semicolonInPath
+    When consumer calls the proxy route with matrixParameterInPath
     And API consumer receives a 200 status code
     And verify token requestPath value /base/path;somekey=somevalue;otherkey=othervalue

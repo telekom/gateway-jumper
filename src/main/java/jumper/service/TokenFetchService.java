@@ -10,7 +10,9 @@ import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Duration;
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import jumper.Constants;
 import jumper.model.TokenInfo;
@@ -32,6 +34,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.UnsupportedMediaTypeException;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -188,7 +191,9 @@ public class TokenFetchService {
         .headers(
             httpHeaders -> {
               httpHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-              if (basicAuthHeader != null) httpHeaders.setBasicAuth(basicAuthHeader);
+              if (basicAuthHeader != null) {
+                httpHeaders.setBasicAuth(basicAuthHeader);
+              }
             })
         .body(BodyInserters.fromFormData(formData))
         .retrieve()
@@ -218,12 +223,25 @@ public class TokenFetchService {
             })
         .bodyToMono(TokenInfo.class)
         .timeout(Duration.ofSeconds(15))
+        .switchIfEmpty(
+            Mono.error(
+                new ResponseStatusException(
+                    HttpStatus.NOT_ACCEPTABLE,
+                    "Empty response while fetching token from " + tokenEndpoint)))
         .onErrorMap(
             TimeoutException.class,
             throwable ->
                 new ResponseStatusException(
                     HttpStatus.GATEWAY_TIMEOUT,
                     "Timeout occurred while fetching token from " + tokenEndpoint))
+        .onErrorMap(
+            WebClientResponseException.class,
+            ex -> {
+              if (ex.getCause() instanceof UnsupportedMediaTypeException cause) {
+                return cause;
+              }
+              return ex;
+            })
         .onErrorMap(
             UnsupportedMediaTypeException.class,
             throwable ->
