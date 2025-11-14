@@ -4,7 +4,9 @@
 
 package jumper;
 
-import static jumper.config.Config.*;
+import static jumper.config.Config.REMOTE_BASE_PATH;
+import static jumper.config.Config.REMOTE_FAILOVER_BASE_PATH;
+import static jumper.config.Config.REMOTE_PROVIDER_BASE_PATH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -12,6 +14,7 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import java.net.URI;
 import java.time.Duration;
 import java.util.function.Consumer;
 import jumper.filter.RequestFilter;
@@ -30,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Getter
 @Setter
@@ -330,6 +334,7 @@ public class BaseSteps {
   @When("consumer calls the proxy route with {word}")
   public void consumerCallsTheAPIWith(String scenario) {
     String uri = "/proxy";
+    boolean uriIsAlreadyEncoded = true;
 
     switch (scenario) {
       case "remoteNoPathNoTrailingNo":
@@ -399,6 +404,7 @@ public class BaseSteps {
         break;
       case "encodedQueryParam":
         setBasePathHeader("/base");
+        uriIsAlreadyEncoded = false;
         uri += "/path?validAt=2020-11-30T23%3A00%3A00%2B01%3A00&sig=123";
         mockUpstreamServer.testEndpoint(id, "/path");
         break;
@@ -407,11 +413,22 @@ public class BaseSteps {
         uri += "/path;somekey=somevalue;otherkey=othervalue";
         mockUpstreamServer.testEndpoint(id, "/path;somekey=somevalue;otherkey=othervalue");
         break;
+      case "encodedSlashesInParameter":
+        setBasePathHeader("/base");
+        uri += "/path/1.1.1.1%2F32";
+        mockUpstreamServer.testEndpoint(id, "/path/1.1.1.1%2F32");
+        break;
+      case "encodedSlashesAndColonsInParameter":
+        setBasePathHeader("/base");
+        uri += "/path/2003%3A0%3A1903%3Aa6ff%3A%3A60%2F124";
+        mockUpstreamServer.testEndpoint(id, "/path/2003%3A0%3A1903%3Aa6ff%3A%3A60%2F124");
+        break;
       default:
         fail("scenario not defined");
     }
 
-    requestExchange = webTestClient.get().uri(uri).headers(httpHeadersOfRequest).exchange();
+    URI builtUri = UriComponentsBuilder.fromUriString(uri).build(uriIsAlreadyEncoded).toUri();
+    requestExchange = webTestClient.get().uri(builtUri).headers(httpHeadersOfRequest).exchange();
   }
 
   @When("horizon calls the spectre route with {word}")
@@ -442,6 +459,11 @@ public class BaseSteps {
   @And("verify token requestPath value {word}")
   public void upstreamVerifyToken(String expected) {
     mockUpstreamServer.verifyTokenRequestPath(expected);
+  }
+
+  @And("verify request has been received")
+  public void verifyRequestWithIdHasBeenReceived() {
+    mockUpstreamServer.verifyCount(id, 1);
   }
 
   @And("verify query param {word} for value {word}")
