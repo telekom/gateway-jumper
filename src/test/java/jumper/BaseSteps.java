@@ -12,6 +12,7 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
+import java.net.URI;
 import java.time.Duration;
 import java.util.function.Consumer;
 import jumper.filter.RequestFilter;
@@ -407,11 +408,22 @@ public class BaseSteps {
         uri += "/path;somekey=somevalue;otherkey=othervalue";
         mockUpstreamServer.testEndpoint(id, "/path;somekey=somevalue;otherkey=othervalue");
         break;
+      case "encodedSlashesInParameter":
+        setBasePathHeader("/base");
+        uri += "/path/1.1.1.1%2F32";
+        mockUpstreamServer.testEndpoint(id, "/path/1.1.1.1%2F32");
+        break;
+      case "encodedSlashesAndColonsInParameter":
+        setBasePathHeader("/base");
+        uri += "/path/2003%3A0%3A1903%3Aa6ff%3A%3A60%2F124";
+        mockUpstreamServer.testEndpoint(id, "/path/2003%3A0%3A1903%3Aa6ff%3A%3A60%2F124");
+        break;
       default:
         fail("scenario not defined");
     }
 
-    requestExchange = webTestClient.get().uri(uri).headers(httpHeadersOfRequest).exchange();
+    requestExchange =
+        webTestClient.get().uri(URI.create(uri)).headers(httpHeadersOfRequest).exchange();
   }
 
   @When("horizon calls the spectre route with {word}")

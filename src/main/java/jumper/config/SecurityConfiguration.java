@@ -48,6 +48,7 @@ public class SecurityConfiguration {
   public StrictServerWebExchangeFirewall httpFirewall() {
     StrictServerWebExchangeFirewall firewall = new StrictServerWebExchangeFirewall();
     firewall.setAllowSemicolon(true);
+    firewall.setAllowUrlEncodedSlash(true);
     return firewall;
   }
 
