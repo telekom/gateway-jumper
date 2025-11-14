@@ -36,13 +36,13 @@ public class SecurityConfiguration {
    * <p>The default StrictServerWebExchangeFirewall blocks them as potentially malicious, but we
    * need to support them for proper URI handling.
    *
+   * @return StrictServerWebExchangeFirewall configured to allow semicolons and URL encoded slashes
    * @see <a
    *     href="https://docs.spring.io/spring-framework/reference/web/webflux/controller/ann-methods/matrix-variables.html">Matrix
    *     Variables in Spring Framework Reference</a>
    * @see <a
    *     href="https://docs.spring.io/spring-security/reference/reactive/exploits/firewall.html">Spring
    *     Security Firewall Documentation</a>
-   * @return StrictServerWebExchangeFirewall configured to allow semicolons
    */
   @Bean
   public StrictServerWebExchangeFirewall httpFirewall() {
