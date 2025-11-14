@@ -4,7 +4,9 @@
 
 package jumper;
 
-import static jumper.config.Config.*;
+import static jumper.config.Config.REMOTE_BASE_PATH;
+import static jumper.config.Config.REMOTE_FAILOVER_BASE_PATH;
+import static jumper.config.Config.REMOTE_PROVIDER_BASE_PATH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -31,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Getter
 @Setter
@@ -331,6 +334,7 @@ public class BaseSteps {
   @When("consumer calls the proxy route with {word}")
   public void consumerCallsTheAPIWith(String scenario) {
     String uri = "/proxy";
+    boolean uriIsAlreadyEncoded = true;
 
     switch (scenario) {
       case "remoteNoPathNoTrailingNo":
@@ -400,6 +404,7 @@ public class BaseSteps {
         break;
       case "encodedQueryParam":
         setBasePathHeader("/base");
+        uriIsAlreadyEncoded = false;
         uri += "/path?validAt=2020-11-30T23%3A00%3A00%2B01%3A00&sig=123";
         mockUpstreamServer.testEndpoint(id, "/path");
         break;
@@ -422,8 +427,8 @@ public class BaseSteps {
         fail("scenario not defined");
     }
 
-    requestExchange =
-        webTestClient.get().uri(URI.create(uri)).headers(httpHeadersOfRequest).exchange();
+    URI builtUri = UriComponentsBuilder.fromUriString(uri).build(uriIsAlreadyEncoded).toUri();
+    requestExchange = webTestClient.get().uri(builtUri).headers(httpHeadersOfRequest).exchange();
   }
 
   @When("horizon calls the spectre route with {word}")
@@ -454,6 +459,11 @@ public class BaseSteps {
   @And("verify token requestPath value {word}")
   public void upstreamVerifyToken(String expected) {
     mockUpstreamServer.verifyTokenRequestPath(expected);
+  }
+
+  @And("verify request has been received")
+  public void verifyRequestWithIdHasBeenReceived() {
+    mockUpstreamServer.verifyCount(id, 1);
   }
 
   @And("verify query param {word} for value {word}")
