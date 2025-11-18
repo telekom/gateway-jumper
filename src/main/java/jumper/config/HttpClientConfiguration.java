@@ -4,14 +4,18 @@
 
 package jumper.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import java.security.KeyStore;
 import java.time.Duration;
 import java.util.stream.Stream;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -44,8 +48,12 @@ public class HttpClientConfiguration {
   @Value("${spring.cloud.oauth.pool.metrics:true}")
   private boolean oauthPoolMetrics;
 
+  @Value("${jumper.ssl.certificate-validation-mode:warn}")
+  private String certificateValidationMode;
+
   private final HttpClientProperties properties;
   private final TlsHardeningConfiguration tlsHardeningConfiguration;
+  private final MeterRegistry meterRegistry;
 
   @Bean
   public HttpClientCustomizer httpClientCustomizer() throws SSLException {
@@ -79,7 +87,7 @@ public class HttpClientConfiguration {
     }
 
     return SslContextBuilder.forClient()
-        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+        .trustManager(createTrustManager())
         .protocols("TLSv1.2", "TLSv1.3")
         .sslProvider(SslProvider.JDK)
         .ciphers(
@@ -89,6 +97,50 @@ public class HttpClientConfiguration {
                 .distinct()
                 .toList())
         .build();
+  }
+
+  /**
+   * Creates a trust manager based on the configured validation mode.
+   *
+   * @return X509TrustManager instance
+   * @throws SSLException if trust manager creation fails
+   */
+  private X509TrustManager createTrustManager() throws SSLException {
+    try {
+      switch (certificateValidationMode.toLowerCase()) {
+        case "strict":
+          log.info(
+              "Certificate validation mode: STRICT - connections will fail on invalid"
+                  + " certificates");
+          // Use default trust manager (validates against system CA certificates)
+          TrustManagerFactory tmf =
+              TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+          tmf.init((KeyStore) null);
+          return (X509TrustManager) tmf.getTrustManagers()[0];
+
+        case "warn":
+          log.info(
+              "Certificate validation mode: WARN - invalid certificates will be logged but"
+                  + " connections allowed");
+          // Use warning trust manager (validates but only logs warnings and records metrics)
+          TrustManagerFactory defaultTmf =
+              TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+          defaultTmf.init((KeyStore) null);
+          X509TrustManager defaultTrustManager =
+              (X509TrustManager) defaultTmf.getTrustManagers()[0];
+          return new WarningTrustManager(defaultTrustManager, meterRegistry);
+
+        case "insecure":
+        default:
+          log.warn(
+              "Certificate validation mode: INSECURE - all certificates accepted without validation"
+                  + " (NOT RECOMMENDED FOR PRODUCTION)");
+          // Use insecure trust manager (accepts all certificates)
+          return (X509TrustManager) InsecureTrustManagerFactory.INSTANCE.getTrustManagers()[0];
+      }
+    } catch (Exception e) {
+      throw new SSLException("Failed to create trust manager", e);
+    }
   }
 
   private HttpClient configureProxy(HttpClient httpClient) {
