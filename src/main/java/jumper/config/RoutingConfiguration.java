@@ -29,6 +29,7 @@ public class RoutingConfiguration {
       RequestFilter requestFilter,
       UpstreamOAuthFilter upstreamOauthFilter,
       RemoveRequestHeaderFilter removeRequestHeader,
+      PlaintextValidationFilter plaintextValidationFilter,
       ResponseFilter responseFilter,
       SpectreRequestFilter spectreRequestFilter,
       SpectreResponseFilter spectreResponseFilter,
@@ -73,6 +74,7 @@ public class RoutingConfiguration {
                                 .filter(
                                     removeRequestHeader.apply(
                                         config -> config.setHeaders(headerRemovalList)))
+                                .filter(plaintextValidationFilter.apply(config -> {}))
                                 .filter(responseFilter.apply(config -> {})))
                     .uri("no://op"))
         .route(
