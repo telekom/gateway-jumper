@@ -154,6 +154,17 @@ jobs:
           fi
           echo "Image tag will be: ${TAG}"
           echo "image-tag=${TAG}" >> "${GITHUB_OUTPUT}"
+      - name: Determine image labels
+        # Apply Quay expiry only to branch builds that are not main; tags stay permanent.
+        id: image-labels
+        run: |
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            echo "labels=" >> "${GITHUB_OUTPUT}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "labels=" >> "${GITHUB_OUTPUT}"
+          else
+            echo "labels=quay.expires-after=60d" >> "${GITHUB_OUTPUT}"
+          fi
       - name: Login to registry
         uses: docker/login-action@v3
         with:
@@ -173,6 +184,8 @@ jobs:
           cache-from: type=registry,ref=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}:latest
           cache-to: type=inline
           build-args: ${{ vars.BASE_IMAGE != '' && format('BASE_IMAGE={0}', vars.BASE_IMAGE) || '' }}
+          provenance: false
+          labels: ${{ steps.image-labels.outputs.labels }}
           push: true
           platforms: linux/amd64
 
