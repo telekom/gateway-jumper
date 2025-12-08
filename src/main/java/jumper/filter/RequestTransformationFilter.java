@@ -34,7 +34,8 @@ public class RequestTransformationFilter implements GatewayFilter, Ordered {
   public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
 
     ServerHttpRequest request = exchange.getRequest();
-    if (request.getHeaders().getContentLength() > limit) {
+    long contentLength = request.getHeaders().getContentLength();
+    if (contentLength >= 0 && contentLength > limit) {
       log.warn("limit {} exceeded, will not store request payload", limit);
       return chain.filter(exchange);
     }
