@@ -90,7 +90,7 @@ jobs:
         # non-zero exit code
       - name: Manually upload ORT results
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: ort-results
           path: ${{ steps.ort.outputs.results-path }}
