@@ -16,6 +16,7 @@ public class Constants {
   public static final String HEADER_JUMPER_CONFIG = "jumper_config";
   public static final String HEADER_ROUTING_CONFIG = "routing_config";
   public static final String GATEWAY_ATTRIBUTE_OAUTH_FILTER_NEEDED = "oauth_filter_needed";
+  public static final String GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY = "token_cache_key";
 
   public static final String HEADER_ISSUER = "issuer";
   public static final String HEADER_TOKEN_ENDPOINT = "token_endpoint";

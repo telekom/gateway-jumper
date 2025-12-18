@@ -235,9 +235,34 @@ public class BaseSteps {
     mockIrisServer.createExpectationExternalDropConnection(id);
   }
 
+  @And("IDP set to provide token without expires_in")
+  public void idpSetToProvideTokenWithoutExpiresIn() {
+    mockIrisServer.createExpectationExternalTokenNoExpiresIn(id);
+  }
+
+  @And("IDP set to provide token without expires_in allowing multiple calls")
+  public void idpSetToProvideTokenWithoutExpiresInMultipleCalls() {
+    mockIrisServer.createExpectationExternalTokenNoExpiresInMultipleCalls(id, 5);
+  }
+
+  @And("IDP token endpoint was called exactly {int} times")
+  public void idpTokenEndpointWasCalledTimes(int expectedCount) {
+    mockIrisServer.verifyTokenEndpointCallCount(expectedCount);
+  }
+
   @When("consumer calls the proxy route")
   public void consumerCallsTheAPI() {
     mockUpstreamServer.callbackRequest();
+    requestExchange =
+        webTestClient
+            .get()
+            .uri("/proxy/callback?statusCode=" + responseStatusCode)
+            .headers(httpHeadersOfRequest)
+            .exchange();
+  }
+
+  @When("consumer calls the proxy route again")
+  public void consumerCallsTheAPIAgain() {
     requestExchange =
         webTestClient
             .get()
