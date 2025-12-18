@@ -11,6 +11,7 @@ import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.service.JumperConfigService;
+import jumper.service.TokenCacheService;
 import jumper.service.TokenFetchService;
 import jumper.util.ExchangeStateManager;
 import jumper.util.HeaderUtil;
@@ -24,6 +25,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 @Component
@@ -35,12 +37,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   private final TokenFetchService tokenFetchService;
   private final JumperConfigService jumperConfigService;
+  private final TokenCacheService tokenCacheService;
 
   public UpstreamOAuthFilter(
-      TokenFetchService tokenFetchService, JumperConfigService jumperConfigService) {
+      TokenFetchService tokenFetchService,
+      JumperConfigService jumperConfigService,
+      TokenCacheService tokenCacheService) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
     this.jumperConfigService = jumperConfigService;
+    this.tokenCacheService = tokenCacheService;
   }
 
   @Override
@@ -64,7 +70,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
           // Reactive chain: resolve token source (mesh/external/legacy) -> set Bearer token ->
           // build request -> continue filter chain
-          return resolveTokenSource(jumperConfig, requestBuilder)
+          return resolveTokenSource(exchange, jumperConfig, requestBuilder)
               .map(tokenInfo -> setBearerToken(requestBuilder, tokenInfo))
               .map(ServerHttpRequest.Builder::build)
               .flatMap(
@@ -89,10 +95,11 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   /**
-   * Resolves the appropriate OAuth token source based on JumperConfig and returns token reactively
+   * Resolves the appropriate OAuth token source based on JumperConfig and returns token reactively.
+   * For external IdP tokens, stores the token cache key in exchange for 4xx-based eviction.
    */
   private Mono<TokenInfo> resolveTokenSource(
-      JumperConfig jumperConfig, ServerHttpRequest.Builder builder) {
+      ServerWebExchange exchange, JumperConfig jumperConfig, ServerHttpRequest.Builder builder) {
     if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
       // Gateway-to-Gateway mesh token: JWT generated internally for inter-gateway communication
       log.debug("----------------GATEWAY MESH-------------");
@@ -110,13 +117,18 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
         // Use OAuth credentials with explicit grant type (modern approach)
         log.debug("fetching token with OauthCredentials");
+        // Store token cache key in exchange for 4xx-based eviction
+        String tokenCacheKey =
+            tokenCacheService.generateTokenCacheKey(
+                jumperConfig.getExternalTokenEndpoint(), oauthCredentials.get());
+        exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY, tokenCacheKey);
         tokenMono =
             tokenFetchService.getAccessTokenWithOauthCredentialsObject(
                 jumperConfig.getExternalTokenEndpoint(), oauthCredentials.get());
       } else {
         // Fallback to legacy header-based credentials extraction
         log.debug("fetching token with legacy method");
-        tokenMono = getAccessTokenFromExternalIdpLegacy(builder, jumperConfig);
+        tokenMono = getAccessTokenFromExternalIdpLegacy(exchange, builder, jumperConfig);
       }
 
       return tokenMono.onErrorResume(Mono::error);
@@ -132,7 +144,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private Mono<TokenInfo> getAccessTokenFromExternalIdpLegacy(
-      ServerHttpRequest.Builder builder, JumperConfig jc) {
+      ServerWebExchange exchange, ServerHttpRequest.Builder builder, JumperConfig jc) {
 
     String consumer = jc.getConsumer();
     String tokenEndpoint = jc.getExternalTokenEndpoint();
@@ -145,6 +157,10 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
     log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
     if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
+      // Store token cache key in exchange for 4xx-based eviction
+      String tokenCacheKey =
+          tokenCacheService.generateTokenCacheKey(tokenEndpoint, clientId, clientScope);
+      exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY, tokenCacheKey);
       return tokenFetchService.getAccessTokenWithClientCredentials(
           tokenEndpoint, clientId, clientSecret, clientScope);
     } else {
