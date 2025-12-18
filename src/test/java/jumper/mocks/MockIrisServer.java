@@ -441,4 +441,75 @@ public class MockIrisServer {
   public void setResponse(int response) {
     this.responseCode = response;
   }
+
+  public void createExpectationExternalTokenNoExpiresIn(String id) {
+    String tokenInfoJson = getTokenInfoJsonWithoutExpiresIn(CONSUMER_EXTERNAL_CONFIGURED);
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody("grant_type=client_credentials")
+                .withHeader(
+                    "Authorization",
+                    "Basic "
+                        + Base64.getEncoder()
+                            .encodeToString(
+                                (addIdSuffix("external_configured", id) + ":" + "secret")
+                                    .getBytes())),
+            exactly(1))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withHeaders(
+                    new Header("Content-Type", "application/json; charset=utf-8"),
+                    new Header("Cache-Control", "no-store"))
+                .withBody(tokenInfoJson)
+                .withDelay(TimeUnit.MILLISECONDS, 100));
+  }
+
+  public void createExpectationExternalTokenNoExpiresInMultipleCalls(String id, int maxCalls) {
+    String tokenInfoJson = getTokenInfoJsonWithoutExpiresIn(CONSUMER_EXTERNAL_CONFIGURED);
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody("grant_type=client_credentials")
+                .withHeader(
+                    "Authorization",
+                    "Basic "
+                        + Base64.getEncoder()
+                            .encodeToString(
+                                (addIdSuffix("external_configured", id) + ":" + "secret")
+                                    .getBytes())),
+            exactly(maxCalls))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withHeaders(
+                    new Header("Content-Type", "application/json; charset=utf-8"),
+                    new Header("Cache-Control", "no-store"))
+                .withBody(tokenInfoJson)
+                .withDelay(TimeUnit.MILLISECONDS, 100));
+  }
+
+  public void verifyTokenEndpointCallCount(int expectedCount) {
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .verify(
+            request().withMethod("POST").withPath("/external"),
+            org.mockserver.verify.VerificationTimes.exactly(expectedCount));
+  }
+
+  private String getTokenInfoJsonWithoutExpiresIn(String client) {
+    // Build JSON manually to exclude expires_in field
+    String accessToken = getToken(client);
+    return String.format(
+        "{\"access_token\":\"%s\",\"refresh_token\":\"asd\",\"token_type\":\"bearer\","
+            + "\"not-before-policy\":0,\"session_state\":\"69fc4e8-77e9-45f9-93e4-646a34f802cc\","
+            + "\"scope\":\"profile email\"}",
+        accessToken);
+  }
 }

@@ -58,6 +58,13 @@ public class TokenCacheService {
     tokenCache.put(tokenKey, gwAccessToken);
   }
 
+  public void evictToken(String tokenCacheKey) {
+    if (tokenCacheKey != null) {
+      log.debug("Evicting token from cache with key: '{}'", tokenCacheKey);
+      tokenCache.evict(tokenCacheKey);
+    }
+  }
+
   public String generateTokenCacheKey(String tokenEndpoint, OauthCredentials oauthCredentials) {
     // Use StringBuilder to reduce object allocations
     String scopes = oauthCredentials.getScopes() != null ? oauthCredentials.getScopes() : "";
@@ -84,6 +91,11 @@ public class TokenCacheService {
   }
 
   private boolean isValid(TokenInfo token) {
+    // If expiration is null (no expires_in in token response), treat as valid.
+    // Rely on cache's TTL (30 min max via expireAfterWrite) and 4xx-based eviction.
+    if (token.getExpiration() == null) {
+      return true;
+    }
     return token.getExpiresIn() > this.ttlOffset;
   }
 }
