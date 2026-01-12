@@ -50,6 +50,40 @@ class SpectreConfigurationTest {
     }
   }
 
+  @ParameterizedTest(name = "[{index}] {0} should match {1}")
+  @MethodSource("mediaTypeWithCharsetProvider")
+  void jsonContentTypesContains_withCharsetParameter(String baseType, String typeWithCharset) {
+
+    // GIVEN - configuration contains only base types without charset
+    MediaType baseMediaType = MediaType.valueOf(baseType);
+    MediaType mediaTypeWithCharset = MediaType.valueOf(typeWithCharset);
+
+    // WHEN
+    boolean resultWithCharset = testInstance.jsonContentTypesContains(mediaTypeWithCharset);
+
+    // THEN
+    assertThat(resultWithCharset)
+        .as(
+            "MediaType '%s' with charset parameter should match configured base type '%s'",
+            typeWithCharset, baseType)
+        .isTrue();
+
+    assertThat(testInstance.jsonContentTypesContains(baseMediaType))
+        .as("Base MediaType '%s' should also match", baseType)
+        .isTrue();
+  }
+
+  private static Stream<Arguments> mediaTypeWithCharsetProvider() {
+    return Stream.of(
+        Arguments.of("application/json", "application/json;charset=UTF-8"),
+        Arguments.of("application/json", "application/json;charset=ISO-8859-1"),
+        Arguments.of("application/merge-patch+json", "application/merge-patch+json;charset=UTF-8"),
+        Arguments.of("application/json-patch+json", "application/json-patch+json;charset=UTF-8"),
+        Arguments.of(
+            "application/json-patch-query+json", "application/json-patch-query+json;charset=UTF-8"),
+        Arguments.of("application/problem+json", "application/problem+json;charset=UTF-8"));
+  }
+
   private static Stream<Arguments> mediaTypeProvider() {
     return getAllMediaTypes().stream().map(Arguments::of);
   }
