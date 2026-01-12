@@ -8,6 +8,7 @@ import java.util.Objects;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.service.SpectreService;
+import jumper.util.ExchangeStateManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.NettyWriteResponseFilter;
@@ -22,6 +23,7 @@ public class SpectreResponseFilter
     extends AbstractGatewayFilterFactory<AbstractGatewayFilterFactory.NameConfig> {
 
   private final SpectreService spectreService;
+  private final ExchangeStateManager exchangeStateManager;
 
   /**
    * At Order "NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 1" we have the response in
@@ -31,9 +33,11 @@ public class SpectreResponseFilter
   public static final int AUTO_EVENT_RESPONSE_FILTER_ORDER =
       NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 2;
 
-  public SpectreResponseFilter(SpectreService spectreService) {
+  public SpectreResponseFilter(
+      SpectreService spectreService, ExchangeStateManager exchangeStateManager) {
     super(AbstractGatewayFilterFactory.NameConfig.class);
     this.spectreService = spectreService;
+    this.exchangeStateManager = exchangeStateManager;
   }
 
   @Override
@@ -45,7 +49,8 @@ public class SpectreResponseFilter
                 .then(
                     Mono.fromRunnable(
                         () -> {
-                          String responseBody = exchange.getAttribute("cachedResponseBodyObject");
+                          String responseBody =
+                              exchangeStateManager.getCachedResponseBody(exchange).orElse(null);
 
                           log.debug(
                               "Response: status={}, headers={}, payload={}",
@@ -55,7 +60,8 @@ public class SpectreResponseFilter
                               responseBody);
 
                           // use jumperConfig passed with exchange
-                          JumperConfig jumperConfig = JumperConfig.parseJumperConfigFrom(exchange);
+                          JumperConfig jumperConfig =
+                              exchangeStateManager.getJumperConfig(exchange).orElse(null);
                           if (jumperConfig.isListenerMatched()) {
                             RouteListener listener =
                                 jumperConfig.getRouteListener().get(jumperConfig.getConsumer());
