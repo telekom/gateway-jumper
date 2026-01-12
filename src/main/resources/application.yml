@@ -127,7 +127,6 @@ jumper:
       - application/merge-patch+json
       - application/json-patch+json
       - application/json-patch-query+json
-      - application/json
       - application/problem+json
   security:
     dir: /keypair
