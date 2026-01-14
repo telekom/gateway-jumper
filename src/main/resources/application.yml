@@ -136,7 +136,7 @@ jumper:
   tokencache:
     ttlOffset: 10
     maxSize: 10000
-    expireAfterWriteMinutes: 30
+    expireAfterWriteMinutes: 1440
   horizon:
     publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
 
