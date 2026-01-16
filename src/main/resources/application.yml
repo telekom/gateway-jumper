@@ -112,6 +112,17 @@ jumper:
     url: ${JUMPER_ISSUER_URL:https://stargate-integration.test.dhei.telekom.de/auth/realms}
   stargate:
     url: ${STARGATE_URL:https://stargate-integration.test.dhei.telekom.de}
+  ssl:
+    # Certificate validation mode for upstream HTTPS connections
+    # - insecure: Accept all certificates without validation (default, backwards compatible)
+    # - warn: Validate certificates but log warnings and allow connections on validation failure
+    # - strict: Enforce strict certificate validation, reject connections with invalid certificates
+    certificate-validation-mode: insecure
+    # Plaintext validation mode for upstream HTTP (non-HTTPS) connections
+    # - insecure: Allow plaintext HTTP connections without warnings (default, backwards compatible)
+    # - warn: Allow plaintext HTTP but log warnings and record metrics
+    # - strict: Block plaintext HTTP connections, only allow HTTPS
+    plaintext-validation-mode: insecure
   zone:
     name: ${JUMPER_ZONE_NAME:default}
     internetFacingZones: ${JUMPER_INTERNET_FACING_ZONES:space,canis,aries} # list all zones in the mesh that are internet facing
