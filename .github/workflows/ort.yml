@@ -96,7 +96,7 @@ jobs:
           path: ${{ steps.ort.outputs.results-path }}
       - name: Submit SBOM to dependency graph
         if: github.ref == 'refs/heads/main'
-        uses: advanced-security/spdx-dependency-submission-action@v0.1.1
+        uses: advanced-security/spdx-dependency-submission-action@v0.1.2
         with:
           filePath: ${{ steps.ort.outputs.results-path }}"
       - name: Upload reports to release
