@@ -19,13 +19,12 @@ SPDX-License-Identifier: Apache-2.0
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.7</version>
+		<version>3.5.9</version>
 	</parent>
 
 	<properties>
 		<java.version>21</java.version>
-		<spring-cloud.version>2025.0.0</spring-cloud.version>
-		<spring-cloud-gateway.version>4.3.2</spring-cloud-gateway.version>
+		<spring-cloud.version>2025.0.1</spring-cloud.version>
 
 		<cucumber.version>7.30.0</cucumber.version>
 		<junit-platform.version>1.14.0</junit-platform.version>
@@ -49,20 +48,6 @@ SPDX-License-Identifier: Apache-2.0
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
-      <!-- Override Spring Cloud Gateway to patched version for CVE-2025-41243 -->
-      <!-- TODO: Remove with bump to spring-cloud 2025.1 -->
-      <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-gateway-server</artifactId>
-        <version>${spring-cloud-gateway.version}</version>
-      </dependency>
-      <!-- Override Spring Cloud Gateway to patched version for CVE-2025-41243 -->
-      <!-- TODO: Remove with bump to spring-cloud 2025.1 -->
-      <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-gateway-server-webflux</artifactId>
-        <version>${spring-cloud-gateway.version}</version>
-      </dependency>
 		</dependencies>
 	</dependencyManagement>
 
