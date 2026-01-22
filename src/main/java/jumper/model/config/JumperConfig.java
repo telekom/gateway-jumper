@@ -11,10 +11,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwt;
-import jakarta.validation.constraints.NotNull;
 import java.util.*;
 import jumper.Constants;
 import jumper.util.HeaderUtil;
+import jumper.util.LoadBalancingUtil;
 import jumper.util.OauthTokenUtil;
 import jumper.util.ObjectMapperUtil;
 import lombok.Data;
@@ -109,7 +109,7 @@ public class JumperConfig {
       setRemoteApiUrl(
           HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
     } else if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
-      setRemoteApiUrl(calculateUpstream(loadBalancing.getServers()));
+      setRemoteApiUrl(LoadBalancingUtil.calculateUpstream(loadBalancing.getServers()));
     } else {
       throw new RuntimeException(
           "missing routing information " + Constants.HEADER_REMOTE_API_URL + " / jc.loadBalancing");
@@ -186,7 +186,7 @@ public class JumperConfig {
 
     // check loadBalancing
     if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
-      setRemoteApiUrl(calculateUpstream(loadBalancing.getServers()));
+      setRemoteApiUrl(LoadBalancingUtil.calculateUpstream(loadBalancing.getServers()));
     } else if (Objects.isNull(remoteApiUrl)) {
       throw new RuntimeException("missing routing information jc.remoteApiUrl / jc.loadBalancing");
     }
@@ -260,27 +260,5 @@ public class JumperConfig {
   public String getSecurityScopes() {
     Optional<OauthCredentials> oauthCredentials = getOauthCredentials();
     return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
-  }
-
-  private static String calculateUpstream(@NotNull List<Server> servers) {
-    // Sum total of weights
-    double total = 0;
-    for (Server server : servers) {
-      total += server.getWeight();
-    }
-
-    // Random a number between [1, total]
-    double random = Math.ceil(Math.random() * total);
-
-    // Seek cursor to find which area the random is in
-    double cursor = 0;
-    for (Server server : servers) {
-      cursor += server.getWeight();
-      if (cursor >= random) {
-        return server.getUpstream();
-      }
-    }
-
-    throw new RuntimeException("can not calculate upstream");
   }
 }
