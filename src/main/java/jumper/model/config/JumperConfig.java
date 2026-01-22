@@ -4,7 +4,6 @@
 
 package jumper.model.config;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -69,7 +68,6 @@ public class JumperConfig {
 
   Boolean secondaryFailover = false;
 
-  @JsonIgnore
   public static String toJsonBase64(Object o) {
     String jsonConfigBase64 = null;
     try {
@@ -82,7 +80,6 @@ public class JumperConfig {
     return jsonConfigBase64;
   }
 
-  @JsonIgnore
   private static <T> T fromJsonBase64(String jsonConfigBase64, TypeReference<T> typeReference) {
     String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
     try {
@@ -100,7 +97,6 @@ public class JumperConfig {
     }
   }
 
-  @JsonIgnore
   private void fillWithLegacyHeaders(ServerHttpRequest request) {
 
     // proxy & real
@@ -163,7 +159,6 @@ public class JumperConfig {
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
   }
 
-  @JsonIgnore
   public void fillProcessingInfo(ServerHttpRequest request) {
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
@@ -203,7 +198,6 @@ public class JumperConfig {
     throw new RuntimeException("can not base64decode header: " + routingConfigBase64);
   }
 
-  @JsonIgnore
   public static JumperConfig parseAndFillJumperConfigFrom(ServerHttpRequest request) {
 
     JumperConfig jc =
