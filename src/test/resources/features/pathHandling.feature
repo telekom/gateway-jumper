@@ -107,3 +107,9 @@ Feature: proper routingPath and token requestPath is used for provider call
     When consumer calls the proxy route with encodedSlashesAndColonsInParameter
     And API consumer receives a 200 status code
     And verify request has been received
+
+  Scenario: Consumer calls proxy route with URL encoded double slashes in parameter
+    Given RealRoute headers are set
+    When consumer calls the proxy route with encodedDoubleSlashesInParameter
+    And API consumer receives a 200 status code
+    And verify request has been received

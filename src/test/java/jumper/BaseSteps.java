@@ -423,6 +423,11 @@ public class BaseSteps {
         uri += "/path/2003%3A0%3A1903%3Aa6ff%3A%3A60%2F124";
         mockUpstreamServer.testEndpoint(id, "/path/2003%3A0%3A1903%3Aa6ff%3A%3A60%2F124");
         break;
+      case "encodedDoubleSlashesInParameter":
+        setBasePathHeader("/base");
+        uri += "/path/test%2F%2Fvalue";
+        mockUpstreamServer.testEndpoint(id, "/path/test%2F%2Fvalue");
+        break;
       default:
         fail("scenario not defined");
     }
