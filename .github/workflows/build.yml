@@ -188,6 +188,37 @@ jobs:
           labels: ${{ steps.image-labels.outputs.labels }}
           push: true
           platforms: linux/amd64
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.0.0
+        with:
+          cosign-release: 'v2.5.3'
+      - name: Sign image using cosign
+        id: cosign-sign
+        run: |
+          echo "TAGS=${TAGS}"
+          echo "DIGEST=${DIGEST}"
+          images=""
+          for tag in ${TAGS}; do
+            images+="${{ env.REGISTRY}}${{ env.REGISTRY_REPO }}:${tag}@${DIGEST} "
+          done
+          echo "images=${images}" >> $GITHUB_OUTPUT
+          cosign login -u ${{ env.REGISTRY_USER }} -p ${{ env.REGISTRY_PASSWORD }} ${{ env.REGISTRY }}
+          cosign sign --key env://COSIGN_PRIVATE_KEY --tlog-upload=false ${images}
+        env:
+          TAGS: ${{ steps.tag.outputs.image-tag }}
+          DIGEST: ${{ steps.build-push.outputs.digest }}
+          REGISTRY: ${{ vars.REGISTRY_HOST }}
+          REGISTRY_REPO: ${{ vars.REGISTRY_REPO }}
+          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+      - name: Verify signature
+        run: |
+          cosign verify --insecure-ignore-tlog=true --key env://COSIGN_PUBLIC_KEY ${IMAGES}
+        env:
+          IMAGES: ${{ steps.cosign-sign.outputs.images }}
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
 
   scan-image:
     name: Scan image
