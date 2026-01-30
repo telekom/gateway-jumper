@@ -21,7 +21,7 @@ management:
         enabled: true #healthcheck probes, liveness and readiness
   endpoints:
     web:
-      exposure.include: loggers, prometheus, health
+      exposure.include: prometheus, health
   observations:
     enable:
       spring.security: false
