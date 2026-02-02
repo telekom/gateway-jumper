@@ -24,7 +24,7 @@ class TlsHardeningConfigurationTest {
 
   @Test
   void getAllowedCipherSuites() {
-    assertEquals(19, tlsHardeningConfiguration.getDefaultAllowedCipherSuites().size());
+    assertEquals(22, tlsHardeningConfiguration.getDefaultAllowedCipherSuites().size());
     assertEquals(0, tlsHardeningConfiguration.getAdditionalAllowedCipherSuites().size());
   }
 
