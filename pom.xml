@@ -29,7 +29,7 @@ SPDX-License-Identifier: Apache-2.0
 		<cucumber.version>7.30.0</cucumber.version>
 		<junit-platform.version>1.14.0</junit-platform.version>
 		<mockserver.version>5.15.0</mockserver.version>
-		<jsonwebtoken.version>0.11.5</jsonwebtoken.version>
+		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 	</properties>
 
 	<dependencyManagement>
