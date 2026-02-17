@@ -496,6 +496,33 @@ public class MockIrisServer {
                 .withDelay(TimeUnit.MILLISECONDS, 100));
   }
 
+  public void createExpectationAlternativeTokenNoExpiresInMultipleCalls(String id, int maxCalls) {
+    String tokenInfoJson = getTokenInfoJsonWithoutExpiresIn("alternative_client");
+
+    new MockServerClient(irisLocalHost, irisLocalPort)
+        .when(
+            request()
+                .withMethod("POST")
+                .withPath("/external")
+                .withBody("grant_type=client_credentials")
+                .withHeader(
+                    "Authorization",
+                    "Basic "
+                        + Base64.getEncoder()
+                            .encodeToString(
+                                (addIdSuffix("alternative_client", id) + ":" + "differentSecret")
+                                    .getBytes())),
+            exactly(maxCalls))
+        .respond(
+            response()
+                .withStatusCode(responseCode)
+                .withHeaders(
+                    new Header("Content-Type", "application/json; charset=utf-8"),
+                    new Header("Cache-Control", "no-store"))
+                .withBody(tokenInfoJson)
+                .withDelay(TimeUnit.MILLISECONDS, 100));
+  }
+
   public void verifyTokenEndpointCallCount(int expectedCount) {
     new MockServerClient(irisLocalHost, irisLocalPort)
         .verify(

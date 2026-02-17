@@ -125,6 +125,18 @@ public class JumperConfigUtil {
       return toJsonBase64(jc);
     }
 
+    public String getJcOauthGrantTypeAlternative(String id) {
+      HashMap<String, OauthCredentials> oauth = new HashMap<>();
+      OauthCredentials oc = new OauthCredentials();
+      oc.setClientId(addIdSuffix("alternative_client", id));
+      oc.setClientSecret("differentSecret");
+      oc.setGrantType("client_credentials");
+      determineKeys().forEach(key -> oauth.put(key, oc));
+      JumperConfig jc = new JumperConfig();
+      jc.setOauth(oauth);
+      return toJsonBase64(jc);
+    }
+
     public String getJcOauthGrantTypePost(String id) {
       HashMap<String, OauthCredentials> oauth = new HashMap<>();
       OauthCredentials oc = new OauthCredentials();

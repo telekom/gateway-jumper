@@ -143,6 +143,11 @@ public class VerificationSteps {
           .getRequestExchange()
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkExternalConfigured);
+    } else if (tokenType.equalsIgnoreCase("AlternativeClient")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkAlternativeClient);
     } else if (tokenType.equalsIgnoreCase("ExternalHeader")) {
       this.baseSteps
           .getRequestExchange()
@@ -272,6 +277,14 @@ public class VerificationSteps {
 
     assertEquals(
         CONSUMER_EXTERNAL_CONFIGURED, claimsFromToken.getBody().get("clientId", String.class));
+    assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
+  }
+
+  private void checkAlternativeClient(String token) {
+    Jwt<?, Claims> claimsFromToken =
+        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+
+    assertEquals("alternative_client", claimsFromToken.getBody().get("clientId", String.class));
     assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
   }
 

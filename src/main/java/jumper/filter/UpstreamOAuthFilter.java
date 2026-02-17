@@ -159,7 +159,8 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
       // Store token cache key in exchange for 4xx-based eviction
       String tokenCacheKey =
-          tokenCacheService.generateTokenCacheKey(tokenEndpoint, clientId, clientScope);
+          tokenCacheService.generateTokenCacheKey(
+              tokenEndpoint, clientId, clientSecret, clientScope);
       exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY, tokenCacheKey);
       return tokenFetchService.getAccessTokenWithClientCredentials(
           tokenEndpoint, clientId, clientSecret, clientScope);

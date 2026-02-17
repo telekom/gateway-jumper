@@ -51,17 +51,20 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
                       ServerHttpResponse response = exchange.getResponse();
                       ServerHttpRequest request = exchange.getRequest();
 
-                        // Evict token from cache on 4xx upstream responses
-                        HttpStatusCode statusCode = response.getStatusCode();
-                        if (statusCode != null
-                                && (statusCode.isSameCodeAs(HttpStatusCode.valueOf(401))
-                                || statusCode.isSameCodeAs(HttpStatusCode.valueOf(403)))) {
-                            String tokenCacheKey = exchange.getAttribute(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY);
-                            if (tokenCacheKey != null) {
-                                log.debug("Received {} response, evicting token from cache", statusCode.value());
-                                tokenCacheService.evictToken(tokenCacheKey);
-                            }
+                      // Evict token from cache on 4xx upstream responses
+                      HttpStatusCode statusCode = response.getStatusCode();
+                      if (statusCode != null
+                          && (statusCode.isSameCodeAs(HttpStatusCode.valueOf(401))
+                              || statusCode.isSameCodeAs(HttpStatusCode.valueOf(403)))) {
+                        String tokenCacheKey =
+                            exchange.getAttribute(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY);
+                        if (tokenCacheKey != null) {
+                          log.debug(
+                              "Received {} response, evicting token from cache",
+                              statusCode.value());
+                          tokenCacheService.evictToken(tokenCacheKey);
                         }
+                      }
 
                       if (log.isDebugEnabled()) {
                         JumperInfoResponse jumperInfoResponse = new JumperInfoResponse();

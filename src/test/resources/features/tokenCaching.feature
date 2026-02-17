@@ -43,6 +43,24 @@ Feature: Token caching for external OAuth tokens
       | 401        |
       | 403        |
 
+  Scenario: Cache is not used when credentials change
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "consumer grant_type client_credentials" set
+    And IDP set to provide token without expires_in allowing multiple calls
+    And IDP set to provide alternative token without expires_in allowing multiple calls
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+    And IDP token endpoint was called exactly 1 times
+    Given jumperConfig oauth "consumer grant_type client_credentials alternative" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route again
+    Then API Provider receives authorization AlternativeClient
+    And API consumer receives a 200 status code
+    And IDP token endpoint was called exactly 2 times
+
   Scenario: Token with expires_in behaves normally
     Given RealRoute headers are set
     And oauth tokenEndpoint set

@@ -63,7 +63,8 @@ public class TokenFetchService {
   public Mono<TokenInfo> getAccessTokenWithClientCredentials(
       String tokenEndpoint, String clientID, String clientSecret, String scope) {
 
-    final String tokenKey = tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, scope);
+    final String tokenKey =
+        tokenCache.generateTokenCacheKey(tokenEndpoint, clientID, clientSecret, scope);
 
     // try to get valid token from tokenCache...
     return tokenCache
