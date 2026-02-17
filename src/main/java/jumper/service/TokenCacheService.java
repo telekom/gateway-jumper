@@ -66,28 +66,24 @@ public class TokenCacheService {
   }
 
   public String generateTokenCacheKey(String tokenEndpoint, OauthCredentials oauthCredentials) {
-    // Use StringBuilder to reduce object allocations
-    String scopes = oauthCredentials.getScopes() != null ? oauthCredentials.getScopes() : "";
-    return new StringBuilder(
-            tokenEndpoint.length() + oauthCredentials.getId().length() + scopes.length() + 2)
-        .append(tokenEndpoint)
-        .append(TOKEN_CACHE_KEY_DELIMITER)
-        .append(oauthCredentials.getId())
-        .append(TOKEN_CACHE_KEY_DELIMITER)
-        .append(scopes)
-        .toString();
+    return generateTokenCacheKey(
+        tokenEndpoint,
+        oauthCredentials.getId(),
+        oauthCredentials.getClientSecret(),
+        oauthCredentials.getScopes());
   }
 
-  public String generateTokenCacheKey(String tokenEndpoint, String clientID, String scopes) {
-    // Use StringBuilder to reduce object allocations - handle null scopes
+  public String generateTokenCacheKey(
+      String tokenEndpoint, String clientID, String clientSecret, String scopes) {
     String safeScopes = scopes != null ? scopes : "";
-    return new StringBuilder(tokenEndpoint.length() + clientID.length() + safeScopes.length() + 2)
-        .append(tokenEndpoint)
-        .append(TOKEN_CACHE_KEY_DELIMITER)
-        .append(clientID)
-        .append(TOKEN_CACHE_KEY_DELIMITER)
-        .append(safeScopes)
-        .toString();
+    String hashedCredentials = hashCredentials(clientID, clientSecret);
+    return tokenEndpoint
+        + TOKEN_CACHE_KEY_DELIMITER
+        + clientID
+        + TOKEN_CACHE_KEY_DELIMITER
+        + hashedCredentials
+        + TOKEN_CACHE_KEY_DELIMITER
+        + safeScopes;
   }
 
   private boolean isValid(TokenInfo token) {
@@ -97,5 +93,23 @@ public class TokenCacheService {
       return true;
     }
     return token.getExpiresIn() > this.ttlOffset;
+  }
+
+  private String hashCredentials(String clientId, String clientSecret) {
+    try {
+      String combined =
+          (clientId != null ? clientId : "") + (clientSecret != null ? clientSecret : "");
+      java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(combined.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      StringBuilder hexString = new StringBuilder();
+      for (byte b : hash) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) hexString.append('0');
+        hexString.append(hex);
+      }
+      return hexString.toString();
+    } catch (java.security.NoSuchAlgorithmException e) {
+      throw new RuntimeException("SHA-256 algorithm not available", e);
+    }
   }
 }

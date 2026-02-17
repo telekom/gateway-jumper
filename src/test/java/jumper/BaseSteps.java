@@ -245,6 +245,11 @@ public class BaseSteps {
     mockIrisServer.createExpectationExternalTokenNoExpiresInMultipleCalls(id, 5);
   }
 
+  @And("IDP set to provide alternative token without expires_in allowing multiple calls")
+  public void idpSetToProvideAlternativeTokenWithoutExpiresInMultipleCalls() {
+    mockIrisServer.createExpectationAlternativeTokenNoExpiresInMultipleCalls(id, 5);
+  }
+
   @And("IDP token endpoint was called exactly {int} times")
   public void idpTokenEndpointWasCalledTimes(int expectedCount) {
     mockIrisServer.verifyTokenEndpointCallCount(expectedCount);

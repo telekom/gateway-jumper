@@ -67,6 +67,11 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.CONSUMER.getJcOauthGrantType(baseSteps.getId()));
                   break;
+                case "consumer grant_type client_credentials alternative":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      JcOauthConfig.CONSUMER.getJcOauthGrantTypeAlternative(baseSteps.getId()));
+                  break;
                 case "consumer grant_type client_credentials client_secret_post method":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
