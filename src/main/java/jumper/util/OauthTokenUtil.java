@@ -26,10 +26,23 @@ public final class OauthTokenUtil {
       throw new IllegalStateException("Consumer token not provided, but expected");
     }
 
-    String[] token = consumerToken.split(" ");
-    String[] splitToken = token[1].split("\\.");
+    String trimmedConsumerToken = consumerToken.trim();
 
-    return splitToken[0] + "." + splitToken[1] + ".";
+    int spaceIndex = trimmedConsumerToken.indexOf(" ");
+    if (spaceIndex == -1) {
+      throw new IllegalStateException("Invalid token format, Missing Bearer prefix");
+    }
+
+    String token = trimmedConsumerToken.substring(spaceIndex + 1).trim();
+
+    int headerPayloadSeperatorIndex = token.indexOf(".");
+
+    int payloadSignatureSeperatorIndex = token.indexOf(".", headerPayloadSeperatorIndex + 1);
+    if (payloadSignatureSeperatorIndex == -1) {
+      throw new IllegalStateException("Invalid token format");
+    }
+
+    return token.substring(0, payloadSignatureSeperatorIndex + 1);
   }
 
   public static String getSignature(String consumerToken) {
@@ -38,10 +51,22 @@ public final class OauthTokenUtil {
       throw new IllegalStateException("Consumer token not provided, but expected");
     }
 
-    String[] token = consumerToken.split(" ");
-    String[] splitToken = token[1].split("\\.");
+    String trimmedConsumerToken = consumerToken.trim();
 
-    return splitToken[2];
+    int spaceIndex = trimmedConsumerToken.indexOf(" ");
+    if (spaceIndex == -1) {
+      throw new IllegalStateException("Invalid token format, Missing Bearer prefix");
+    }
+
+    String token = trimmedConsumerToken.substring(spaceIndex + 1).trim();
+
+    int headerPayloadSeperatorIndex = token.indexOf(".");
+    int payloadSignatureSeperatorIndex = token.indexOf(".", headerPayloadSeperatorIndex + 1);
+    if (payloadSignatureSeperatorIndex == -1) {
+      throw new IllegalStateException("Invalid token format");
+    }
+
+    return token.substring(payloadSignatureSeperatorIndex + 1);
   }
 
   public static String getClaimFromToken(String consumerToken, String claimName) {
