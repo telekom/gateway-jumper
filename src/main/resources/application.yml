@@ -31,9 +31,10 @@ management:
       probability: 1.0
     propagation:
       type: B3_MULTI
-  zipkin:
+  oltp:
     tracing:
-      endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
+      endpoint: ${TRACING_URL:http://localhost:4318}/v1/traces
+      #endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
 
 cache-manager:
   caffeine-caches:
