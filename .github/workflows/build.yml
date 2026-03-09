@@ -166,7 +166,7 @@ jobs:
             echo "labels=quay.expires-after=60d" >> "${GITHUB_OUTPUT}"
           fi
       - name: Login to registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ vars.REGISTRY_HOST }}
           username: ${{ vars.REGISTRY_USER }}
