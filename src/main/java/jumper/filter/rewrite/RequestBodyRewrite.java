@@ -20,11 +20,13 @@ import reactor.core.publisher.Mono;
 public class RequestBodyRewrite extends AbstractBodyRewrite
     implements RewriteFunction<byte[], byte[]> {
 
+  private final ExchangeStateManager exchangeStateManager;
+
   @Override
   public Publisher<byte[]> apply(ServerWebExchange exchange, byte[] originalBody) {
 
     if (Objects.nonNull(originalBody)) {
-      ExchangeStateManager.setCachedRequestBody(
+      exchangeStateManager.setCachedRequestBody(
           exchange,
           getBodyForContentType(exchange.getRequest().getHeaders().getContentType(), originalBody));
       return Mono.just(originalBody);
