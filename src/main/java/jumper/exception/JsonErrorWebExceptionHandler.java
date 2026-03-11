@@ -166,7 +166,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
 
   private String formatError(Throwable ex, ServerRequest request) {
     String reason = ex.getClass().getSimpleName() + ": " + ex.getMessage();
-    return "Resolved [" + reason + "] for HTTP " + request.methodName() + " " + request.path();
+    return "Resolved [" + reason + "] for HTTP " + request.method() + " " + request.path();
   }
 
   private String determineMessage(

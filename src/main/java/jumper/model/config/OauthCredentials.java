@@ -6,6 +6,7 @@ package jumper.model.config;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 @Getter
 @Setter
@@ -21,12 +22,6 @@ public class OauthCredentials {
   private String tokenRequest;
 
   public String getId() {
-
-    if (this.clientId != null && !this.clientId.isBlank()) {
-      return this.clientId;
-
-    } else {
-      return this.username;
-    }
+    return StringUtils.isNotBlank(clientId) ? clientId : username;
   }
 }

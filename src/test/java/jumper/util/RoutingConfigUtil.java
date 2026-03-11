@@ -5,26 +5,30 @@
 package jumper.util;
 
 import static jumper.config.Config.*;
-import static jumper.model.config.JumperConfig.toJsonBase64;
 
 import java.util.List;
 import java.util.function.Consumer;
 import jumper.BaseSteps;
 import jumper.Constants;
 import jumper.model.config.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.stereotype.Service;
 
+@Service
+@RequiredArgsConstructor
 public class RoutingConfigUtil {
 
-  public static Consumer<HttpHeaders> getSecondaryRouteHeaders(BaseSteps baseSteps) {
+  private final JsonConverter jsonConverter;
+
+  public Consumer<HttpHeaders> getSecondaryRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondary(baseSteps.getId()));
     };
   }
 
-  public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithLoadbalancing(
-      BaseSteps baseSteps) {
+  public Consumer<HttpHeaders> getSecondaryRouteHeadersWithLoadbalancing(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(
@@ -32,26 +36,28 @@ public class RoutingConfigUtil {
     };
   }
 
-  public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
+  public Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxy(baseSteps.getId()));
     };
   }
 
-  public static String getRcSecondary(String id) {
+  public String getRcSecondary(String id) {
     // proxy + real
-    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJc()));
+    return jsonConverter.toJsonBase64(
+        List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJc()));
   }
 
-  public static String getRcSecondaryLoadbalancing(String id) {
+  public String getRcSecondaryLoadbalancing(String id) {
     // proxy + real (with loadbalancing)
-    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJcLb()));
+    return jsonConverter.toJsonBase64(
+        List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJcLb()));
   }
 
-  public static String getRcProxy(String id) {
+  public String getRcProxy(String id) {
     // proxy + proxy
-    return toJsonBase64(
+    return jsonConverter.toJsonBase64(
         List.of(
             getProxyRouteJc(REMOTE_ZONE_NAME, id), getProxyRouteJc(REMOTE_FAILOVER_ZONE_NAME, id)));
   }

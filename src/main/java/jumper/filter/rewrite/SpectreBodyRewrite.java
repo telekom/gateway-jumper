@@ -5,11 +5,12 @@
 package jumper.filter.rewrite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Objects;
 import jumper.Constants;
 import jumper.model.config.Spectre;
-import jumper.util.ObjectMapperUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.reactivestreams.Publisher;
 import org.springframework.cloud.gateway.filter.factory.rewrite.RewriteFunction;
@@ -20,7 +21,10 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SpectreBodyRewrite implements RewriteFunction<String, String> {
+
+  private final ObjectMapper objectMapper;
 
   @Override
   public Publisher<String> apply(ServerWebExchange exchange, String body) {
@@ -35,7 +39,7 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
 
     String eventJson = null;
     try {
-      eventJson = ObjectMapperUtil.getInstance().writeValueAsString(event);
+      eventJson = objectMapper.writeValueAsString(event);
     } catch (JsonProcessingException e) {
       log.error("Failed to write event type as json", e);
     }
@@ -48,7 +52,7 @@ public class SpectreBodyRewrite implements RewriteFunction<String, String> {
     Spectre event = null;
 
     try {
-      event = ObjectMapperUtil.getInstance().readValue(body, Spectre.class);
+      event = objectMapper.readValue(body, Spectre.class);
       event.setType(event.getType() + "." + id);
     } catch (IOException e) {
       log.error("Failed to adjust event type", e);
