@@ -32,8 +32,8 @@ jobs:
     steps:
       - name: Checkout project
         if: github.event_name != 'pull_request' # Checkout not necessary for PRs
-        uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v3
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d #v4
         id: filter
         with:
           filters: |
@@ -53,7 +53,7 @@ jobs:
           git config --global url.https://github.com/.insteadOf ssh://git@github.com/
           git config --global url.https://github.com/.insteadOf git://github.com/
       - name: Checkout project
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
       - name: Prepare ORT config
         run: |
           # Move into default config dir
@@ -71,7 +71,7 @@ jobs:
           fi
       - name: Run GitHub Action for ORT
         id: ort
-        uses: oss-review-toolkit/ort-ci-github-action@v1
+        uses: oss-review-toolkit/ort-ci-github-action@1805edcf1f4f55f35ae6e4d2d9795ccfb29b6021 #v1.1.0
         with:
           fail-on: violations
           docker-cli-args: >-
@@ -90,18 +90,18 @@ jobs:
         # non-zero exit code
       - name: Manually upload ORT results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f #v6.0.0
         with:
           name: ort-results
           path: ${{ steps.ort.outputs.results-path }}
       - name: Submit SBOM to dependency graph
         if: github.ref == 'refs/heads/main'
-        uses: advanced-security/spdx-dependency-submission-action@v0.2.0
+        uses: advanced-security/spdx-dependency-submission-action@169d22427d74f3faf93504e70b03eede8dab272a #v0.2.0
         with:
           filePath: ${{ steps.ort.outputs.results-path }}"
       - name: Upload reports to release
         if: github.event_name == 'workflow_dispatch'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe #v2.6.1
         with:
           name: ${{ github.event.inputs.release_name }}
           files: ${{ steps.ort.outputs.results-path }}/*
