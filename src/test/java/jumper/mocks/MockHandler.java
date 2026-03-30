@@ -6,6 +6,7 @@ package jumper.mocks;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
+import io.micrometer.tracing.Tracer;
 import java.util.Random;
 import jumper.BaseSteps;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,8 @@ public class MockHandler {
 
   static MockHorizonServer mockHorizonServer = new MockHorizonServer();
 
+  @Autowired Tracer tracer;
+
   @Autowired WebTestClient webTestClient;
 
   @Before("@upstream")
@@ -33,7 +36,9 @@ public class MockHandler {
     this.baseSteps.setWebTestClient(webTestClient);
 
     Random random = new Random();
-    this.baseSteps.setId(String.format("%016x", random.nextLong()));
+
+    String traceId = tracer.nextSpan().context().traceId();
+    this.baseSteps.setId(traceId);
   }
 
   @After("@upstream")
