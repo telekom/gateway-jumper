@@ -23,7 +23,8 @@ public class JumperConfigSteps {
             httpHeaders -> {
               // tracing headers we use for matching on horizon mock
               httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, baseSteps.getId());
-              httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, baseSteps.getId());
+              httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, baseSteps.getSpanId());
+              httpHeaders.set(Constants.HEADER_X_B3_SAMPLED, "1");
 
               switch (jc_case) {
                 case "consumer":

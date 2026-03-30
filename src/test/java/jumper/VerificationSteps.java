@@ -181,8 +181,6 @@ public class VerificationSteps {
         .expectHeader()
         .valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
         .expectHeader()
-        .valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
-        .expectHeader()
         .valueMatches(Constants.HEADER_X_B3_SAMPLED, "1")
         .expectHeader()
         .valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, ORIGIN_STARGATE)

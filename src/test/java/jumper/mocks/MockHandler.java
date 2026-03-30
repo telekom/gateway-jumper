@@ -7,7 +7,6 @@ package jumper.mocks;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.micrometer.tracing.Tracer;
-import java.util.Random;
 import jumper.BaseSteps;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,10 +34,9 @@ public class MockHandler {
 
     this.baseSteps.setWebTestClient(webTestClient);
 
-    Random random = new Random();
-
-    String traceId = tracer.nextSpan().context().traceId();
-    this.baseSteps.setId(traceId);
+    var span = tracer.nextSpan();
+    this.baseSteps.setId(span.context().traceId());
+    this.baseSteps.setSpanId(span.context().spanId());
   }
 
   @After("@upstream")
