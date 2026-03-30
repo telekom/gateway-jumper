@@ -30,8 +30,8 @@ management:
     sampling:
       probability: 1.0
     propagation:
-      type: B3_MULTI
-  oltp:
+      type: b3_multi
+  otlp:
     tracing:
       endpoint: ${TRACING_URL:http://localhost:4318}/v1/traces
       #endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans

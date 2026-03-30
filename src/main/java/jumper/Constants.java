@@ -34,7 +34,7 @@ public class Constants {
   public static final String HEADER_DEBUG_RESPONSE_HEADER = "X-Tardis-Debug";
   public static final String HEADER_X_ORIGIN_STARGATE = "X-Origin-Stargate";
   public static final String HEADER_X_ORIGIN_ZONE = "X-Origin-Zone";
-  public static final String HEADER_X_B3_TRACE_ID = "x-b3-traceid";
+  public static final String HEADER_X_B3_TRACE_ID = "X-B3-TraceId";
   public static final String HEADER_X_B3_SPAN_ID = "X-B3-SpanId";
   public static final String HEADER_X_B3_PARENT_SPAN_ID = "X-B3-ParentSpanId";
   public static final String HEADER_X_B3_SAMPLED = "X-B3-Sampled";
