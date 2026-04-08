@@ -42,28 +42,6 @@ public class TracingConfiguration {
       // Modify the span name
       switch (observationContext.getName()) {
         case "http.client.requests":
-          String spanName = "unknown";
-          if (observationContext instanceof ClientRequestObservationContext clientRequestContext) {
-            ClientRequest request = clientRequestContext.getRequest();
-            if (request == null) {
-              break;
-            }
-
-            if (request.url().getPath().contains("token")) {
-              spanName = "idp";
-            } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
-              spanName = "gateway";
-            }
-
-            String xTardisTraceId = request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
-            appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
-          }
-          observationContext.setContextualName("outgoing request: " + spanName);
-          break;
-        case "http.server.requests":
-          observationContext.setContextualName("incoming request");
-          break;
-        case CloudGatewayPrefixedGatewayObservationConvention.NAME:
           if (observationContext instanceof GatewayContext gatewayContext) {
             ServerHttpRequest request = gatewayContext.getRequest();
 
@@ -79,7 +57,31 @@ public class TracingConfiguration {
             String xTardisTraceId =
                 request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
             appendXTardisTraceIdHeader(gatewayContext, xTardisTraceId);
+          } else {
+            String spanName = "unknown";
+            if (observationContext
+                instanceof ClientRequestObservationContext clientRequestContext) {
+              ClientRequest request = clientRequestContext.getRequest();
+              if (request == null) {
+                break;
+              }
+
+              if (request.url().getPath().contains("token")) {
+                spanName = "idp";
+              } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
+                spanName = "gateway";
+              }
+
+              String xTardisTraceId =
+                  request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
+              appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
+            }
+
+            observationContext.setContextualName("outgoing request: " + spanName);
           }
+          break;
+        case "http.server.requests":
+          observationContext.setContextualName("incoming request");
           break;
       }
       return observationContext;
