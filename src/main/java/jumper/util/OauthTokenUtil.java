@@ -5,7 +5,6 @@
 package jumper.util;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.SignatureException;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 
@@ -21,40 +20,38 @@ public final class OauthTokenUtil {
   }
 
   public static String getTokenWithoutSignature(String consumerToken) {
-    return validateToken(consumerToken)[0];
+    return parseTokenParts(consumerToken).headerWithPayload();
   }
 
   public static String getSignature(String consumerToken) {
-    return validateToken(consumerToken)[1];
+    return parseTokenParts(consumerToken).signature();
   }
 
-  public static String[] validateToken(String consumerToken){
+  private static TokenParts parseTokenParts(String consumerToken){
     if (Objects.isNull(consumerToken)) {
-      throw new IllegalStateException("Consumer token not provided, but expected");
+      throw new IllegalArgumentException("Consumer token not provided, but expected");
     }
 
     String trimmedConsumerToken = consumerToken.trim();
 
     int spaceIndex = trimmedConsumerToken.indexOf(" ");
     if (spaceIndex == -1) {
-      throw new IllegalStateException("Invalid token format, Missing Bearer prefix");
+      throw new IllegalArgumentException("Invalid token format, Missing Bearer prefix");
     }
 
-    String token = trimmedConsumerToken.substring(spaceIndex + 1).trim();
+    String token = trimmedConsumerToken.substring(spaceIndex + 1);
 
-    int headerPayloadSeperatorIndex = token.indexOf(".");
+    int firstDot = token.indexOf(".");
+    int secondDot = token.indexOf(".", firstDot + 1);
 
-    int payloadSignatureSeperatorIndex = token.indexOf(".", headerPayloadSeperatorIndex + 1);
-    if (payloadSignatureSeperatorIndex == -1) {
-      throw new IllegalStateException("Invalid token format");
+    if (secondDot == -1) {
+      throw new IllegalArgumentException("Invalid token format");
     }
 
-    String tokenHeaderWithPayload = token.substring(0, payloadSignatureSeperatorIndex+1);
-    String tokenSignature = token.substring(payloadSignatureSeperatorIndex+1);
+    String headerAndPayload = token.substring(0, secondDot +1);
+    String signature  = token.substring(secondDot +1);
 
-    String[] splittedToken = {tokenHeaderWithPayload, tokenSignature};
-
-    return splittedToken;
+    return new TokenParts(headerAndPayload, signature);
   }
 
   public static String getClaimFromToken(String consumerToken, String claimName) {
@@ -68,17 +65,10 @@ public final class OauthTokenUtil {
 
     try {
       return jwtParser.parseClaimsJwt(consumerToken);
-    } catch (SignatureException e) {
-      log.error("SignatureException", e);
-    } catch (ExpiredJwtException e) {
-      log.error("ExpiredJwtException", e);
-    } catch (UnsupportedJwtException e) {
-      log.error("UnsupportedJwtException", e);
-    } catch (MalformedJwtException e) {
-      log.error("MalformedJwtException", e);
-    } catch (IllegalArgumentException e) {
-      log.error("IllegalArgumentException", e);
+    } catch (Exception e) {
+      log.error("Failed to parse consumer token", e);
+      throw e;
     }
-    throw new IllegalStateException("Was not able to parse consumer token");
   }
+  private record TokenParts(String headerWithPayload, String signature) {}
 }
