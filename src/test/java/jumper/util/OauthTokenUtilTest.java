@@ -1,14 +1,14 @@
 package jumper.util;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.UnsupportedJwtException;
-import io.jsonwebtoken.impl.TextCodec;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Date;
 
 import static jumper.util.OauthTokenUtil.*;
@@ -24,18 +24,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should return token without signature from a valid JWT token")
     public void testGetTokenWithoutSignature_validToken_returnsTokenWithoutSignature() {
       // GIVEN
-      String token = "Bearer " + Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      String token = getTestToken(true);
 
       // WHEN
       String returnedTokenWithoutSignature = getTokenWithoutSignature(token);
@@ -63,18 +52,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should throw exception when getting token without bearer prefix from a JWT token")
     public void testGetTokenWithoutSignature_invalidToken_throwsException() {
       // GIVEN
-      final String token = Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      final String token = getTestToken(false);
 
       // WHEN
 
@@ -86,18 +64,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should throw exception when getting token without a signature from a JWT token")
     public void testGetTokenWithoutSignature_invalidTokenNoSignature_throwsException() {
       // GIVEN
-      String initialisedToken = "Bearer " + Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      String initialisedToken = getTestToken(true);
 
       // WHEN
       initialisedToken = initialisedToken.trim();
@@ -115,18 +82,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should return token without signature from a valid JWT token")
     public void testGetSignature_validToken_returnsSignature() {
       // GIVEN
-      String token = "Bearer " + Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      String token = getTestToken(true);
 
       // WHEN
       String returnedSignature = getSignature(token);
@@ -154,18 +110,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should throw exception when getting token without bearer prefix from a JWT token")
     public void testGetSignature_invalidToken_throwsException() {
       // GIVEN
-      final String token = Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      final String token = getTestToken(false);
 
       // WHEN
 
@@ -177,18 +122,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should throw exception when getting token without a signature from a JWT token")
     public void testGetSignature_invalidTokenNoSignature_throwsException() {
       // GIVEN
-      String initialisedToken = "Bearer " + Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      String initialisedToken = getTestToken(true);
 
       // WHEN
       initialisedToken = initialisedToken.trim();
@@ -206,18 +140,7 @@ public class OauthTokenUtilTest {
     @DisplayName("valid token should return claims")
     public void testGetClaimFromToken_validToken_returnsClaims() {
       // GIVEN
-      String token = "Bearer " + Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      String token = getTestToken(true);
 
       // WHEN
       String nameClaim = getClaimFromToken(token, "name");
@@ -247,18 +170,7 @@ public class OauthTokenUtilTest {
     @DisplayName("Should return all claims from a valid JWT token")
     public void testGetAllClaimsFromToken_validToken_returnsAllClaims() {
       // GIVEN
-      String token = Jwts.builder()
-              .setIssuer("Narvi")
-              .setSubject("tuser")
-              .claim("name", "test user")
-              .claim("scope", "dev")
-              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-              .signWith(
-                      SignatureAlgorithm.HS256,
-                      TextCodec.BASE64.decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")
-              )
-              .compact();
+      String token = getTestToken(false);
 
       // WHEN
       token = token.substring(0, token.lastIndexOf(".") + 1);
@@ -284,4 +196,27 @@ public class OauthTokenUtilTest {
     }
   }
 
+  private String getTestToken(boolean withBearerPrefix) {
+    if (withBearerPrefix) {
+      return "Bearer " + Jwts.builder()
+              .setIssuer("Narvi")
+              .setSubject("tuser")
+              .claim("name", "test user")
+              .claim("scope", "dev")
+              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
+              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
+              .signWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")))
+              .compact();
+    } else {
+      return Jwts.builder()
+              .setIssuer("Narvi")
+              .setSubject("tuser")
+              .claim("name", "test user")
+              .claim("scope", "dev")
+              .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
+              .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
+              .signWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")))
+              .compact();
+    }
+  }
 }
