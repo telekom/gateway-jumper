@@ -21,32 +21,14 @@ public final class OauthTokenUtil {
   }
 
   public static String getTokenWithoutSignature(String consumerToken) {
-
-    if (Objects.isNull(consumerToken)) {
-      throw new IllegalStateException("Consumer token not provided, but expected");
-    }
-
-    String trimmedConsumerToken = consumerToken.trim();
-
-    int spaceIndex = trimmedConsumerToken.indexOf(" ");
-    if (spaceIndex == -1) {
-      throw new IllegalStateException("Invalid token format, Missing Bearer prefix");
-    }
-
-    String token = trimmedConsumerToken.substring(spaceIndex + 1).trim();
-
-    int headerPayloadSeperatorIndex = token.indexOf(".");
-
-    int payloadSignatureSeperatorIndex = token.indexOf(".", headerPayloadSeperatorIndex + 1);
-    if (payloadSignatureSeperatorIndex == -1) {
-      throw new IllegalStateException("Invalid token format");
-    }
-
-    return token.substring(0, payloadSignatureSeperatorIndex + 1);
+    return validateToken(consumerToken)[0];
   }
 
   public static String getSignature(String consumerToken) {
+    return validateToken(consumerToken)[1];
+  }
 
+  public static String[] validateToken(String consumerToken){
     if (Objects.isNull(consumerToken)) {
       throw new IllegalStateException("Consumer token not provided, but expected");
     }
@@ -61,12 +43,18 @@ public final class OauthTokenUtil {
     String token = trimmedConsumerToken.substring(spaceIndex + 1).trim();
 
     int headerPayloadSeperatorIndex = token.indexOf(".");
+
     int payloadSignatureSeperatorIndex = token.indexOf(".", headerPayloadSeperatorIndex + 1);
     if (payloadSignatureSeperatorIndex == -1) {
       throw new IllegalStateException("Invalid token format");
     }
 
-    return token.substring(payloadSignatureSeperatorIndex + 1);
+    String tokenHeaderWithPayload = token.substring(0, payloadSignatureSeperatorIndex+1);
+    String tokenSignature = token.substring(payloadSignatureSeperatorIndex+1);
+
+    String[] splittedToken = {tokenHeaderWithPayload, tokenSignature};
+
+    return splittedToken;
   }
 
   public static String getClaimFromToken(String consumerToken, String claimName) {
