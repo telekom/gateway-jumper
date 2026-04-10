@@ -27,7 +27,7 @@ public final class OauthTokenUtil {
     return parseTokenParts(consumerToken).signature();
   }
 
-  private static TokenParts parseTokenParts(String consumerToken){
+  private static TokenParts parseTokenParts(String consumerToken) {
     if (Objects.isNull(consumerToken)) {
       throw new IllegalArgumentException("Consumer token not provided, but expected");
     }
@@ -48,8 +48,8 @@ public final class OauthTokenUtil {
       throw new IllegalArgumentException("Invalid token format");
     }
 
-    String headerAndPayload = token.substring(0, secondDot +1);
-    String signature  = token.substring(secondDot +1);
+    String headerAndPayload = token.substring(0, secondDot + 1);
+    String signature = token.substring(secondDot + 1);
 
     return new TokenParts(headerAndPayload, signature);
   }
@@ -70,5 +70,6 @@ public final class OauthTokenUtil {
       throw e;
     }
   }
+
   private record TokenParts(String headerWithPayload, String signature) {}
 }
