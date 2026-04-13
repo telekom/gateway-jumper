@@ -71,7 +71,7 @@ jobs:
           fi
       - name: Run GitHub Action for ORT
         id: ort
-        uses: oss-review-toolkit/ort-ci-github-action@35e1afda9c9144edb7cc71b1643b2f2402291ae6 # main branch latest commit on 2026-04-07
+        uses: oss-review-toolkit/ort-ci-github-action@086d928d24ef1653dc0777296b312fda5faaaf52 # main branch latest commit from 2026-04-13
         with:
           fail-on: violations
           docker-cli-args: >-
