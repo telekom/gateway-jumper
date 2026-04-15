@@ -167,7 +167,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+                        tokenGeneratorService.generateProviderLmsToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),
