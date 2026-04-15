@@ -17,14 +17,6 @@ Feature: proper error message returned based on conditions
     Then API consumer receives a 500 status code
     And error response contains msg "Consumer token not provided, but expected" error "Internal Server Error" status 500
 
-  Scenario: mesh IDP drops connection
-    Given ProxyRoute headers are set
-    And IDP set to drop connection
-    And API provider set to respond with a 200 status code
-    When consumer calls the proxy route
-    And API consumer receives a 401 status code
-    And error response contains msg "Failed to connect to http://localhost:1081/auth/realms/default/protocol/openid-connect/token, cause: Connection prematurely closed BEFORE response" error "Unauthorized" status 401
-
   Scenario: Consumer calls proxy route with jc with oauth, oauth wrong credential headers set
     Given RealRoute headers are set
     And oauth tokenEndpoint set

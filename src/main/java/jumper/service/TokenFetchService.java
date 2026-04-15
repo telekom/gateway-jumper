@@ -16,7 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import jumper.Constants;
 import jumper.model.TokenInfo;
-import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.util.BasicAuthUtil;
 import lombok.RequiredArgsConstructor;
@@ -51,14 +50,6 @@ public class TokenFetchService {
 
   private final TokenCacheService tokenCache;
   private final TokenGeneratorService tokenGeneratorService;
-
-  public Mono<TokenInfo> getInternalMeshAccessToken(JumperConfig jc) {
-    return getAccessTokenWithClientCredentials(
-        jc.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX,
-        jc.getClientId(),
-        jc.getClientSecret(),
-        null);
-  }
 
   public Mono<TokenInfo> getAccessTokenWithClientCredentials(
       String tokenEndpoint, String clientID, String clientSecret, String scope) {
