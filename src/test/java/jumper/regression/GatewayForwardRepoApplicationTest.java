@@ -17,6 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.web.client.RestClient;
@@ -27,6 +28,7 @@ import org.springframework.web.client.RestClient;
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = "spring.main.cloud-platform=kubernetes")
+@ActiveProfiles("test")
 @Import(CloudXForwardedConfiguration.class)
 public class GatewayForwardRepoApplicationTest {
 
