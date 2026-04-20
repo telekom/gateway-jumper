@@ -6,8 +6,6 @@ package jumper.service;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.WeakKeyException;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.*;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
@@ -30,19 +28,8 @@ public class TokenGeneratorService {
 
   private String fromRealm(
       HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
-    KeyInfo keyInfo;
-    try {
-      log.debug("GatewayToken or OneToken: Loading keyInfo");
-      keyInfo = keyInfoService.getKeyInfo();
-
-    } catch (IOException e1) {
-      log.error("IOException", e1);
-      throw new RuntimeException("Error while generating LMS token", e1);
-    } catch (GeneralSecurityException e2) {
-      log.error("GeneralSecurityException", e2);
-      throw new RuntimeException("Could not create PrivateKey from key file", e2);
-    }
-
+    log.debug("GatewayToken or OneToken: Loading keyInfo");
+    KeyInfo keyInfo = keyInfoService.getKeyInfo();
     return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
   }
 

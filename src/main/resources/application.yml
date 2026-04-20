@@ -37,12 +37,14 @@ management:
 
 cache-manager:
   caffeine-caches:
-    - cache-names: [ cache-key-info ]
-      spec: maximumSize=1, expireAfterWrite=1m
     - cache-names: [ cache-token-info ]
       spec: maximumSize=${jumper.tokencache.maxSize:10000}, expireAfterWrite=${jumper.tokencache.expireAfterWriteMinutes:30}m
 
 spring:
+  task:
+    scheduling:
+      pool:
+        size: 2
   cache:
     type: caffeine
   lifecycle:
@@ -143,6 +145,7 @@ jumper:
     dir: /keypair
     pk-file: tls.key
     kid-file: tls.kid
+    key-refresh-interval-ms: 60000
     tls:
       additional-allowed-cipher-suites: [ ]
       default-allowed-cipher-suites:
