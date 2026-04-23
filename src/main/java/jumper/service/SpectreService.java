@@ -5,6 +5,7 @@
 package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.util.HashMap;
@@ -18,10 +19,8 @@ import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
-import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -44,6 +43,8 @@ public class SpectreService {
 
   private final TokenGeneratorService tokenGeneratorService;
   private final Tracer tracer;
+  private final SpectreConfiguration spectreConfiguration;
+  private final ObjectMapper objectMapper;
 
   @Qualifier("spectreServiceWebClient")
   private final WebClient spectreServiceWebClient;
@@ -56,8 +57,6 @@ public class SpectreService {
 
   @Value("${jumper.horizon.publishEventUrl}")
   private String publishEventUrl;
-
-  @Autowired private SpectreConfiguration spectreConfiguration;
 
   public Mono<Void> handleEvent(
       JumperConfig jc,
@@ -227,7 +226,7 @@ public class SpectreService {
       log.debug("json compatible content-type, will try to parse as json payload");
       try {
         // try to return payload as json
-        return ObjectMapperUtil.getInstance().readTree(payload);
+        return objectMapper.readTree(payload);
       } catch (JsonProcessingException e) {
         log.error("error while parsing json payload for spectre", e);
       }

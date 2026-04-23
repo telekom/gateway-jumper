@@ -6,7 +6,10 @@ package jumper.util;
 
 import java.util.Optional;
 import jumper.model.config.JumperConfig;
+import jumper.service.JumperConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 import org.springframework.web.server.ServerWebExchange;
 
 /**
@@ -19,6 +22,8 @@ import org.springframework.web.server.ServerWebExchange;
  * exchange.getAttributes().put()} or {@code exchange.getAttribute()}.
  */
 @Slf4j
+@Service
+@RequiredArgsConstructor
 public class ExchangeStateManager {
 
   // Private constants - encapsulated implementation details
@@ -27,13 +32,16 @@ public class ExchangeStateManager {
   private static final String ATTR_CACHED_REQUEST_BODY = "cachedRequestBodyObject";
   private static final String ATTR_CACHED_RESPONSE_BODY = "cachedResponseBodyObject";
 
+  private final JsonConverter jsonConverter;
+  private final JumperConfigService jumperConfigService;
+
   /**
    * Sets whether the OAuth filter is required for this request.
    *
    * @param exchange the server web exchange
    * @param required true if OAuth filter should be applied
    */
-  public static void setOAuthFilterRequired(ServerWebExchange exchange, boolean required) {
+  public void setOAuthFilterRequired(ServerWebExchange exchange, boolean required) {
     log.debug("Setting OAuth filter required: {}", required);
     exchange.getAttributes().put(ATTR_OAUTH_FILTER_NEEDED, required);
   }
@@ -44,7 +52,7 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @return true if OAuth filter is required, false otherwise
    */
-  public static boolean isOAuthFilterRequired(ServerWebExchange exchange) {
+  public boolean isOAuthFilterRequired(ServerWebExchange exchange) {
     return Optional.ofNullable(exchange.getAttributes().get(ATTR_OAUTH_FILTER_NEEDED))
         .map(val -> (Boolean) val)
         .orElse(false);
@@ -56,9 +64,9 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @param config the jumper configuration to store
    */
-  public static void setJumperConfig(ServerWebExchange exchange, JumperConfig config) {
+  public void setJumperConfig(ServerWebExchange exchange, JumperConfig config) {
     log.debug("Setting JumperConfig for consumer: {}", config.getConsumer());
-    exchange.getAttributes().put(ATTR_JUMPER_CONFIG, JumperConfig.toJsonBase64(config));
+    exchange.getAttributes().put(ATTR_JUMPER_CONFIG, jsonConverter.toJsonBase64(config));
   }
 
   /**
@@ -67,9 +75,9 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @return Optional containing the JumperConfig if present
    */
-  public static Optional<JumperConfig> getJumperConfig(ServerWebExchange exchange) {
+  public Optional<JumperConfig> getJumperConfig(ServerWebExchange exchange) {
     return Optional.ofNullable(exchange.getAttributes().get(ATTR_JUMPER_CONFIG))
-        .map(attr -> JumperConfig.fromJsonBase64((String) attr));
+        .map(attr -> jumperConfigService.fromJsonBase64((String) attr));
   }
 
   /**
@@ -78,7 +86,7 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @param body the request body to cache (null values are not cached)
    */
-  public static void setCachedRequestBody(ServerWebExchange exchange, String body) {
+  public void setCachedRequestBody(ServerWebExchange exchange, String body) {
     if (body != null) {
       log.debug("Caching request body (length: {})", body.length());
       exchange.getAttributes().put(ATTR_CACHED_REQUEST_BODY, body);
@@ -94,7 +102,7 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @return Optional containing the cached request body if present
    */
-  public static Optional<String> getCachedRequestBody(ServerWebExchange exchange) {
+  public Optional<String> getCachedRequestBody(ServerWebExchange exchange) {
     return Optional.ofNullable((String) exchange.getAttributes().get(ATTR_CACHED_REQUEST_BODY));
   }
 
@@ -104,7 +112,7 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @param body the response body to cache (null values are not cached)
    */
-  public static void setCachedResponseBody(ServerWebExchange exchange, String body) {
+  public void setCachedResponseBody(ServerWebExchange exchange, String body) {
     if (body != null) {
       log.debug("Caching response body (length: {})", body.length());
       exchange.getAttributes().put(ATTR_CACHED_RESPONSE_BODY, body);
@@ -120,7 +128,7 @@ public class ExchangeStateManager {
    * @param exchange the server web exchange
    * @return Optional containing the cached response body if present
    */
-  public static Optional<String> getCachedResponseBody(ServerWebExchange exchange) {
+  public Optional<String> getCachedResponseBody(ServerWebExchange exchange) {
     return Optional.ofNullable((String) exchange.getAttributes().get(ATTR_CACHED_RESPONSE_BODY));
   }
 
@@ -129,7 +137,7 @@ public class ExchangeStateManager {
    *
    * @param exchange the server web exchange
    */
-  public static void clearCustomState(ServerWebExchange exchange) {
+  public void clearCustomState(ServerWebExchange exchange) {
     log.debug("Clearing all custom exchange state");
     exchange.getAttributes().remove(ATTR_OAUTH_FILTER_NEEDED);
     exchange.getAttributes().remove(ATTR_JUMPER_CONFIG);

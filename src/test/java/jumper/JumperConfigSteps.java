@@ -10,11 +10,13 @@ import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.And;
 import java.util.List;
 import jumper.config.Config;
+import jumper.util.JumperConfigUtil;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class JumperConfigSteps {
   private final BaseSteps baseSteps;
+  private final JumperConfigUtil jumperConfigUtil;
 
   @And("jumperConfig with {word} route listener set")
   public void setJumperConfigListener(String jc_case) {
@@ -28,12 +30,13 @@ public class JumperConfigSteps {
               switch (jc_case) {
                 case "consumer":
                   httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getJcRouteListener(Config.CONSUMER));
+                      Constants.HEADER_JUMPER_CONFIG,
+                      jumperConfigUtil.getJcRouteListener(Config.CONSUMER));
                   break;
                 case "otherConsumer":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
-                      getJcRouteListener(Config.CONSUMER_EXTERNAL_CONFIGURED));
+                      jumperConfigUtil.getJcRouteListener(Config.CONSUMER_EXTERNAL_CONFIGURED));
                   break;
               }
             }));
@@ -43,7 +46,8 @@ public class JumperConfigSteps {
   public void setJumperConfigScopes() {
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity())));
+            httpHeaders ->
+                httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, jumperConfigUtil.getJcSecurity())));
   }
 
   @And("jumperConfig oauth {string} set")
@@ -140,21 +144,23 @@ public class JumperConfigSteps {
               switch (jc_case) {
                 case "consumer key only":
                   httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getJcBasicAuthConsumer(baseSteps.getId()));
+                      Constants.HEADER_JUMPER_CONFIG,
+                      jumperConfigUtil.getJcBasicAuthConsumer(baseSteps.getId()));
                   break;
                 case "provider key only":
                   httpHeaders.set(
-                      Constants.HEADER_JUMPER_CONFIG, getJcBasicAuthProvider(baseSteps.getId()));
+                      Constants.HEADER_JUMPER_CONFIG,
+                      jumperConfigUtil.getJcBasicAuthProvider(baseSteps.getId()));
                   break;
                 case "consumer and provider":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
-                      getJcBasicAuthConsumerAndProvider(baseSteps.getId()));
+                      jumperConfigUtil.getJcBasicAuthConsumerAndProvider(baseSteps.getId()));
                   break;
                 case "other consumer present":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
-                      getJcBasicAuthOtherConsumer(baseSteps.getId()));
+                      jumperConfigUtil.getJcBasicAuthOtherConsumer(baseSteps.getId()));
                   break;
                 default:
                   httpHeaders.set(
@@ -171,10 +177,12 @@ public class JumperConfigSteps {
             httpHeaders -> {
               switch (jc_case) {
                 case "valid":
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancing());
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, jumperConfigUtil.getJcLoadBalancing());
                   break;
                 case "empty":
-                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getEmptyJcLoadBalancing());
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, jumperConfigUtil.getEmptyJcLoadBalancing());
                   break;
                 default:
                   assert false : "not defined";
@@ -188,7 +196,8 @@ public class JumperConfigSteps {
         baseSteps.httpHeadersOfRequest.andThen(
             httpHeaders ->
                 httpHeaders.set(
-                    Constants.HEADER_JUMPER_CONFIG, getJcRemoveHeaders(removeHeaders))));
+                    Constants.HEADER_JUMPER_CONFIG,
+                    jumperConfigUtil.getJcRemoveHeaders(removeHeaders))));
   }
 
   @ParameterType("(?:[^,]*)(?:,\\s?[^,]*)*")
