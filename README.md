@@ -27,7 +27,7 @@ For its functionality, it relies on information provided by the Kong component u
 
 ## Getting Started
 
-The easiest way to get started is to build your own Jumper image using the [one-step multi-stage Dockerfile](#one-step-multi-stage-build).
+The easiest way to get started is to build your own Jumper image using [Jib](#jib-image-builds).
 
 Once you have that, refer to the [Configuration](#configuration) section to find out how to use Jumper locally or deploy it using the [Stargate Helm Chart](https://github.com/telekom/gateway-kong-charts).
 
@@ -54,36 +54,25 @@ This project is built with [Maven](https://maven.apache.org/). It is validated t
 
 This will build the project and run all tests. The resulting artifacts will be placed in the `target` directory.
 
-### Docker Builds
+### Jib Image Builds
 
-#### Standard Docker Build
+Container images are built using [Jib](https://github.com/GoogleContainerTools/jib), which creates optimized, layered OCI images directly from Maven without requiring a Docker daemon.
 
-The project contains a Dockerfile that can be used to build a Docker image after packaging the application:
+#### Build to Local Docker Daemon
 
 ```bash
-docker build --platform linux/amd64 -t jumper .
+./mvnw jib:dockerBuild
 ```
+
+This builds the image and loads it into your local Docker daemon as `jumper`.
 
 #### Customizing the Base Image
 
-The Dockerfile supports customization via build arguments to specify a custom base image:
-
-
-```bash
-docker build --platform linux/amd64 -t jumper --build-arg BASE_IMAGE=<your-preferred-base-image> .
-```
-
-By default, the Dockerfile uses `eclipse-temurin:21-jre-alpine`.
-
-#### One-Step Multi-Stage Build
-
-For a simpler development workflow, you can use `Dockerfile.multi-stage` to build the image in a single step without needing a local Maven installation:
+The default base image is `gcr.io/distroless/java21-debian12:nonroot`. To override it:
 
 ```bash
-docker build --platform linux/amd64 -t jumper -f Dockerfile.multi-stage .
+./mvnw jib:dockerBuild -Djib.from.image=<your-preferred-base-image>
 ```
-
-This approach builds the application in a Maven container and then copies the resulting artifacts into a smaller runtime container, all in one command. **It will, however, skip the Maven unit test stage due to some issues with Testcontainers.**
 
 ## Configuration
 

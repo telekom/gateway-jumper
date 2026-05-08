@@ -30,6 +30,9 @@ SPDX-License-Identifier: Apache-2.0
 		<junit-platform.version>1.14.3</junit-platform.version>
 		<mockserver.version>5.15.0</mockserver.version>
 		<jsonwebtoken.version>0.11.5</jsonwebtoken.version>
+
+		<jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
+		<jib.base-image>gcr.io/distroless/java21-debian12:nonroot</jib.base-image>
 	</properties>
 
 	<dependencyManagement>
@@ -278,6 +281,25 @@ SPDX-License-Identifier: Apache-2.0
         <configuration>
           <excludedGroups>ignore</excludedGroups>
           <argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>${jib-maven-plugin.version}</version>
+        <configuration>
+          <from>
+            <image>${jib.base-image}</image>
+          </from>
+          <to>
+            <image>jumper</image>
+          </to>
+          <container>
+            <ports>
+              <port>8080</port>
+            </ports>
+            <user>nonroot</user>
+          </container>
         </configuration>
       </plugin>
     </plugins>
