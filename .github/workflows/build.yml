@@ -15,7 +15,7 @@ name: Build
 #
 # Required secrets:
 # - REGISTRY_TOKEN: Container registry token/password
-# - ORT_ARTIFACTORY_TOKEN: Token for accessing ORT repository
+# - OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY: Token for accessing ORT repository
 
 on:
   pull_request:

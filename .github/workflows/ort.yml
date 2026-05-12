@@ -75,7 +75,7 @@ jobs:
         with:
           fail-on: violations
           docker-cli-args: >-
-            -e ORT_ARTIFACTORY_TOKEN=${{ secrets.ORT_ARTIFACTORY_TOKEN }}
+            -e OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY=${{ secrets.OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY }}
           run: >
             cache-dependencies,
             cache-scan-results,
