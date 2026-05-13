@@ -7,17 +7,18 @@ package jumper.health;
 import java.util.concurrent.atomic.AtomicBoolean;
 import jumper.config.WarmupProperties;
 import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HealthIndicator;
+import org.springframework.boot.actuate.health.ReactiveHealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
 
 @Component
 @ConditionalOnProperty(
     prefix = "jumper.warmup",
     name = "enabled",
     havingValue = "true",
-    matchIfMissing = true)
-public class WarmupHealthIndicator implements HealthIndicator {
+    matchIfMissing = false)
+public class WarmupHealthIndicator implements ReactiveHealthIndicator {
 
   private final AtomicBoolean ready = new AtomicBoolean(false);
 
@@ -29,11 +30,11 @@ public class WarmupHealthIndicator implements HealthIndicator {
   }
 
   @Override
-  public Health health() {
+  public Mono<Health> health() {
     if (ready.get()) {
-      return Health.up().build();
+      return Mono.just(Health.up().build());
     }
-    return Health.down().withDetail("reason", "warmup in progress").build();
+    return Mono.just(Health.down().withDetail("reason", "warmup in progress").build());
   }
 
   public void setReady() {

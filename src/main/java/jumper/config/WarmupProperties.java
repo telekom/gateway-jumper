@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class WarmupProperties {
 
-  private boolean enabled = true;
+  private boolean enabled = false;
   private Duration timeout = Duration.ofSeconds(15);
   private List<String> urls = List.of();
 }

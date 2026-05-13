@@ -21,7 +21,7 @@ management:
         enabled: true #healthcheck probes, liveness and readiness
       group:
         readiness:
-          include: readinessState, warmup
+          include: readinessState
   endpoints:
     web:
       exposure.include: prometheus, health
@@ -188,7 +188,7 @@ jumper:
     maxSize: 10000
     expireAfterWriteMinutes: 30
   warmup:
-    enabled: true
+    enabled: false
     timeout: 15s
     urls: 
   horizon:
