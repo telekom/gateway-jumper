@@ -34,7 +34,7 @@ import reactor.core.publisher.Mono;
     prefix = "jumper.warmup",
     name = "enabled",
     havingValue = "true",
-    matchIfMissing = true)
+    matchIfMissing = false)
 public class WarmupService {
 
   private final WarmupProperties warmupProperties;
@@ -58,7 +58,7 @@ public class WarmupService {
     }
   }
 
-  @Value("${server.port:8080}")
+  @Value("${server.port}")
   private int serverPort;
 
   @EventListener(ApplicationReadyEvent.class)

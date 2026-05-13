@@ -62,7 +62,7 @@ class WarmupServiceTest {
 
     WarmupHealthIndicator healthIndicator = new WarmupHealthIndicator(properties);
     assertThat(healthIndicator.isReady()).isFalse();
-    assertThat(healthIndicator.health().getStatus().getCode()).isEqualTo("DOWN");
+    assertThat(healthIndicator.health().block().getStatus().getCode()).isEqualTo("DOWN");
   }
 
   @Test
@@ -78,7 +78,7 @@ class WarmupServiceTest {
     healthIndicator.setReady();
 
     assertThat(healthIndicator.isReady()).isTrue();
-    assertThat(healthIndicator.health().getStatus().getCode()).isEqualTo("UP");
+    assertThat(healthIndicator.health().block().getStatus().getCode()).isEqualTo("UP");
   }
 
   @Test
@@ -90,7 +90,7 @@ class WarmupServiceTest {
 
     WarmupHealthIndicator healthIndicator = new WarmupHealthIndicator(properties);
     assertThat(healthIndicator.isReady()).isTrue();
-    assertThat(healthIndicator.health().getStatus().getCode()).isEqualTo("UP");
+    assertThat(healthIndicator.health().block().getStatus().getCode()).isEqualTo("UP");
   }
 
   @Test

@@ -29,10 +29,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties = {
-      "jumper.warmup.enabled=false",
-      "management.endpoint.health.group.readiness.include=readinessState"
-    })
+    properties = {"jumper.warmup.enabled=false"})
 @ActiveProfiles("test")
 @AutoConfigureObservability
 @AutoConfigureWebTestClient(timeout = "PT10S")
