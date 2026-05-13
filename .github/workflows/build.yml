@@ -118,7 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-maven, test-maven]
     outputs:
-      image-digest: ${{ steps.jib-build.outputs.digest }}
+      image-digest: ${{ steps.build-push.outputs.digest }}
       image-tag: ${{ steps.tag.outputs.image-tag }}
     steps:
       - name: Checkout
@@ -168,8 +168,8 @@ jobs:
           else
             echo "labels=quay.expires-after=60d" >> "${GITHUB_OUTPUT}"
           fi
-      - name: Build and push with Jib
-        id: jib-build
+      - name: Build and push
+        id: build-push
         run: |
           LABELS_ARG=""
           if [[ -n "${{ steps.image-labels.outputs.labels }}" ]]; then
@@ -210,7 +210,7 @@ jobs:
           cosign sign --key env://COSIGN_PRIVATE_KEY --tlog-upload=false ${images}
         env:
           TAGS: ${{ steps.tag.outputs.image-tag }}
-          DIGEST: ${{ steps.jib-build.outputs.digest }}
+          DIGEST: ${{ steps.build-push.outputs.digest }}
           REGISTRY: ${{ vars.REGISTRY_HOST }}
           REGISTRY_REPO: ${{ vars.REGISTRY_REPO }}
           REGISTRY_USER: ${{ vars.REGISTRY_USER }}
