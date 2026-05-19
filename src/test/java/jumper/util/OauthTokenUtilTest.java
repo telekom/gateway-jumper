@@ -199,24 +199,48 @@ public class OauthTokenUtilTest {
     }
   }
 
+  @Nested
+  class testWithMultipleBlanks {
+    @Test
+    @DisplayName("token with multiple blanks between bearer and token should return claims")
+    public void testGetTokenWithoutSignature_tokenWithMoreThanOneSpace_throwsException() {
+      // GIVEN
+      String token = getTestTokenWithMultipleBlanks();
+
+      // WHEN
+      String nameClaim = getClaimFromToken(token, "name");
+      String scopeClaim = getClaimFromToken(token, "scope");
+
+      // THEN
+      assertThat(nameClaim).isEqualTo("test user");
+      assertThat(scopeClaim).isEqualTo("dev");
+    }
+  }
+
   private String getTestToken(boolean withBearerPrefix) {
-    String token =
-        Jwts.builder()
-            .setIssuer("Narvi")
-            .setSubject("tuser")
-            .claim("name", "test user")
-            .claim("scope", "dev")
-            .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-            .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
-            .signWith(
-                Keys.hmacShaKeyFor(
-                    Base64.getDecoder().decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")))
-            .compact();
 
     if (withBearerPrefix) {
-      return "Bearer " + token;
+      return "Bearer " + createToken();
     } else {
-      return token;
+      return createToken();
     }
+  }
+
+  private String getTestTokenWithMultipleBlanks() {
+    return "Bearer      " + createToken();
+  }
+
+  private String createToken() {
+    return Jwts.builder()
+        .setIssuer("Narvi")
+        .setSubject("tuser")
+        .claim("name", "test user")
+        .claim("scope", "dev")
+        .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
+        .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
+        .signWith(
+            Keys.hmacShaKeyFor(
+                Base64.getDecoder().decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")))
+        .compact();
   }
 }
