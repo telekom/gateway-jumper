@@ -28,59 +28,30 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class TracingConfiguration {
 
+  private static final String OBSERVATION_HTTP_CLIENT = "http.client.requests";
+  private static final String OBSERVATION_HTTP_SERVER = "http.server.requests";
+
   @Value("${jumper.tracing.filter-param-list:}")
   List<String> queryFilterList;
 
-  private List<Pattern> compiledQueryFilterPatterns;
-
   @Bean
   public ObservationFilter customSpanNameFilter() {
-    // Pre-compile regex patterns for better performance
-    compiledQueryFilterPatterns = queryFilterList.stream().map(Pattern::compile).toList();
+    List<Pattern> compiledQueryFilterPatterns =
+        queryFilterList.stream().map(Pattern::compile).toList();
 
     return (observationContext) -> {
-      // Modify the span name
       switch (observationContext.getName()) {
-        case "http.client.requests":
+        case OBSERVATION_HTTP_CLIENT:
           if (observationContext instanceof GatewayContext gatewayContext) {
-            ServerHttpRequest request = gatewayContext.getRequest();
-
-            gatewayContext.setContextualName("outgoing request: provider");
-            gatewayContext.addHighCardinalityKeyValue(
-                KeyValue.of(
-                    "http.uri",
-                    filterQueryParams(request.getURI().toString(), compiledQueryFilterPatterns)));
-
-            gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
-            gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.uri");
-
-            String xTardisTraceId =
-                request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
-            appendXTardisTraceIdHeader(gatewayContext, xTardisTraceId);
+            handleGatewayContext(gatewayContext, compiledQueryFilterPatterns);
+          } else if (observationContext
+              instanceof ClientRequestObservationContext clientRequestContext) {
+            handleClientRequestContext(clientRequestContext);
           } else {
-            String spanName = "unknown";
-            if (observationContext
-                instanceof ClientRequestObservationContext clientRequestContext) {
-              ClientRequest request = clientRequestContext.getRequest();
-              if (request == null) {
-                break;
-              }
-
-              if (request.url().getPath().contains("token")) {
-                spanName = "idp";
-              } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
-                spanName = "gateway";
-              }
-
-              String xTardisTraceId =
-                  request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
-              appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
-            }
-
-            observationContext.setContextualName("outgoing request: " + spanName);
+            observationContext.setContextualName("outgoing request: unknown");
           }
           break;
-        case "http.server.requests":
+        case OBSERVATION_HTTP_SERVER:
           observationContext.setContextualName("incoming request");
           break;
       }
@@ -88,10 +59,46 @@ public class TracingConfiguration {
     };
   }
 
+  private void handleGatewayContext(
+      GatewayContext gatewayContext, List<Pattern> compiledQueryFilterPatterns) {
+    ServerHttpRequest request = gatewayContext.getRequest();
+
+    gatewayContext.setContextualName("outgoing request: provider");
+    gatewayContext.addHighCardinalityKeyValue(
+        KeyValue.of(
+            "http.uri",
+            filterQueryParams(request.getURI().toString(), compiledQueryFilterPatterns)));
+
+    gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
+    gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.uri");
+
+    String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
+    appendXTardisTraceIdHeader(gatewayContext, xTardisTraceId);
+  }
+
+  private void handleClientRequestContext(ClientRequestObservationContext clientRequestContext) {
+    ClientRequest request = clientRequestContext.getRequest();
+    if (request == null) {
+      return;
+    }
+
+    String spanName = "unknown";
+    if (request.url().getPath().contains("token")) {
+      spanName = "idp";
+    } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
+      spanName = "gateway";
+    }
+
+    clientRequestContext.setContextualName("outgoing request: " + spanName);
+
+    String xTardisTraceId = request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
+    appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
+  }
+
   private static void appendXTardisTraceIdHeader(
-      Observation.Context gatewayContext, String xTardisTraceId) {
+      Observation.Context context, String xTardisTraceId) {
     if (xTardisTraceId != null) {
-      gatewayContext.addHighCardinalityKeyValue(
+      context.addHighCardinalityKeyValue(
           KeyValue.of(Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId));
     }
   }
