@@ -32,14 +32,14 @@ public final class OauthTokenUtil {
       throw new IllegalArgumentException("Consumer token not provided, but expected");
     }
 
-    String trimmedConsumerToken = consumerToken.trim();
+    final String BEARER_PREFIX = "Bearer ";
 
-    int spaceIndex = trimmedConsumerToken.indexOf(" ");
-    if (spaceIndex == -1) {
+    if (!consumerToken.startsWith(BEARER_PREFIX)) {
       throw new IllegalArgumentException("Invalid token format, Missing Bearer prefix");
     }
 
-    String token = trimmedConsumerToken.substring(spaceIndex + 1);
+    String tokenWithoutBearer = consumerToken.substring(BEARER_PREFIX.length());
+    String token = tokenWithoutBearer.trim();
 
     int firstDot = token.indexOf(".");
     int secondDot = token.indexOf(".", firstDot + 1);

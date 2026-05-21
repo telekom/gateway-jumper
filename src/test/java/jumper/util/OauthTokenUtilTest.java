@@ -14,23 +14,31 @@ import io.jsonwebtoken.security.Keys;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 public class OauthTokenUtilTest {
+
+  static Stream<String> provideValidTestTokens() {
+    return Stream.of(getTestToken(true), getTestTokenWithMultipleBlanks());
+  }
 
   @Nested
   class getTokenWithoutSignatureTests {
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
     @DisplayName("Should return token without signature from a valid JWT token")
-    public void testGetTokenWithoutSignature_validToken_returnsTokenWithoutSignature() {
-      String token = getTestToken(true);
+    public void testGetTokenWithoutSignature_validToken_returnsTokenWithoutSignature(String token) {
 
       String returnedTokenWithoutSignature = getTokenWithoutSignature(token);
       token = token.trim();
-      token = token.substring(token.indexOf(" ") + 1);
+      token = token.substring("Bearer ".length());
+      token = token.trim();
 
       String tokenWithoutSignature = token.substring(0, token.lastIndexOf(".") + 1);
 
@@ -66,14 +74,15 @@ public class OauthTokenUtilTest {
   @Nested
   class getSignatureTests {
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
     @DisplayName("Should return token without signature from a valid JWT token")
-    public void testGetSignature_validToken_returnsSignature() {
-      String token = getTestToken(true);
+    public void testGetSignature_validToken_returnsSignature(String token) {
 
       String returnedSignature = getSignature(token);
       token = token.trim();
-      token = token.substring(token.indexOf(" ") + 1);
+      token = token.substring("Bearer ".length());
+      token = token.trim();
 
       String tokenWithoutSignature = token.substring(token.lastIndexOf(".") + 1);
 
@@ -109,10 +118,10 @@ public class OauthTokenUtilTest {
   @Nested
   class getClaimFromTokenTests {
 
-    @Test
+    @ParameterizedTest
+    @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
     @DisplayName("valid token should return claims")
-    public void testGetClaimFromToken_validToken_returnsClaims() {
-      String token = getTestToken(true);
+    public void testGetClaimFromToken_validToken_returnsClaims(String token) {
 
       String nameClaim = getClaimFromToken(token, "name");
       String scopeClaim = getClaimFromToken(token, "scope");
@@ -153,22 +162,7 @@ public class OauthTokenUtilTest {
     }
   }
 
-  @Nested
-  class testWithMultipleBlanks {
-    @Test
-    @DisplayName("token with multiple blanks between bearer and token should return claims")
-    public void testGetTokenWithoutSignature_tokenWithMoreThanOneSpace_throwsException() {
-      String token = getTestTokenWithMultipleBlanks();
-
-      String nameClaim = getClaimFromToken(token, "name");
-      String scopeClaim = getClaimFromToken(token, "scope");
-
-      assertThat(nameClaim).isEqualTo("test user");
-      assertThat(scopeClaim).isEqualTo("dev");
-    }
-  }
-
-  private String getTestToken(boolean withBearerPrefix) {
+  private static String getTestToken(boolean withBearerPrefix) {
 
     if (withBearerPrefix) {
       return "Bearer " + createToken();
@@ -177,11 +171,11 @@ public class OauthTokenUtilTest {
     }
   }
 
-  private String getTestTokenWithMultipleBlanks() {
+  private static String getTestTokenWithMultipleBlanks() {
     return "Bearer      " + createToken();
   }
 
-  private String createToken() {
+  private static String createToken() {
     return Jwts.builder()
         .setIssuer("Narvi")
         .setSubject("tuser")
