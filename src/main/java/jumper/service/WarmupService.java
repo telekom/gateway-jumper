@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import jumper.Constants;
 import jumper.config.WarmupProperties;
 import jumper.health.WarmupHealthIndicator;
@@ -70,12 +71,21 @@ public class WarmupService {
     }
 
     Duration timeout = warmupProperties.getTimeout();
-    log.info("Warmup: starting for {} URL(s) with {}s timeout", urls.size(), timeout.toSeconds());
+    int iterations = Math.max(1, warmupProperties.getIterations());
+    log.info(
+        "Warmup: starting for {} URL(s) x {} iterations with {}s timeout",
+        urls.size(),
+        iterations,
+        timeout.toSeconds());
 
     long start = System.currentTimeMillis();
+    int totalRequests = urls.size() * iterations;
+    AtomicInteger successCount = new AtomicInteger();
+    AtomicInteger failureCount = new AtomicInteger();
 
     Flux.fromIterable(urls)
-        .flatMap(this::warmupUrl)
+        .repeat(iterations - 1)
+        .concatMap(url -> warmupUrl(url, successCount, failureCount))
         .timeout(timeout)
         .onErrorResume(
             throwable -> {
@@ -85,14 +95,20 @@ public class WarmupService {
         .doFinally(
             signal -> {
               long elapsed = System.currentTimeMillis() - start;
-              log.info("Warmup: completed in {}ms (signal={})", elapsed, signal);
+              log.info(
+                  "Warmup: completed in {}ms — {}/{} succeeded, {} failed (signal={})",
+                  elapsed,
+                  successCount.get(),
+                  totalRequests,
+                  failureCount.get(),
+                  signal);
               warmupHealthIndicator.setReady();
             })
         .subscribe();
   }
 
-  private Mono<Void> warmupUrl(String url) {
-    log.info("Warmup: warming up {}", url);
+  private Mono<Void> warmupUrl(String url, AtomicInteger successCount, AtomicInteger failureCount) {
+    log.debug("Warmup: warming up {}", url);
     long start = System.currentTimeMillis();
 
     try {
@@ -114,18 +130,23 @@ public class WarmupService {
           .accept(MediaType.APPLICATION_JSON)
           .exchangeToMono(response -> response.releaseBody())
           .doOnSuccess(
-              v ->
-                  log.info("Warmup: {} completed in {}ms", url, System.currentTimeMillis() - start))
+              v -> {
+                successCount.incrementAndGet();
+                log.debug("Warmup: {} completed in {}ms", url, System.currentTimeMillis() - start);
+              })
           .doOnError(
-              throwable ->
-                  log.warn(
-                      "Warmup: {} failed after {}ms: {}",
-                      url,
-                      System.currentTimeMillis() - start,
-                      throwable.getMessage()))
+              throwable -> {
+                failureCount.incrementAndGet();
+                log.warn(
+                    "Warmup: {} failed after {}ms: {}",
+                    url,
+                    System.currentTimeMillis() - start,
+                    throwable.getMessage());
+              })
           .onErrorResume(throwable -> Mono.empty());
 
     } catch (Exception e) {
+      failureCount.incrementAndGet();
       log.error("Warmup: failed to build warmup request for {}: {}", url, e.getMessage());
       return Mono.empty();
     }
