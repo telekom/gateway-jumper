@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+// SPDX-FileCopyrightText: 2023-2026 Deutsche Telekom AG
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -7,6 +7,7 @@ package jumper.util;
 import io.jsonwebtoken.*;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 
 @Slf4j
 public final class OauthTokenUtil {
@@ -19,56 +20,59 @@ public final class OauthTokenUtil {
     throw new UnsupportedOperationException("Utility class");
   }
 
-  public static String getTokenWithoutSignature(String consumerToken) {
-    return parseTokenParts(consumerToken).headerWithPayload();
-  }
-
   public static String getSignature(String consumerToken) {
     return parseTokenParts(consumerToken).signature();
   }
 
+  static String getTokenWithoutSignature(String consumerToken) {
+    return parseTokenParts(consumerToken).headerWithPayload();
+  }
+
+  public static String getClaimFromToken(String consumerToken, String claimName) {
+    return getAllClaimsFromToken(consumerToken).getBody().get(claimName, String.class);
+  }
+
+  public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
+    String tokenWithoutSignature = getTokenWithoutSignature(consumerToken);
+
+    try {
+      return jwtParser.parseClaimsJwt(tokenWithoutSignature);
+    } catch (Exception e) {
+      log.error("Failed to parse consumer token", e);
+      throw e;
+    }
+  }
+
   private static TokenParts parseTokenParts(String consumerToken) {
-    if (Objects.isNull(consumerToken)) {
-      throw new IllegalArgumentException("Consumer token not provided, but expected");
-    }
+    String fullyProcessedToken = processToken(consumerToken);
 
-    final String BEARER_PREFIX = "Bearer ";
-
-    if (!consumerToken.startsWith(BEARER_PREFIX)) {
-      throw new IllegalArgumentException("Invalid token format, Missing Bearer prefix");
-    }
-
-    String tokenWithoutBearer = consumerToken.substring(BEARER_PREFIX.length());
-    String token = tokenWithoutBearer.trim();
-
-    int firstDot = token.indexOf(".");
-    int secondDot = token.indexOf(".", firstDot + 1);
+    int firstDot = fullyProcessedToken.indexOf(".");
+    int secondDot = fullyProcessedToken.indexOf(".", firstDot + 1);
 
     if (secondDot == -1) {
       throw new IllegalArgumentException("Invalid token format");
     }
 
-    String headerAndPayload = token.substring(0, secondDot + 1);
-    String signature = token.substring(secondDot + 1);
+    String headerAndPayload = fullyProcessedToken.substring(0, secondDot + 1);
+    String signature = fullyProcessedToken.substring(secondDot + 1);
 
     return new TokenParts(headerAndPayload, signature);
   }
 
-  public static String getClaimFromToken(String consumerToken, String claimName) {
-    String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
-    return getAllClaimsFromToken(consumerTokenWithoutSignature)
-        .getBody()
-        .get(claimName, String.class);
-  }
-
-  public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
-
-    try {
-      return jwtParser.parseClaimsJwt(consumerToken);
-    } catch (Exception e) {
-      log.error("Failed to parse consumer token", e);
-      throw e;
+  private static @NonNull String processToken(String consumerToken) {
+    if (Objects.isNull(consumerToken)) {
+      throw new IllegalArgumentException("Consumer token not provided, but expected");
     }
+
+    String trimmedConsumerToken = consumerToken.trim();
+
+    final String BEARER_PREFIX = "Bearer ";
+    if (!trimmedConsumerToken.startsWith(BEARER_PREFIX)) {
+      throw new IllegalArgumentException("Invalid token format, Missing Bearer prefix");
+    }
+
+    String tokenWithoutBearer = trimmedConsumerToken.substring(BEARER_PREFIX.length());
+    return tokenWithoutBearer.trim();
   }
 
   private record TokenParts(String headerWithPayload, String signature) {}

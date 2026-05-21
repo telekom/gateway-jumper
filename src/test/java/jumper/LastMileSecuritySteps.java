@@ -70,9 +70,7 @@ public class LastMileSecuritySteps {
   }
 
   private void checkConsumerToken(String consumerToken) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(
-            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
 
     assertNotNull(claimsFromToken.getBody().get("clientId", String.class));
   }

@@ -195,8 +195,7 @@ public class VerificationSteps {
   }
 
   private void checkOneToken(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
@@ -214,8 +213,7 @@ public class VerificationSteps {
   }
 
   private void checkOneTokenSimple(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
@@ -231,8 +229,7 @@ public class VerificationSteps {
   }
 
   private void checkPubSub(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
     assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("subscriberId", String.class));
@@ -240,22 +237,19 @@ public class VerificationSteps {
   }
 
   private void checkScopes(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals(SCOPES, claimsFromToken.getBody().get("scope", String.class));
   }
 
   private void checkAud(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals("testAudience", claimsFromToken.getBody().get("aud", String.class));
   }
 
   private void checkMeshToken(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("clientId", String.class));
@@ -270,8 +264,7 @@ public class VerificationSteps {
   }
 
   private void checkExternalConfigured(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals(
         CONSUMER_EXTERNAL_CONFIGURED, claimsFromToken.getBody().get("clientId", String.class));
@@ -279,16 +272,14 @@ public class VerificationSteps {
   }
 
   private void checkAlternativeClient(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals("alternative_client", claimsFromToken.getBody().get("clientId", String.class));
     assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
   }
 
   private void checkExternalHeader(String token) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
     assertEquals(CONSUMER_EXTERNAL_HEADER, claimsFromToken.getBody().get("clientId", String.class));
     assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());

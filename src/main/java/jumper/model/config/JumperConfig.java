@@ -149,9 +149,7 @@ public class JumperConfig {
     // processing
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> consumerTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(
-            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
     setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
@@ -162,9 +160,7 @@ public class JumperConfig {
   public void fillProcessingInfo(ServerHttpRequest request) {
     setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> consumerTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(
-            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
     setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
         consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));

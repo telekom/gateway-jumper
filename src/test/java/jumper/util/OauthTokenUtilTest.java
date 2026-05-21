@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+// SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -6,10 +6,9 @@ package jumper.util;
 
 import static jumper.util.OauthTokenUtil.*;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.security.Keys;
 import java.time.Instant;
 import java.util.Base64;
@@ -17,172 +16,248 @@ import java.util.Date;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 public class OauthTokenUtilTest {
 
-  static Stream<String> provideValidTestTokens() {
-    return Stream.of(getTestToken(true), getTestTokenWithMultipleBlanks());
+  private static final String CLAIM_NAME_KEY = "name";
+  private static final String CLAIM_NAME_VALUE = "test user";
+  private static final String CLAIM_SCOPE_KEY = "scope";
+  private static final String CLAIM_SCOPE_VALUE = "dev";
+  private static final String CLAIM_ISS_KEY = "iss";
+  private static final String CLAIM_ISS_VALUE = "Narvi";
+  private static final String CLAIM_SUB_KEY = "sub";
+  private static final String CLAIM_SUB_VALUE = "tuser";
+
+  // ---------------------------------------------------------------------------
+  // Token providers
+  // ---------------------------------------------------------------------------
+
+  /** All token variants that parseTokenParts must accept as valid. */
+  static Stream<Arguments> provideValidTestTokens() {
+    return Stream.of(
+        Arguments.of(getTestToken(true), "standard Bearer prefix"),
+        Arguments.of(getTestTokenWithMultipleBlanks(), "multiple spaces after Bearer"),
+        Arguments.of(getTestTokenWithLeadingSpaces(), "leading spaces before Bearer"));
   }
+
+  /**
+   * Tokens that lack a proper Bearer prefix or JWT structure and must trigger
+   * IllegalArgumentException from parseTokenParts.
+   */
+  static Stream<Arguments> provideInvalidBearerTokens() {
+    String rawJwt = getTestToken(false);
+
+    String noSignatureToken = getTestToken(true).trim();
+    noSignatureToken = noSignatureToken.substring(0, noSignatureToken.lastIndexOf("."));
+
+    return Stream.of(
+        Arguments.of("", "empty token"),
+        Arguments.of(null, "null token"),
+        Arguments.of(rawJwt, "raw JWT without Bearer prefix"),
+        Arguments.of(noSignatureToken, "Bearer token with signature stripped"));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tests for getTokenWithoutSignature
+  // ---------------------------------------------------------------------------
 
   @Nested
   class getTokenWithoutSignatureTests {
 
-    @ParameterizedTest
-    @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
-    @DisplayName("Should return token without signature from a valid JWT token")
-    public void testGetTokenWithoutSignature_validToken_returnsTokenWithoutSignature(String token) {
+    @Nested
+    @DisplayName("Valid tokens")
+    class ValidTokens {
 
-      String returnedTokenWithoutSignature = getTokenWithoutSignature(token);
-      token = token.trim();
-      token = token.substring("Bearer ".length());
-      token = token.trim();
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return header.payload. portion from a valid JWT token")
+      public void testGetTokenWithoutSignature_validToken_returnsHeaderAndPayload(
+          String token, String description) {
+        String normalized = token.trim().substring("Bearer ".length()).trim();
+        String expected = normalized.substring(0, normalized.lastIndexOf(".") + 1);
 
-      String tokenWithoutSignature = token.substring(0, token.lastIndexOf(".") + 1);
-
-      assertThat(returnedTokenWithoutSignature).isEqualTo(tokenWithoutSignature);
+        assertThat(getTokenWithoutSignature(token)).isEqualTo(expected);
+      }
     }
 
-    @Test
-    @DisplayName("Should throw exception when getting no token")
-    public void testGetTokenWithoutSignature_noToken_throwsException() {
-      assertThrows(IllegalArgumentException.class, () -> getTokenWithoutSignature(null));
-    }
+    @Nested
+    @DisplayName("Invalid tokens")
+    class InvalidTokens {
 
-    @Test
-    @DisplayName("Should throw exception when getting token without bearer prefix from a JWT token")
-    public void testGetTokenWithoutSignature_invalidToken_throwsException() {
-      final String token = getTestToken(false);
-
-      assertThrows(IllegalArgumentException.class, () -> getTokenWithoutSignature(token));
-    }
-
-    @Test
-    @DisplayName("Should throw exception when getting token without a signature from a JWT token")
-    public void testGetTokenWithoutSignature_invalidTokenNoSignature_throwsException() {
-      String initialisedToken = getTestToken(true);
-
-      initialisedToken = initialisedToken.trim();
-      final String token = initialisedToken.substring(0, initialisedToken.lastIndexOf("."));
-
-      assertThrows(IllegalArgumentException.class, () -> getTokenWithoutSignature(token));
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideInvalidBearerTokens")
+      @DisplayName("Should throw IllegalArgumentException for")
+      public void testGetTokenWithoutSignature_invalidToken_throwsException(
+          String token, String description) {
+        assertThrows(IllegalArgumentException.class, () -> getTokenWithoutSignature(token));
+      }
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Tests for getSignature
+  // ---------------------------------------------------------------------------
 
   @Nested
   class getSignatureTests {
 
-    @ParameterizedTest
-    @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
-    @DisplayName("Should return token without signature from a valid JWT token")
-    public void testGetSignature_validToken_returnsSignature(String token) {
+    @Nested
+    @DisplayName("Valid tokens")
+    class ValidTokens {
 
-      String returnedSignature = getSignature(token);
-      token = token.trim();
-      token = token.substring("Bearer ".length());
-      token = token.trim();
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return the signature part from a valid JWT token")
+      public void testGetSignature_validToken_returnsSignature(String token, String description) {
+        String normalized = token.trim().substring("Bearer ".length()).trim();
+        String expected = normalized.substring(normalized.lastIndexOf(".") + 1);
 
-      String tokenWithoutSignature = token.substring(token.lastIndexOf(".") + 1);
-
-      assertThat(returnedSignature).isEqualTo(tokenWithoutSignature);
+        assertThat(getSignature(token)).isEqualTo(expected);
+      }
     }
 
-    @Test
-    @DisplayName("Should throw exception when getting no token")
-    public void testGetSignature_noToken_throwsException() {
-      assertThrows(IllegalArgumentException.class, () -> getSignature(null));
-    }
+    @Nested
+    @DisplayName("Invalid tokens")
+    class InvalidTokens {
 
-    @Test
-    @DisplayName("Should throw exception when getting token without bearer prefix from a JWT token")
-    public void testGetSignature_invalidToken_throwsException() {
-      final String token = getTestToken(false);
-
-      assertThrows(IllegalArgumentException.class, () -> getSignature(token));
-    }
-
-    @Test
-    @DisplayName("Should throw exception when getting token without a signature from a JWT token")
-    public void testGetSignature_invalidTokenNoSignature_throwsException() {
-      String initialisedToken = getTestToken(true);
-
-      initialisedToken = initialisedToken.trim();
-      final String token = initialisedToken.substring(0, initialisedToken.lastIndexOf("."));
-
-      assertThrows(IllegalArgumentException.class, () -> getSignature(token));
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideInvalidBearerTokens")
+      @DisplayName("Should throw IllegalArgumentException for")
+      public void testGetSignature_invalidToken_throwsException(String token, String description) {
+        assertThrows(IllegalArgumentException.class, () -> getSignature(token));
+      }
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Tests for getClaimFromToken
+  // ---------------------------------------------------------------------------
 
   @Nested
   class getClaimFromTokenTests {
 
-    @ParameterizedTest
-    @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
-    @DisplayName("valid token should return claims")
-    public void testGetClaimFromToken_validToken_returnsClaims(String token) {
+    @Nested
+    @DisplayName("Valid tokens")
+    class ValidTokens {
 
-      String nameClaim = getClaimFromToken(token, "name");
-      String scopeClaim = getClaimFromToken(token, "scope");
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return custom claims from a valid token")
+      public void testGetClaimFromToken_validToken_returnsCustomClaims(
+          String token, String description) {
+        assertThat(getClaimFromToken(token, CLAIM_NAME_KEY)).isEqualTo(CLAIM_NAME_VALUE);
+        assertThat(getClaimFromToken(token, CLAIM_SCOPE_KEY)).isEqualTo(CLAIM_SCOPE_VALUE);
+      }
 
-      assertThat(nameClaim).isEqualTo("test user");
-      assertThat(scopeClaim).isEqualTo("dev");
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return standard JWT claims (sub, iss) from a valid token")
+      public void testGetClaimFromToken_validToken_returnsStandardClaims(
+          String token, String description) {
+        assertThat(getClaimFromToken(token, CLAIM_ISS_KEY)).isEqualTo(CLAIM_ISS_VALUE);
+        assertThat(getClaimFromToken(token, CLAIM_SUB_KEY)).isEqualTo(CLAIM_SUB_VALUE);
+      }
+
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return null for a non-existent claim name")
+      public void testGetClaimFromToken_nonExistentClaim_returnsNull(
+          String token, String description) {
+        assertThat(getClaimFromToken(token, "nonExistentClaim")).isNull();
+      }
+
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return null for an empty claim name")
+      public void testGetClaimFromToken_emptyClaimName_returnsNull(
+          String token, String description) {
+        assertThat(getClaimFromToken(token, "")).isNull();
+      }
     }
 
-    @Test
-    @DisplayName("Should throw exception when getting claim from no token")
-    public void testGetClaimFromToken_noToken_throwsException() {
-      assertThrows(IllegalArgumentException.class, () -> getClaimFromToken(null, "name"));
+    @Nested
+    @DisplayName("Invalid tokens")
+    class InvalidTokens {
+
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideInvalidBearerTokens")
+      @DisplayName("Should throw IllegalArgumentException for")
+      public void testGetClaimFromToken_invalidToken_throwsException(
+          String token, String description) {
+        assertThrows(
+            IllegalArgumentException.class, () -> getClaimFromToken(token, CLAIM_NAME_KEY));
+      }
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Tests for getAllClaimsFromToken
+  // ---------------------------------------------------------------------------
 
   @Nested
   class getAllClaimsFromTokenTests {
 
-    @Test
-    @DisplayName("Should return all claims from a valid JWT token")
-    public void testGetAllClaimsFromToken_validToken_returnsAllClaims() {
-      String token = getTestToken(false);
+    @Nested
+    @DisplayName("Valid tokens")
+    class ValidTokens {
 
-      token = token.substring(0, token.lastIndexOf(".") + 1);
-      String header = getAllClaimsFromToken(token).getHeader().toString();
-      String nameClaim = getAllClaimsFromToken(token).getBody().get("name", String.class);
-      String scopeClaim = getAllClaimsFromToken(token).getBody().get("scope", String.class);
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
+      @DisplayName("Should return all claims from a valid Bearer-prefixed JWT token")
+      public void testGetAllClaimsFromToken_validToken_returnsAllClaims(
+          String token, String description) {
+        var claims = getAllClaimsFromToken(token);
 
-      assertThat(header).contains("alg=HS256");
-      assertThat(nameClaim).isEqualTo("test user");
-      assertThat(scopeClaim).isEqualTo("dev");
+        assertThat(claims.getHeader().toString()).contains("alg=HS256");
+        assertThat(claims.getBody().get(CLAIM_NAME_KEY, String.class)).isEqualTo(CLAIM_NAME_VALUE);
+        assertThat(claims.getBody().get(CLAIM_SCOPE_KEY, String.class))
+            .isEqualTo(CLAIM_SCOPE_VALUE);
+        assertThat(claims.getBody().getSubject()).isEqualTo(CLAIM_SUB_VALUE);
+        assertThat(claims.getBody().getIssuer()).isEqualTo(CLAIM_ISS_VALUE);
+      }
     }
 
-    @Test
-    @DisplayName("Should throw exception when getting claims from no token")
-    public void testGetAllClaimsFromToken_noToken_throwsException() {
-      assertThrows(UnsupportedJwtException.class, () -> getAllClaimsFromToken(null));
+    @Nested
+    @DisplayName("Invalid tokens")
+    class InvalidTokens {
+
+      @ParameterizedTest(name = "{1}")
+      @MethodSource("jumper.util.OauthTokenUtilTest#provideInvalidBearerTokens")
+      @DisplayName("Should throw IllegalArgumentException for")
+      public void testGetAllClaimsFromToken_invalidToken_throwsException(
+          String token, String description) {
+        assertThrows(IllegalArgumentException.class, () -> getAllClaimsFromToken(token));
+      }
     }
   }
 
-  private static String getTestToken(boolean withBearerPrefix) {
+  // ---------------------------------------------------------------------------
+  // Token factory helpers
+  // ---------------------------------------------------------------------------
 
-    if (withBearerPrefix) {
-      return "Bearer " + createToken();
-    } else {
-      return createToken();
-    }
+  private static String getTestToken(boolean withBearerPrefix) {
+    return withBearerPrefix ? "Bearer " + createToken() : createToken();
   }
 
   private static String getTestTokenWithMultipleBlanks() {
     return "Bearer      " + createToken();
   }
 
+  private static String getTestTokenWithLeadingSpaces() {
+    return "  Bearer " + createToken();
+  }
+
   private static String createToken() {
     return Jwts.builder()
-        .setIssuer("Narvi")
-        .setSubject("tuser")
-        .claim("name", "test user")
-        .claim("scope", "dev")
-        .setIssuedAt(Date.from(Instant.ofEpochSecond(1466796822L)))
-        .setExpiration(Date.from(Instant.ofEpochSecond(4622470422L)))
+        .setIssuer(CLAIM_ISS_VALUE)
+        .setSubject(CLAIM_SUB_VALUE)
+        .claim(CLAIM_NAME_KEY, CLAIM_NAME_VALUE)
+        .claim(CLAIM_SCOPE_KEY, CLAIM_SCOPE_VALUE)
+        .setIssuedAt(Date.from(Instant.now()))
+        .setExpiration(Date.from(Instant.now().plusSeconds(300L)))
         .signWith(
             Keys.hmacShaKeyFor(
                 Base64.getDecoder().decode("Yn2kjibddFAWtnPJ2AFlL8WXmohJMCvigQggaEypa5E=")))
