@@ -80,11 +80,8 @@ public class TokenGeneratorService {
       String subscriberId,
       boolean legacy) {
 
-    String consumerTokenWithoutSignature =
-        OauthTokenUtil.getTokenWithoutSignature(jc.getConsumerToken());
-
     Jwt<?, Claims> consumerTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(consumerTokenWithoutSignature);
+        OauthTokenUtil.getAllClaimsFromToken(jc.getConsumerToken());
 
     Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
     Date expiration = consumerTokenClaims.getBody().getExpiration();

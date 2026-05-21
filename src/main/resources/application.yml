@@ -30,14 +30,14 @@ management:
     sampling:
       probability: 1.0
     propagation:
-      type: B3_MULTI
-  zipkin:
+      type: b3_multi
+  otlp:
     tracing:
-      endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
+      endpoint: ${TRACING_URL:http://localhost:4318}/v1/traces
 
 cache-manager:
   caffeine-caches:
-    - cache-names: [ cache-token-info ]
+    - cache-names: [cache-token-info]
       spec: maximumSize=${jumper.tokencache.maxSize:10000}, expireAfterWrite=${jumper.tokencache.expireAfterWriteMinutes:30}m
 
 spring:
@@ -147,7 +147,7 @@ jumper:
     kid-file: tls.kid
     key-refresh-interval-ms: 60000
     tls:
-      additional-allowed-cipher-suites: [ ]
+      additional-allowed-cipher-suites: []
       default-allowed-cipher-suites:
         # tls 13
         - TLS_AES_256_GCM_SHA384 # high
@@ -193,3 +193,4 @@ logging:
       console: logstash
   level:
     jumper.service.AuditLogService: INFO
+
