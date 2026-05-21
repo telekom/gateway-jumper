@@ -17,5 +17,6 @@ public class WarmupProperties {
 
   private boolean enabled = false;
   private Duration timeout = Duration.ofSeconds(15);
+  private int iterations = 1;
   private List<String> urls = List.of();
 }

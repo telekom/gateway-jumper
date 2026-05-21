@@ -190,6 +190,7 @@ jumper:
   warmup:
     enabled: false
     timeout: 15s
+    iterations: 1
     urls: 
   horizon:
     publishEventUrl: ${PUBLISH_EVENT_URL:http://producer.stage:8080/v1/events}
