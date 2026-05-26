@@ -195,10 +195,9 @@ class TokenFetchServiceTest {
   void failedIdpCall_cleansUpInFlightEntry_allowsRetry() {
     when(tokenCacheService.getToken(TOKEN_CACHE_KEY)).thenReturn(Optional.empty());
 
-    // Wire up a failing WebClient
-    WebClient failingWebClient = mockFailingWebClient();
-    tokenFetchService =
-        new TokenFetchService(failingWebClient, tokenCacheService, tokenGeneratorService);
+    // Wire up a WebClient that fails first, then succeeds on the next call
+    WebClient webClient = mockFailThenSucceedWebClient(createTokenInfo(3600));
+    tokenFetchService = new TokenFetchService(webClient, tokenCacheService, tokenGeneratorService);
 
     // First request fails
     StepVerifier.create(
@@ -207,11 +206,7 @@ class TokenFetchServiceTest {
         .expectError()
         .verify(Duration.ofSeconds(5));
 
-    // Now swap in a working WebClient and verify the in-flight map was cleaned up
-    WebClient workingWebClient = mockWebClient(createTokenInfo(3600), Duration.ZERO);
-    tokenFetchService =
-        new TokenFetchService(workingWebClient, tokenCacheService, tokenGeneratorService);
-
+    // Second request on the SAME instance succeeds — proves the in-flight entry was cleaned up
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
@@ -257,12 +252,14 @@ class TokenFetchServiceTest {
   }
 
   @SuppressWarnings("unchecked")
-  private WebClient mockFailingWebClient() {
+  private WebClient mockFailThenSucceedWebClient(TokenInfo responseToken) {
     WebClient webClient = mock(WebClient.class);
     WebClient.RequestBodyUriSpec requestBodyUriSpec = mock(WebClient.RequestBodyUriSpec.class);
     WebClient.RequestBodySpec requestBodySpec = mock(WebClient.RequestBodySpec.class);
     WebClient.RequestHeadersSpec requestHeadersSpec = mock(WebClient.RequestHeadersSpec.class);
     WebClient.ResponseSpec responseSpec = mock(WebClient.ResponseSpec.class);
+
+    AtomicInteger callCount = new AtomicInteger(0);
 
     when(webClient.post()).thenReturn(requestBodyUriSpec);
     when(requestBodyUriSpec.uri(anyString())).thenReturn(requestBodySpec);
@@ -271,7 +268,14 @@ class TokenFetchServiceTest {
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
     when(responseSpec.onStatus(any(), any())).thenReturn(responseSpec);
     when(responseSpec.bodyToMono(TokenInfo.class))
-        .thenReturn(Mono.error(new RuntimeException("IDP unavailable")));
+        .thenReturn(
+            Mono.defer(
+                () -> {
+                  if (callCount.getAndIncrement() == 0) {
+                    return Mono.error(new RuntimeException("IDP unavailable"));
+                  }
+                  return Mono.just(responseToken);
+                }));
 
     return webClient;
   }

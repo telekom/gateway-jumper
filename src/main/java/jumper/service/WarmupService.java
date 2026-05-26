@@ -83,9 +83,11 @@ public class WarmupService {
     AtomicInteger successCount = new AtomicInteger();
     AtomicInteger failureCount = new AtomicInteger();
 
+    WebClient warmupClient = WebClient.builder().baseUrl("http://localhost:" + serverPort).build();
+
     Flux.fromIterable(urls)
         .repeat(iterations - 1)
-        .concatMap(url -> warmupUrl(url, successCount, failureCount))
+        .concatMap(url -> warmupUrl(warmupClient, url, successCount, failureCount))
         .timeout(timeout)
         .onErrorResume(
             throwable -> {
@@ -107,16 +109,14 @@ public class WarmupService {
         .subscribe();
   }
 
-  private Mono<Void> warmupUrl(String url, AtomicInteger successCount, AtomicInteger failureCount) {
+  private Mono<Void> warmupUrl(
+      WebClient warmupClient, String url, AtomicInteger successCount, AtomicInteger failureCount) {
     log.debug("Warmup: warming up {}", url);
     long start = System.currentTimeMillis();
 
     try {
       String consumerToken = buildSyntheticConsumerToken();
       String jumperConfigBase64 = buildWarmupJumperConfig(url);
-
-      WebClient warmupClient =
-          WebClient.builder().baseUrl("http://localhost:" + serverPort).build();
 
       return warmupClient
           .get()
