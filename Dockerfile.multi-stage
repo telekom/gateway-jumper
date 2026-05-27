@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# DEPRECATED: CI/CD uses Jib (mvn jib:build) to produce optimized layered images.
+# Prefer: ./mvnw jib:dockerBuild
+
 # This multi-stage Dockerfile is used to build a Java application with Maven and run it with a JRE.
 # It skips the tests during the build process and uses a slim JRE image for the final container.
 # USE WITH CAUTION: This Dockerfile is intended for demonstration purposes only and should be adjusted to your needs.

@@ -2,6 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+# DEPRECATED: CI/CD uses Jib (mvn jib:build) to produce optimized layered images.
+# Prefer: ./mvnw jib:dockerBuild
+
 ARG BASE_IMAGE=gcr.io/distroless/java21-debian12:nonroot
 FROM ${BASE_IMAGE}
 
