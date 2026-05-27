@@ -87,8 +87,7 @@ public class TokenGeneratorService {
       String operation,
       String issuer,
       String publisherId,
-      String subscriberId,
-      boolean legacy) {
+      String subscriberId) {
 
     String consumerTokenWithoutSignature =
         OauthTokenUtil.getTokenWithoutSignature(jc.getConsumerToken());
@@ -115,29 +114,23 @@ public class TokenGeneratorService {
     claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone());
     claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
-    if (legacy) {
-      String consumerTokenSignature = OauthTokenUtil.getSignature(jc.getConsumerToken());
-      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
+    // env is only set on provider LMS tokens, not on mesh LMS tokens, because
+    // consumer-side proxy routes do not inject the `environment` header.
+    if (Objects.nonNull(jc.getEnvName())) {
+      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
+    }
 
-    } else {
-      // env is only set on provider LMS tokens, not on mesh LMS tokens, because
-      // consumer-side proxy routes do not inject the `environment` header.
-      if (Objects.nonNull(jc.getEnvName())) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
-      }
+    if (Objects.nonNull(jc.getSecurityScopes())) {
+      claims.put(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
+    }
 
-      if (Objects.nonNull(jc.getSecurityScopes())) {
-        claims.put(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
-      }
+    if (Objects.nonNull(publisherId)) {
+      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+    }
 
-      if (Objects.nonNull(publisherId)) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
-      }
-
-      if (Objects.nonNull(subscriberId)) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
-        claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
-      }
+    if (Objects.nonNull(subscriberId)) {
+      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
+      claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
     }
 
     if (StringUtils.isNotBlank(aud)) {
@@ -154,13 +147,8 @@ public class TokenGeneratorService {
    * API.
    */
   public String generateProviderLmsToken(
-      JumperConfig jc,
-      String operation,
-      String issuer,
-      String publisherId,
-      String subscriberId,
-      boolean legacy) {
-    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId, legacy);
+      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
+    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
   }
 
   /**
@@ -171,7 +159,7 @@ public class TokenGeneratorService {
    * required. The provider zone validates this token against the consumer zone's StarGate JWKS.
    */
   public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
-    return generateLmsToken(jc, "gateway", operation, issuer, null, null, false);
+    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

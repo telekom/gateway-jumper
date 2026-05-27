@@ -184,7 +184,6 @@ A legacy scenario where Jumper forwards both the original token and a new LMS to
   "clientId": "<taken from incoming token>",
   "azp": "stargate",
   "originZone": "aws",
-  "accessTokenSignature": "<signature of incoming token>",
   "typ": "Bearer",
   "operation": "<performed operation>",
   "requestPath": "<taken from header>",

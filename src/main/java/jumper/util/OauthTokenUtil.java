@@ -32,18 +32,6 @@ public final class OauthTokenUtil {
     return splitToken[0] + "." + splitToken[1] + ".";
   }
 
-  public static String getSignature(String consumerToken) {
-
-    if (Objects.isNull(consumerToken)) {
-      throw new IllegalStateException("Consumer token not provided, but expected");
-    }
-
-    String[] token = consumerToken.split(" ");
-    String[] splitToken = token[1].split("\\.");
-
-    return splitToken[2];
-  }
-
   public static String getClaimFromToken(String consumerToken, String claimName) {
     String consumerTokenWithoutSignature = getTokenWithoutSignature(consumerToken);
     return getAllClaimsFromToken(consumerTokenWithoutSignature)
