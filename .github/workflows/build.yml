@@ -20,12 +20,10 @@ name: Build
 #
 # Required GitHub environment:
 # - "external": Configured with required reviewers. Used as an approval gate
-#   for fork PRs before they can run with access to repository secrets.
-#   Internal PRs and other events bypass this gate automatically.
+#   for fork PRs in the push-image workflow before pushing with secrets.
 
 on:
   pull_request:
-  pull_request_target:
   workflow_dispatch:
     inputs:
       tag:
@@ -45,19 +43,8 @@ env:
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
 
 jobs:
-  authorize:
-    name: Authorize
-    environment:
-      ${{ github.event_name == 'pull_request_target'
-      && github.event.pull_request.head.repo.full_name != github.repository
-      && 'external' || 'internal' }}
-    runs-on: ubuntu-latest
-    steps:
-      - run: true
-
   lint-maven:
     name: Check Java code style
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -73,7 +60,6 @@ jobs:
 
   build-maven:
     name: Build Maven project
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
@@ -104,7 +90,6 @@ jobs:
 
   test-maven:
     name: Run unit tests
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     needs: [build-maven]
     steps:
@@ -133,29 +118,22 @@ jobs:
           path: |
             **/target/surefire-reports/
 
-  build-push-image:
-    name: Build & push container image
+  build-image:
+    name: Build container image
     runs-on: ubuntu-latest
-    needs: [authorize, build-maven, test-maven]
-    if: |
-      always()
-      && (needs.authorize.result == 'success')
-      && (needs.build-maven.result == 'success' || needs.build-maven.result == 'skipped')
-      && (needs.test-maven.result == 'success' || needs.test-maven.result == 'skipped')
+    needs: [build-maven, test-maven]
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - name: Create test artifact
+        run: |
+          mkdir -p build-output
+          echo "image-built-from-sha=${{ github.sha }}" > build-output/metadata.txt
+          echo "event=${{ github.event_name }}" >> build-output/metadata.txt
+          echo "Test artifact - this simulates a container image tarball" > build-output/image.tar
+      - name: Upload image artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.ref }}
-      - name: Check secret access
-        run: |
-          if [ -n "${{ secrets.TEST_SECRET }}" ]; then
-            echo "Secret is accessible"
-          else
-            echo "Secret is NOT accessible"
-            exit 1
-          fi
-      - name: Verify checked out code
-        run: |
-          echo "Checked out ref: ${{ github.event.pull_request.head.sha || github.ref }}"
-          git log --oneline -1
+          name: container-image
+          path: build-output/
+          retention-days: 1

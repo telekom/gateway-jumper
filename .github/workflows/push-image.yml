@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom IT GmbH
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Push container image
+
+# This workflow runs after the Build workflow completes.
+# It downloads the pre-built image artifact and pushes it to the registry.
+#
+# For fork PRs, the "external" environment approval gate ensures a maintainer
+# reviews the fork's code before the image is pushed with access to secrets.
+# For internal PRs and other events, no approval is required.
+#
+# Security: This workflow never checks out fork code. It only handles
+# the pre-built artifact from the Build workflow.
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  push-image:
+    name: Push container image
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    environment: ${{ github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.head_repository.full_name != github.repository
+      && 'external' || '' }}
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c #v8.0.1
+        with:
+          name: container-image
+          path: build-output/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check secret access
+        run: |
+          if [ -n "$TEST_SECRET" ]; then
+            echo "Secret is accessible - would push image"
+          else
+            echo "Secret is NOT accessible"
+            exit 1
+          fi
+        env:
+          TEST_SECRET: ${{ secrets.TEST_SECRET }}
+      - name: Show artifact metadata
+        run: cat build-output/metadata.txt
