@@ -4,32 +4,28 @@
 
 name: Build
 
-# Required environment setup:
-# Variables (set on both environments):
-# - REGISTRY_HOST: Container registry host (e.g. mtr.devops.telekom.de)
-# - REGISTRY_REPO: Repository path (e.g. /tardis-internal/gateway/jumper-sse)
-# - REGISTRY_USER: Container registry username
-# - BASE_IMAGE: The base image used for the container build (defaults to gcr.io/distroless/java21-debian12:nonroot)
-#
-# Secrets (set on both environments):
+# Required secrets (repository level):
 # - REGISTRY_TOKEN: Container registry token/password
-# - OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY: Token for accessing ORT repository
 # - COSIGN_PASSWORD: Cosign key password
 # - COSIGN_PRIVATE_KEY: Cosign private key for image signing
 # - COSIGN_PUBLIC_KEY: Cosign public key for signature verification
 #
-# Repository variables:
+# Required variables (repository level):
+# - REGISTRY_HOST: Container registry host (e.g. mtr.devops.telekom.de)
+# - REGISTRY_REPO: Repository path (e.g. /tardis-internal/gateway/jumper-sse)
+# - REGISTRY_USER: Container registry username
+# - BASE_IMAGE: The base image used for the container build (defaults to gcr.io/distroless/java21-debian12:nonroot)
 # - JAVA_VERSION: Java version to use (defaults to '21' if not specified)
 # - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'zulu' if not specified)
 #
-# Required GitHub environments:
-# - "container-registry": No approval required. Used for pushes to main, tags,
-#   workflow_dispatch, and PRs from internal branches.
-# - "container-registry-approval": Configured with required reviewers. Used for
-#   fork PRs — pauses until a maintainer approves, then provides secrets.
+# Required GitHub environment:
+# - "external": Configured with required reviewers. Used as an approval gate
+#   for fork PRs before they can run with access to repository secrets.
+#   Internal PRs and other events bypass this gate automatically.
 
 on:
   pull_request:
+  pull_request_target:
   workflow_dispatch:
     inputs:
       tag:
@@ -49,8 +45,19 @@ env:
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
 
 jobs:
+  authorize:
+    name: Authorize
+    environment:
+      ${{ github.event_name == 'pull_request_target'
+      && github.event.pull_request.head.repo.full_name != github.repository
+      && 'external' || 'internal' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: true
+
   lint-maven:
     name: Check Java code style
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -66,6 +73,7 @@ jobs:
 
   build-maven:
     name: Build Maven project
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
@@ -96,6 +104,7 @@ jobs:
 
   test-maven:
     name: Run unit tests
+    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     needs: [build-maven]
     steps:
@@ -126,18 +135,27 @@ jobs:
 
   build-push-image:
     name: Build & push container image
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    needs: [build-maven, test-maven]
-    uses: ./.github/workflows/build-image.yml
-    with:
-      environment: container-registry
-    secrets: inherit
-
-  build-push-image-fork:
-    name: Build & push container image (fork)
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-    needs: [build-maven, test-maven]
-    uses: ./.github/workflows/build-image.yml
-    with:
-      environment: container-registry-approval
-    secrets: inherit
+    runs-on: ubuntu-latest
+    needs: [authorize, build-maven, test-maven]
+    if: |
+      always()
+      && (needs.authorize.result == 'success')
+      && (needs.build-maven.result == 'success' || needs.build-maven.result == 'skipped')
+      && (needs.test-maven.result == 'success' || needs.test-maven.result == 'skipped')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
+      - name: Check secret access
+        run: |
+          if [ -n "${{ secrets.TEST_SECRET }}" ]; then
+            echo "Secret is accessible"
+          else
+            echo "Secret is NOT accessible"
+            exit 1
+          fi
+      - name: Verify checked out code
+        run: |
+          echo "Checked out ref: ${{ github.event.pull_request.head.sha || github.ref }}"
+          git log --oneline -1
