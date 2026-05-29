@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 @upstream @iris
-Feature: Last Mile Security, legacy scenario with 2 tokens
+Feature: Last Mile Security (OneToken)
 
   Scenario: Consumer calls an API with lastMileSecurity
     Given lastMileSecurity is activated

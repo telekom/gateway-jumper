@@ -66,9 +66,8 @@ Feature: proper authorization token reaches provider endpoint
     And API Provider receives header x-tardis-traceid that matches regex dummy
 
   ################ mesh ################
-  Scenario: Consumer calls proxy route with proxy route headers, mesh token sent
+  Scenario: Consumer calls proxy route with proxy route headers, mesh LMS token sent
     Given ProxyRoute headers are set
-    And IDP set to provide internal token
     And API provider set to respond with a 200 status code
     And A header x-tardis-traceid is set with value dummy
     When consumer calls the proxy route

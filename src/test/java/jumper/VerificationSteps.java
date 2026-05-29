@@ -260,13 +260,24 @@ public class VerificationSteps {
         OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
-    assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("clientId", String.class));
+    // Mesh LMS token carries the real consumer identity, not the "gateway" client
+    assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
+    // azp is "gateway" so the provider-zone ACL group check passes
     assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("azp", String.class));
-    assertEquals(ENVIRONMENT_REMOTE, claimsFromToken.getBody().get("env", String.class));
-    assertEquals(ORIGIN_ZONE_REMOTE, claimsFromToken.getBody().get("originZone", String.class));
+    // env is absent: proxy route headers (TokenUtil.getProxyRouteHeaders) do not include
+    // `environment`. The null-guard in generateLmsToken ensures the claim is omitted rather
+    // than written as null.
+    assertNull(claimsFromToken.getBody().get("env", String.class));
+    // requestPath is absent: UpstreamOAuthFilter resolves a fresh JumperConfig from headers
+    // where requestPath is never populated (calculateFinalApiUri only runs in RequestFilter).
+    assertNull(claimsFromToken.getBody().get("requestPath", String.class));
+    assertEquals("GET", claimsFromToken.getBody().get("operation", String.class));
+    // originZone and originStargate come from the consumer token, not the remote zone
+    assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
+    assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
+    // iss is the local StarGate issuer URL — the provider zone validates against its JWKS
     assertEquals(
-        ORIGIN_STARGATE_REMOTE, claimsFromToken.getBody().get("originStargate", String.class));
-    assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
+        localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().getIssuer());
     assertNotNull(claimsFromToken.getBody().getExpiration());
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }

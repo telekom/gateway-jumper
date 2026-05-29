@@ -167,15 +167,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+                        tokenGeneratorService.generateProviderLmsToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),
                             HeaderUtil.getLastValueFromHeaderField(
                                 readOnlyRequest, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                             HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
-                            false);
+                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID));
 
                     HeaderUtil.addHeader(
                         requestMutationBuilder,
