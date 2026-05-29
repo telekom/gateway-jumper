@@ -9,19 +9,34 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import jumper.model.config.JumperConfig;
+import jumper.service.JumperConfigService;
+import jumper.service.ZoneHealthCheckService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ServerWebExchange;
 
 class ExchangeStateManagerTest {
 
+  private ExchangeStateManager testInstance;
+
   private ServerWebExchange exchange;
   private Map<String, Object> attributes;
+
+  private final ObjectMapper objectMapper =
+      new ObjectMapper()
+          .registerModule(new Jdk8Module())
+          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+  private final JsonConverter jsonConverter = new JsonConverter(objectMapper);
+  private final JumperConfigService jumperConfigService =
+      new JumperConfigService(mock(ZoneHealthCheckService.class), jsonConverter);
 
   @BeforeEach
   void setUp() {
@@ -30,29 +45,28 @@ class ExchangeStateManagerTest {
     when(exchange.getAttributes()).thenReturn(attributes);
     when(exchange.getAttribute(anyString()))
         .thenAnswer(invocation -> attributes.get(invocation.getArgument(0)));
+
+    testInstance = new ExchangeStateManager(jsonConverter, jumperConfigService);
   }
 
-  // arrange
   @Test
   void shouldSetAndGetOAuthFilterRequired() {
     // act
-    ExchangeStateManager.setOAuthFilterRequired(exchange, true);
+    testInstance.setOAuthFilterRequired(exchange, true);
 
     // assert
-    assertThat(ExchangeStateManager.isOAuthFilterRequired(exchange)).isTrue();
+    assertThat(testInstance.isOAuthFilterRequired(exchange)).isTrue();
   }
 
-  // arrange
   @Test
   void shouldReturnFalseWhenOAuthFilterNotSet() {
     // act
-    boolean result = ExchangeStateManager.isOAuthFilterRequired(exchange);
+    boolean result = testInstance.isOAuthFilterRequired(exchange);
 
     // assert
     assertThat(result).isFalse();
   }
 
-  // arrange
   @Test
   void shouldSetAndGetJumperConfig() {
     // arrange
@@ -61,8 +75,8 @@ class ExchangeStateManagerTest {
     config.setRealmName("test-realm");
 
     // act
-    ExchangeStateManager.setJumperConfig(exchange, config);
-    Optional<JumperConfig> result = ExchangeStateManager.getJumperConfig(exchange);
+    testInstance.setJumperConfig(exchange, config);
+    Optional<JumperConfig> result = testInstance.getJumperConfig(exchange);
 
     // assert
     assertThat(result).isPresent();
@@ -70,76 +84,70 @@ class ExchangeStateManagerTest {
     assertThat(result.get().getRealmName()).isEqualTo("test-realm");
   }
 
-  // arrange
   @Test
   void shouldReturnEmptyOptionalWhenJumperConfigNotSet() {
     // act
-    Optional<JumperConfig> result = ExchangeStateManager.getJumperConfig(exchange);
+    Optional<JumperConfig> result = testInstance.getJumperConfig(exchange);
 
     // assert
     assertThat(result).isEmpty();
   }
 
-  // arrange
   @Test
   void shouldSetAndGetCachedRequestBody() {
     // arrange
     String requestBody = "{\"test\":\"data\"}";
 
     // act
-    ExchangeStateManager.setCachedRequestBody(exchange, requestBody);
-    Optional<String> result = ExchangeStateManager.getCachedRequestBody(exchange);
+    testInstance.setCachedRequestBody(exchange, requestBody);
+    Optional<String> result = testInstance.getCachedRequestBody(exchange);
 
     // assert
     assertThat(result).isPresent();
     assertThat(result.get()).isEqualTo(requestBody);
   }
 
-  // arrange
   @Test
   void shouldReturnEmptyOptionalWhenRequestBodyNotSet() {
     // act
-    Optional<String> result = ExchangeStateManager.getCachedRequestBody(exchange);
+    Optional<String> result = testInstance.getCachedRequestBody(exchange);
 
     // assert
     assertThat(result).isEmpty();
   }
 
-  // arrange
   @Test
   void shouldSetAndGetCachedResponseBody() {
     // arrange
     String responseBody = "{\"result\":\"success\"}";
 
     // act
-    ExchangeStateManager.setCachedResponseBody(exchange, responseBody);
-    Optional<String> result = ExchangeStateManager.getCachedResponseBody(exchange);
+    testInstance.setCachedResponseBody(exchange, responseBody);
+    Optional<String> result = testInstance.getCachedResponseBody(exchange);
 
     // assert
     assertThat(result).isPresent();
     assertThat(result.get()).isEqualTo(responseBody);
   }
 
-  // arrange
   @Test
   void shouldReturnEmptyOptionalWhenResponseBodyNotSet() {
     // act
-    Optional<String> result = ExchangeStateManager.getCachedResponseBody(exchange);
+    Optional<String> result = testInstance.getCachedResponseBody(exchange);
 
     // assert
     assertThat(result).isEmpty();
   }
 
-  // arrange
   @Test
   void shouldClearAllCustomState() {
     // arrange
-    ExchangeStateManager.setOAuthFilterRequired(exchange, true);
+    testInstance.setOAuthFilterRequired(exchange, true);
     JumperConfig config = new JumperConfig();
     config.setConsumer("test-consumer");
-    ExchangeStateManager.setJumperConfig(exchange, config);
-    ExchangeStateManager.setCachedRequestBody(exchange, "request");
-    ExchangeStateManager.setCachedResponseBody(exchange, "response");
+    testInstance.setJumperConfig(exchange, config);
+    testInstance.setCachedRequestBody(exchange, "request");
+    testInstance.setCachedResponseBody(exchange, "response");
 
     // Set a framework attribute to ensure it's not cleared
     URI frameworkUri = URI.create("http://framework.test");
@@ -151,13 +159,13 @@ class ExchangeStateManagerTest {
             frameworkUri);
 
     // act
-    ExchangeStateManager.clearCustomState(exchange);
+    testInstance.clearCustomState(exchange);
 
     // assert
-    assertThat(ExchangeStateManager.isOAuthFilterRequired(exchange)).isFalse();
-    assertThat(ExchangeStateManager.getJumperConfig(exchange)).isEmpty();
-    assertThat(ExchangeStateManager.getCachedRequestBody(exchange)).isEmpty();
-    assertThat(ExchangeStateManager.getCachedResponseBody(exchange)).isEmpty();
+    assertThat(testInstance.isOAuthFilterRequired(exchange)).isFalse();
+    assertThat(testInstance.getJumperConfig(exchange)).isEmpty();
+    assertThat(testInstance.getCachedRequestBody(exchange)).isEmpty();
+    assertThat(testInstance.getCachedResponseBody(exchange)).isEmpty();
 
     // Verify framework attribute was not cleared
     assertThat(
@@ -168,31 +176,29 @@ class ExchangeStateManagerTest {
         .isEqualTo(frameworkUri);
   }
 
-  // arrange
   @Test
   void shouldHandleNullBodyValues() {
     // act
-    ExchangeStateManager.setCachedRequestBody(exchange, null);
-    ExchangeStateManager.setCachedResponseBody(exchange, null);
+    testInstance.setCachedRequestBody(exchange, null);
+    testInstance.setCachedResponseBody(exchange, null);
 
     // assert
-    assertThat(ExchangeStateManager.getCachedRequestBody(exchange)).isEmpty();
-    assertThat(ExchangeStateManager.getCachedResponseBody(exchange)).isEmpty();
+    assertThat(testInstance.getCachedRequestBody(exchange)).isEmpty();
+    assertThat(testInstance.getCachedResponseBody(exchange)).isEmpty();
   }
 
-  // arrange
   @Test
   void shouldOverwriteExistingValues() {
     // arrange
-    ExchangeStateManager.setOAuthFilterRequired(exchange, true);
-    ExchangeStateManager.setCachedRequestBody(exchange, "first");
+    testInstance.setOAuthFilterRequired(exchange, true);
+    testInstance.setCachedRequestBody(exchange, "first");
 
     // act
-    ExchangeStateManager.setOAuthFilterRequired(exchange, false);
-    ExchangeStateManager.setCachedRequestBody(exchange, "second");
+    testInstance.setOAuthFilterRequired(exchange, false);
+    testInstance.setCachedRequestBody(exchange, "second");
 
     // assert
-    assertThat(ExchangeStateManager.isOAuthFilterRequired(exchange)).isFalse();
-    assertThat(ExchangeStateManager.getCachedRequestBody(exchange).get()).isEqualTo("second");
+    assertThat(testInstance.isOAuthFilterRequired(exchange)).isFalse();
+    assertThat(testInstance.getCachedRequestBody(exchange).get()).isEqualTo("second");
   }
 }

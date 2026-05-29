@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.context.ContextExecutorService;
 import io.micrometer.context.ContextSnapshotFactory;
+import jakarta.annotation.PreDestroy;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +39,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
   private final RedisMessageListenerContainer redisMessageListenerContainer;
 
   private final String channelKey;
+  private final ExecutorService executorService;
 
   @Getter private boolean isInitiallySubscribed = false;
 
@@ -50,6 +52,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
     this.zoneHealthCheckService = zoneHealthCheckService;
     this.redisMessageListenerContainer = redisMessageListenerContainer;
     this.channelKey = channelKey;
+    this.executorService = Executors.newSingleThreadExecutor();
 
     this.lazyInitializeRedisMessageListenerContainer();
   }
@@ -74,7 +77,6 @@ public class RedisZoneHealthStatusService implements MessageListener {
   }
 
   void lazyInitializeRedisMessageListenerContainer() {
-    ExecutorService executorService = Executors.newSingleThreadExecutor();
     ContextSnapshotFactory contextSnapshotFactory = ContextSnapshotFactory.builder().build();
     Executor wrappedExecutor = ContextExecutorService.wrap(executorService, contextSnapshotFactory);
 
@@ -88,12 +90,6 @@ public class RedisZoneHealthStatusService implements MessageListener {
               return template.execute(
                   context -> {
                     try {
-                      if (redisMessageListenerContainer.getConnectionFactory() == null) {
-                        log.debug(
-                            "Redis connection factory not available, skipping initialization");
-                        return false;
-                      }
-
                       var connectionFactory = redisMessageListenerContainer.getConnectionFactory();
                       if (connectionFactory == null) {
                         log.debug("Connection factory is null, skipping initialization");
@@ -106,8 +102,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
                       }
                     } catch (Exception e) {
                       log.error(
-                          "Connection failure occurred. Restarting subscription task after 5000"
-                              + " ms");
+                          "Connection failure occurred. Restarting subscription task after 5000ms");
                       throw e;
                     }
                     redisMessageListenerContainer.addMessageListener(
@@ -126,5 +121,13 @@ public class RedisZoneHealthStatusService implements MessageListener {
               return false;
             })
         .thenApply(result -> isInitiallySubscribed = result);
+  }
+
+  @PreDestroy
+  public void shutdown() {
+    if (executorService != null && !executorService.isShutdown()) {
+      executorService.shutdown();
+      log.info("ExecutorService shutdown completed");
+    }
   }
 }

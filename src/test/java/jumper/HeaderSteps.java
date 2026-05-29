@@ -4,7 +4,11 @@
 
 package jumper;
 
-import static jumper.config.Config.*;
+import static jumper.config.Config.CONSUMER_EXTERNAL_HEADER;
+import static jumper.config.Config.OAUTH_SCOPE_HEADER;
+import static jumper.config.Config.PUBSUB_PUBLISHER;
+import static jumper.config.Config.PUBSUB_SUBSCRIBER;
+import static jumper.config.Config.REMOTE_ZONE_NAME;
 import static jumper.util.JumperConfigUtil.addIdSuffix;
 import static jumper.util.TokenUtil.getConsumerAccessTokenWithAud;
 
@@ -18,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class HeaderSteps {
   private final BaseSteps baseSteps;
+  private final RoutingConfigUtil routingConfigUtil;
 
   @ParameterType(value = "true|True|TRUE|false|False|FALSE")
   public Boolean booleanValue(String value) {
@@ -79,20 +84,20 @@ public class HeaderSteps {
   @Given("Secondary routing_config header set")
   public void secondaryRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
-    baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getSecondaryRouteHeaders(baseSteps));
+    baseSteps.setHttpHeadersOfRequest(routingConfigUtil.getSecondaryRouteHeaders(baseSteps));
   }
 
   @Given("Secondary routing_config with loadbalancing header set")
   public void secondaryRoutingConfigWithLoadbalancingHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(
-        RoutingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
+        routingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
   }
 
   @Given("Proxy routing_config header set")
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
-    baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getProxyRouteHeaders(baseSteps));
+    baseSteps.setHttpHeadersOfRequest(routingConfigUtil.getProxyRouteHeaders(baseSteps));
   }
 
   @Given("RealRoute headers without Authorization are set")

@@ -38,15 +38,18 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   private final TokenFetchService tokenFetchService;
   private final JumperConfigService jumperConfigService;
   private final TokenCacheService tokenCacheService;
+  private final ExchangeStateManager exchangeStateManager;
 
   public UpstreamOAuthFilter(
       TokenFetchService tokenFetchService,
       JumperConfigService jumperConfigService,
-      TokenCacheService tokenCacheService) {
+      TokenCacheService tokenCacheService,
+      ExchangeStateManager exchangeStateManager) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
     this.jumperConfigService = jumperConfigService;
     this.tokenCacheService = tokenCacheService;
+    this.exchangeStateManager = exchangeStateManager;
   }
 
   @Override
@@ -56,7 +59,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           ServerHttpRequest readOnlyRequest = exchange.getRequest();
 
           // Early exit for localhost issuer service
-          if (!ExchangeStateManager.isOAuthFilterRequired(exchange)) {
+          if (!exchangeStateManager.isOAuthFilterRequired(exchange)) {
             log.debug("Skipping UpstreamOAuthFilter for localhost issuer service");
             return chain.filter(exchange.mutate().request(readOnlyRequest).build());
           }

@@ -23,6 +23,7 @@ public class SpectreResponseFilter
     extends AbstractGatewayFilterFactory<AbstractGatewayFilterFactory.NameConfig> {
 
   private final SpectreService spectreService;
+  private final ExchangeStateManager exchangeStateManager;
 
   /**
    * At Order "NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 1" we have the response in
@@ -32,9 +33,11 @@ public class SpectreResponseFilter
   public static final int AUTO_EVENT_RESPONSE_FILTER_ORDER =
       NettyWriteResponseFilter.WRITE_RESPONSE_FILTER_ORDER - 2;
 
-  public SpectreResponseFilter(SpectreService spectreService) {
+  public SpectreResponseFilter(
+      SpectreService spectreService, ExchangeStateManager exchangeStateManager) {
     super(AbstractGatewayFilterFactory.NameConfig.class);
     this.spectreService = spectreService;
+    this.exchangeStateManager = exchangeStateManager;
   }
 
   @Override
@@ -47,7 +50,7 @@ public class SpectreResponseFilter
                     Mono.fromRunnable(
                         () -> {
                           String responseBody =
-                              ExchangeStateManager.getCachedResponseBody(exchange).orElse(null);
+                              exchangeStateManager.getCachedResponseBody(exchange).orElse(null);
 
                           log.debug(
                               "Response: status={}, headers={}, payload={}",
@@ -58,7 +61,7 @@ public class SpectreResponseFilter
 
                           // use jumperConfig passed with exchange
                           JumperConfig jumperConfig =
-                              ExchangeStateManager.getJumperConfig(exchange).orElse(null);
+                              exchangeStateManager.getJumperConfig(exchange).orElse(null);
                           if (jumperConfig.isListenerMatched()) {
                             RouteListener listener =
                                 jumperConfig.getRouteListener().get(jumperConfig.getConsumer());

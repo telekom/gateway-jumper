@@ -6,27 +6,43 @@ package jumper.util;
 
 import static jumper.config.Config.*;
 import static jumper.config.Config.CONSUMER;
-import static jumper.model.config.JumperConfig.toJsonBase64;
 
+import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.List;
 import jumper.Constants;
 import jumper.config.Config;
 import jumper.model.config.*;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import org.springframework.stereotype.Service;
 
+@Service
+@RequiredArgsConstructor
 public class JumperConfigUtil {
 
-  public static String getJcSecurity() {
+  private final JsonConverter jsonConverter;
+
+  // private final JumperConfigService jumperConfigService;
+
+  @PostConstruct
+  public void initialize() {
+    // Initialize JcOauthConfig enum instances with JsonConverter
+    JcOauthConfig.CONSUMER.setJsonConverter(jsonConverter);
+    JcOauthConfig.PROVIDER.setJsonConverter(jsonConverter);
+  }
+
+  public String getJcSecurity() {
     HashMap<String, OauthCredentials> oauth = new HashMap<>();
     OauthCredentials oc = new OauthCredentials();
     oc.setScopes(SCOPES);
     oauth.put(CONSUMER, oc);
     JumperConfig jc = new JumperConfig();
     jc.setOauth(oauth);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getJcBasicAuthConsumer(String id) {
+  public String getJcBasicAuthConsumer(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials ba = new BasicAuthCredentials();
     ba.setUsername(addIdSuffix(CONSUMER, id));
@@ -34,10 +50,10 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(CONSUMER, ba);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getJcBasicAuthProvider(String id) {
+  public String getJcBasicAuthProvider(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials ba = new BasicAuthCredentials();
     ba.setUsername(addIdSuffix(CONSUMER_GATEWAY, id));
@@ -45,10 +61,10 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(Constants.BASIC_AUTH_PROVIDER_KEY, ba);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getJcBasicAuthConsumerAndProvider(String id) {
+  public String getJcBasicAuthConsumerAndProvider(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials baConsumer = new BasicAuthCredentials();
     baConsumer.setUsername(addIdSuffix(CONSUMER, id));
@@ -60,10 +76,10 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(Constants.BASIC_AUTH_PROVIDER_KEY, baProvider);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getJcBasicAuthOtherConsumer(String id) {
+  public String getJcBasicAuthOtherConsumer(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials ba = new BasicAuthCredentials();
     ba.setUsername(addIdSuffix(CONSUMER, id));
@@ -71,10 +87,10 @@ public class JumperConfigUtil {
     basicAuthCredentialsHashMap.put(CONSUMER_GATEWAY, ba);
     JumperConfig jc = new JumperConfig();
     jc.setBasicAuth(basicAuthCredentialsHashMap);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getJcLoadBalancing() {
+  public String getJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(
         List.of(
@@ -82,22 +98,22 @@ public class JumperConfigUtil {
 
     JumperConfig jc = new JumperConfig();
     jc.setLoadBalancing(loadBalancing);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getEmptyJcLoadBalancing() {
+  public String getEmptyJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(List.of());
 
     JumperConfig jc = new JumperConfig();
     jc.setLoadBalancing(loadBalancing);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
-  public static String getJcRemoveHeaders(List<String> values) {
+  public String getJcRemoveHeaders(List<String> values) {
     JumperConfig jc = new JumperConfig();
     jc.setRemoveHeaders(values);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
   public enum JcOauthConfig {
@@ -105,6 +121,7 @@ public class JumperConfigUtil {
     PROVIDER;
 
     private String clientKey = PRIVATE_RSA_KEY_SECURE_EXAMPLE;
+    @Setter private JsonConverter jsonConverter;
 
     List<String> determineKeys() {
       return switch (this) {
@@ -122,7 +139,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypeAlternative(String id) {
@@ -134,7 +151,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypePost(String id) {
@@ -147,7 +164,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypePassword(String id) {
@@ -161,7 +178,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypePasswordOnly(String id) {
@@ -173,7 +190,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauth(String id) {
@@ -184,7 +201,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauthWithScope(String id) {
@@ -196,7 +213,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public String getJcOauthGrantTypeWithKey(String id) {
@@ -208,7 +225,7 @@ public class JumperConfigUtil {
       determineKeys().forEach(key -> oauth.put(key, oc));
       JumperConfig jc = new JumperConfig();
       jc.setOauth(oauth);
-      return toJsonBase64(jc);
+      return jsonConverter.toJsonBase64(jc);
     }
 
     public void setJcOauthKeyType(String clientKey) {
@@ -232,7 +249,7 @@ public class JumperConfigUtil {
     }
   }
 
-  public static String getJcRouteListener(String consumer) {
+  public String getJcRouteListener(String consumer) {
     HashMap<String, RouteListener> routeListenerHashMap = new HashMap<>();
     RouteListener rl = new RouteListener();
     rl.setIssue(LISTENER_ISSUE);
@@ -243,7 +260,7 @@ public class JumperConfigUtil {
     GatewayClient gc = new GatewayClient();
     gc.setIssuer("realms/default");
     jc.setGatewayClient(gc);
-    return toJsonBase64(jc);
+    return jsonConverter.toJsonBase64(jc);
   }
 
   public static String addIdSuffix(String from, String id) {

@@ -11,6 +11,7 @@ import jumper.Constants;
 import jumper.model.response.IncomingResponse;
 import jumper.model.response.JumperInfoResponse;
 import jumper.service.TokenCacheService;
+import jumper.util.JsonConverter;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,11 +31,14 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
   private final Tracer tracer;
   private final TokenCacheService tokenCacheService;
+  private final JsonConverter jsonConverter;
 
-  public ResponseFilter(Tracer tracer, TokenCacheService tokenCacheService) {
+  public ResponseFilter(
+      Tracer tracer, TokenCacheService tokenCacheService, JsonConverter jsonConverter) {
     super(Config.class);
     this.tracer = tracer;
     this.tokenCacheService = tokenCacheService;
+    this.jsonConverter = jsonConverter;
   }
 
   @Override
@@ -83,7 +87,7 @@ public class ResponseFilter extends AbstractGatewayFilterFactory<ResponseFilter.
 
                         log.atDebug()
                             .setMessage("logging response:")
-                            .addKeyValue("jumperInfo", jumperInfoResponse)
+                            .addKeyValue("jumperInfo", jsonConverter.toJson(jumperInfoResponse))
                             .log();
                       }
 

@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
 @Slf4j
@@ -21,7 +21,7 @@ public class RedisConfig {
   // https://stackoverflow.com/questions/72436006/spring-boot-2-7-redis-pub-sub-fails-startup-on-missing-redis-connection
   @Bean
   public RedisMessageListenerContainer redisContainer(
-      LettuceConnectionFactory lettuceConnectionFactory) {
+      RedisConnectionFactory lettuceConnectionFactory) {
     RedisMessageListenerContainer container = new RedisMessageListenerContainer();
     container.setConnectionFactory(lettuceConnectionFactory);
     // the following causes the app to fail on startup if redis is not available

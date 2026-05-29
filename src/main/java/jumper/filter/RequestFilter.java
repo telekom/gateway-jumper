@@ -44,6 +44,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   private final Tracer tracer;
   private final TokenGeneratorService tokenGeneratorService;
   private final JumperConfigService jumperConfigService;
+  private final ExchangeStateManager exchangeStateManager;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -60,11 +61,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   public RequestFilter(
       Tracer tracer,
       TokenGeneratorService tokenGeneratorService,
-      JumperConfigService jumperConfigService) {
+      JumperConfigService jumperConfigService,
+      ExchangeStateManager exchangeStateManager) {
     super(Config.class);
     this.tracer = tracer;
     this.tokenGeneratorService = tokenGeneratorService;
     this.jumperConfigService = jumperConfigService;
+    this.exchangeStateManager = exchangeStateManager;
   }
 
   @Override
@@ -86,7 +89,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           // ListenerRoute was called, jumperConfig is stored in exchange for usage with Spectre
           if (config.getRoutePathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
-            ExchangeStateManager.setJumperConfig(exchange, jumperConfig);
+            exchangeStateManager.setJumperConfig(exchange, jumperConfig);
           }
 
           if (jumperConfig.getSecondaryFailover()) {
@@ -121,7 +124,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                   jumperConfig.getConsumerOriginZone(),
                   jumperConfig.getConsumerToken());
 
-              ExchangeStateManager.setOAuthFilterRequired(exchange, true);
+              exchangeStateManager.setOAuthFilterRequired(exchange, true);
 
             } else {
               // ALL NON MESH SCENARIOS
@@ -158,7 +161,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                   if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
 
-                    ExchangeStateManager.setOAuthFilterRequired(exchange, true);
+                    exchangeStateManager.setOAuthFilterRequired(exchange, true);
 
                   } else {
                     // Enhanced Last Mile Security Token scenario

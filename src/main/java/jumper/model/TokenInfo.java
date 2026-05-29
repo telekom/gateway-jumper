@@ -42,10 +42,6 @@ public class TokenInfo {
     setExpiration(new Date(System.currentTimeMillis() + expiresIn * 1000L));
   }
 
-  public void setExpiration(Date expiration) {
-    this.expiration = expiration;
-  }
-
   public int getExpiresIn() {
     return expiration != null
         ? (int) ((expiration.getTime() - System.currentTimeMillis()) / 1000L)

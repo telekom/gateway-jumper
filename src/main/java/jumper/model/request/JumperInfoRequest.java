@@ -29,19 +29,19 @@ public class JumperInfoRequest {
       boolean meshActivated,
       boolean externalAuthorization,
       boolean basicAuth,
-      boolean xTokenExchangeauthorization) {
+      boolean xTokenExchangeAuthorization) {
     this.meshActivated = meshActivated;
     this.lastMileSecurity = lastMileSecurity;
     this.lastMileSecurityEnhanced = lastMileSecurityEnhanced;
     this.externalAuthorization = externalAuthorization;
     this.basicAuth = basicAuth;
-    this.xTokenExchangeAuthorization = xTokenExchangeauthorization;
+    this.xTokenExchangeAuthorization = xTokenExchangeAuthorization;
   }
 
   @Override
   public String toString() {
 
-    String lineSeparator = System.getProperty("line.separator");
+    String lineSeparator = System.lineSeparator();
     StringBuilder sb = new StringBuilder();
 
     sb.append("Scenario:");
