@@ -91,17 +91,17 @@ public class WarmupService {
         .timeout(timeout)
         .onErrorResume(
             throwable -> {
-              log.warn("Warmup: aborted due to timeout or error: {}", throwable.getMessage());
+              log.info("Warmup: concluded end due to timeout or error: {}", throwable.getMessage());
               return Mono.empty();
             })
         .doFinally(
             signal -> {
               long elapsed = System.currentTimeMillis() - start;
               log.info(
-                  "Warmup: completed in {}ms — {}/{} succeeded, {} failed (signal={})",
+                  "Warmup: completed in {}ms — {} succeeded, {} skipped, {} failed (signal={})",
                   elapsed,
                   successCount.get(),
-                  totalRequests,
+                  totalRequests - successCount.get() - failureCount.get(),
                   failureCount.get(),
                   signal);
               warmupHealthIndicator.setReady();
