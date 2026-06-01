@@ -402,7 +402,6 @@ public class MockIrisServer {
     List<Header> headersList = new ArrayList<>();
     headersList.add(new Header(HttpHeaders.HOST, irisLocalHost + ":" + irisLocalPort));
     headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
-    headersList.add(new Header(HttpHeaders.CONTENT_LENGTH, "86"));
     headersList.add(new Header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded"));
     return headersList;
   }

@@ -50,6 +50,7 @@ public class BaseSteps {
   private WebTestClient webTestClient;
   private WebTestClient.ResponseSpec requestExchange;
   private String id;
+  private String spanId;
 
   @Autowired private RequestFilter rf;
 

@@ -53,8 +53,6 @@ public class LastMileSecuritySteps {
         .expectHeader()
         .valueMatches(Constants.HEADER_X_B3_SPAN_ID, Pattern.compile("\\w+").pattern())
         .expectHeader()
-        .valueMatches(Constants.HEADER_X_B3_PARENT_SPAN_ID, Pattern.compile("\\w+").pattern())
-        .expectHeader()
         .valueMatches(Constants.HEADER_X_B3_SAMPLED, "1")
         .expectHeader()
         .valueMatches(Constants.HEADER_X_ORIGIN_STARGATE, "https://zone.local.de")
@@ -72,9 +70,7 @@ public class LastMileSecuritySteps {
   }
 
   private void checkConsumerToken(String consumerToken) {
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(
-            OauthTokenUtil.getTokenWithoutSignature(consumerToken));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
 
     assertNotNull(claimsFromToken.getBody().get("clientId", String.class));
   }

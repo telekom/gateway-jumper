@@ -13,10 +13,13 @@ import java.util.regex.Pattern;
 import jumper.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.gateway.filter.headers.observation.DefaultGatewayObservationConvention;
 import org.springframework.cloud.gateway.filter.headers.observation.GatewayContext;
+import org.springframework.cloud.gateway.filter.headers.observation.GatewayObservationConvention;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.lang.NonNull;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.ClientRequest;
@@ -28,57 +31,44 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Slf4j
 public class TracingConfiguration {
 
+  private static final String OBSERVATION_HTTP_CLIENT = "http.client.requests";
+  private static final String OBSERVATION_HTTP_SERVER = "http.server.requests";
+  private static final String OBSERVATION_GATEWAY = "spring.cloud.gateway.http.client.requests";
+
   @Value("${jumper.tracing.filter-param-list:}")
   List<String> queryFilterList;
 
-  private List<Pattern> compiledQueryFilterPatterns;
+  @Bean
+  GatewayObservationConvention gatewayObservationConvention() {
+    return new DefaultGatewayObservationConvention() {
+      @Override
+      @NonNull
+      public String getName() {
+        return OBSERVATION_GATEWAY;
+      }
+    };
+  }
 
   @Bean
   public ObservationFilter customSpanNameFilter() {
-    // Pre-compile regex patterns for better performance
-    compiledQueryFilterPatterns = queryFilterList.stream().map(Pattern::compile).toList();
+    List<Pattern> compiledQueryFilterPatterns =
+        queryFilterList.stream().map(Pattern::compile).toList();
 
     return (observationContext) -> {
-      // Modify the span name
       switch (observationContext.getName()) {
-        case "http.client.requests":
-          String spanName = "unknown";
+        case OBSERVATION_HTTP_CLIENT:
           if (observationContext instanceof ClientRequestObservationContext clientRequestContext) {
-            ClientRequest request = clientRequestContext.getRequest();
-            if (request == null) {
-              break;
-            }
-
-            if (request.url().getPath().contains("token")) {
-              spanName = "idp";
-            } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
-              spanName = "gateway";
-            }
-
-            String xTardisTraceId = request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
-            appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
+            handleClientRequestContext(clientRequestContext);
+          } else {
+            observationContext.setContextualName("outgoing request: unknown");
           }
-          observationContext.setContextualName("outgoing request: " + spanName);
           break;
-        case "http.server.requests":
+        case OBSERVATION_HTTP_SERVER:
           observationContext.setContextualName("incoming request");
           break;
-        case CloudGatewayPrefixedGatewayObservationConvention.NAME:
+        case OBSERVATION_GATEWAY:
           if (observationContext instanceof GatewayContext gatewayContext) {
-            ServerHttpRequest request = gatewayContext.getRequest();
-
-            gatewayContext.setContextualName("outgoing request: provider");
-            gatewayContext.addHighCardinalityKeyValue(
-                KeyValue.of(
-                    "http.uri",
-                    filterQueryParams(request.getURI().toString(), compiledQueryFilterPatterns)));
-
-            gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
-            gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.uri");
-
-            String xTardisTraceId =
-                request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
-            appendXTardisTraceIdHeader(gatewayContext, xTardisTraceId);
+            handleGatewayContext(gatewayContext, compiledQueryFilterPatterns);
           }
           break;
       }
@@ -86,10 +76,46 @@ public class TracingConfiguration {
     };
   }
 
+  private void handleGatewayContext(
+      GatewayContext gatewayContext, List<Pattern> compiledQueryFilterPatterns) {
+    ServerHttpRequest request = gatewayContext.getRequest();
+
+    gatewayContext.setContextualName("outgoing request: provider");
+    gatewayContext.addHighCardinalityKeyValue(
+        KeyValue.of(
+            "http.uri",
+            filterQueryParams(request.getURI().toString(), compiledQueryFilterPatterns)));
+
+    gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
+    gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.uri");
+
+    String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
+    appendXTardisTraceIdHeader(gatewayContext, xTardisTraceId);
+  }
+
+  private void handleClientRequestContext(ClientRequestObservationContext clientRequestContext) {
+    ClientRequest request = clientRequestContext.getRequest();
+    if (request == null) {
+      return;
+    }
+
+    String spanName = "unknown";
+    if (request.url().getPath().contains("token")) {
+      spanName = "idp";
+    } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
+      spanName = "gateway";
+    }
+
+    clientRequestContext.setContextualName("outgoing request: " + spanName);
+
+    String xTardisTraceId = request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
+    appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
+  }
+
   private static void appendXTardisTraceIdHeader(
-      Observation.Context gatewayContext, String xTardisTraceId) {
+      Observation.Context context, String xTardisTraceId) {
     if (xTardisTraceId != null) {
-      gatewayContext.addHighCardinalityKeyValue(
+      context.addHighCardinalityKeyValue(
           KeyValue.of(Constants.HEADER_X_TARDIS_TRACE_ID, xTardisTraceId));
     }
   }

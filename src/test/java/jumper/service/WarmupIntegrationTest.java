@@ -98,8 +98,7 @@ class WarmupIntegrationTest {
     assertThat(authHeader).startsWith("Bearer ");
 
     // Parse the LMS token and verify it has expected claims
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(authHeader));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(authHeader);
 
     assertThat(claimsFromToken.getBody().get("env", String.class)).isEqualTo("warmup");
     assertThat(claimsFromToken.getBody().get("typ", String.class)).isEqualTo("Bearer");
