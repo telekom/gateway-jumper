@@ -110,7 +110,7 @@ SPDX-License-Identifier: Apache-2.0
 
 		<dependency>
 			<groupId>io.zipkin.reporter2</groupId>
-			<artifactId>zipkin-reporter-brave</artifactId>
+      		<artifactId>zipkin-reporter-brave</artifactId>
 		</dependency>
 
 		<dependency>

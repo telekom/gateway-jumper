@@ -89,8 +89,7 @@ public class MockUpstreamServer {
     HttpRequest[] recordedRequests = mockServerClient.retrieveRecordedRequests(request());
 
     String token = recordedRequests[0].getFirstHeader("Authorization");
-    Jwt<?, Claims> claimsFromToken =
-        OauthTokenUtil.getAllClaimsFromToken(OauthTokenUtil.getTokenWithoutSignature(token));
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
     assertEquals(expectedValue, claimsFromToken.getBody().get(claim, String.class));
   }
 
