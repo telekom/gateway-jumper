@@ -67,7 +67,7 @@ public final class OauthTokenUtil {
     String trimmedConsumerToken = consumerToken.trim();
 
     final String BEARER_PREFIX = "Bearer ";
-    if (!trimmedConsumerToken.startsWith(BEARER_PREFIX)) {
+    if (!trimmedConsumerToken.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
       throw new IllegalArgumentException("Invalid token format, Missing Bearer prefix");
     }
 
