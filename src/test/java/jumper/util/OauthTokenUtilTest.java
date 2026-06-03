@@ -39,6 +39,7 @@ public class OauthTokenUtilTest {
   static Stream<Arguments> provideValidTestTokens() {
     return Stream.of(
         Arguments.of(getTestToken(true), "standard Bearer prefix"),
+        Arguments.of("bearer " + getTestToken(false), "lowercase bearer prefix"),
         Arguments.of(getTestTokenWithMultipleBlanks(), "multiple spaces after Bearer"),
         Arguments.of(getTestTokenWithLeadingSpaces(), "leading spaces before Bearer"));
   }
