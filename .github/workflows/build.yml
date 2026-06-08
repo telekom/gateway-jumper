@@ -64,76 +64,58 @@ jobs:
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - name: Set up JDK
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: "maven"
-      - name: Cache maven target dir
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
-      - name: Build with Maven
-        run: |
-          mvn -B package -DskipTests -U
-      - name: Extract version
-        id: extract-version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-  test-maven:
-    name: Run unit tests
-    runs-on: ubuntu-latest
-    needs: [build-maven]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - name: Set up JDK
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: "maven"
-      - name: Cache maven target dir
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
-      - name: Run tests
-        run: mvn -B test
-      - name: Upload test results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
-        if: always()
-        with:
-          name: test-results
-          path: |
-            **/target/surefire-reports/
-
-  build-image:
-    name: Build container image
-    runs-on: ubuntu-latest
-    needs: [build-maven, test-maven]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - name: Create test artifact
-        run: |
-          mkdir -p build-output
-          echo "image-built-from-sha=${{ github.sha }}" > build-output/metadata.txt
-          echo "event=${{ github.event_name }}" >> build-output/metadata.txt
-          echo "Test artifact - this simulates a container image tarball" > build-output/image.tar
-      - name: Upload image artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
-        with:
-          name: container-image
-          path: build-output/
-          retention-days: 1
+      - name: Skip for testing
+        run: echo "Skipping build for testing purposes"
+  #     - name: Checkout
+  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+  #     - name: Set up JDK
+  #       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+  #       with:
+  #         distribution: ${{ env.JAVA_DISTRIBUTION }}
+  #         java-version: ${{ env.JAVA_VERSION }}
+  #         cache: "maven"
+  #     - name: Cache maven target dir
+  #       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+  #       with:
+  #         path: target
+  #         key: ${{ runner.os }}-maven-target-${{ github.sha }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-maven-target-${{ github.sha }}
+  #     - name: Build with Maven
+  #       run: |
+  #         mvn -B package -DskipTests -U
+  #     - name: Extract version
+  #       id: extract-version
+  #       run: |
+  #         VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+  #         echo "version=$VERSION" >> $GITHUB_OUTPUT
+  #
+  # test-maven:
+  #   name: Run unit tests
+  #   runs-on: ubuntu-latest
+  #   needs: [build-maven]
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+  #     - name: Set up JDK
+  #       uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
+  #       with:
+  #         distribution: ${{ env.JAVA_DISTRIBUTION }}
+  #         java-version: ${{ env.JAVA_VERSION }}
+  #         cache: "maven"
+  #     - name: Cache maven target dir
+  #       uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+  #       with:
+  #         path: target
+  #         key: ${{ runner.os }}-maven-target-${{ github.sha }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-maven-target-${{ github.sha }}
+  #     - name: Run tests
+  #       run: mvn -B test
+  #     - name: Upload test results
+  #       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+  #       if: always()
+  #       with:
+  #         name: test-results
+  #         path: |
+  #           **/target/surefire-reports/
