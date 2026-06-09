@@ -55,12 +55,16 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: "maven"
       - name: Cache maven target dir
+        id: cache-target
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
         with:
           path: target
           key: ${{ runner.os }}-maven-target-${{ github.event.workflow_run.head_sha || github.sha }}
           restore-keys: |
             ${{ runner.os }}-maven-target-${{ github.event.workflow_run.head_sha || github.sha }}
+      - name: Compile project
+        if: steps.cache-target.outputs.cache-hit != 'true'
+        run: mvn -B compile -DskipTests
       - name: Download release tag
         id: release-tag
         if: github.event.workflow_run.event == 'workflow_dispatch'
