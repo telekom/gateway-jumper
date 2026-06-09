@@ -67,7 +67,7 @@ jobs:
       - name: Skip for testing
         run: |
           echo "Skipping build for testing purposes"
-          echo "Cache key would be: ${{ runner.os }}-maven-target-${{ github.sha }}"
+          echo "Cache key would be: ${{ runner.os }}-maven-target-${{ github.event.pull_request.head.sha || github.sha }}"
           mkdir target
           echo "test artifact" > target/test-artifact.txt
       #     - name: Checkout
@@ -82,9 +82,9 @@ jobs:
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
         with:
           path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
+          key: ${{ runner.os }}-maven-target-${{ github.event.pull_request.head.sha || github.sha }}
           restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
+            ${{ runner.os }}-maven-target-${{ github.event.pull_request.head.sha || github.sha }}
   #     - name: Build with Maven
   #       run: |
   #         mvn -B package -DskipTests -U
