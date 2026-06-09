@@ -34,8 +34,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "*"
 
 permissions:
   contents: read
@@ -89,6 +87,15 @@ jobs:
         run: |
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Save release tag
+        if: inputs.tag != ''
+        run: echo "${{ inputs.tag }}" > release-tag.txt
+      - name: Upload release tag
+        if: inputs.tag != ''
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
+        with:
+          name: release-tag
+          path: release-tag.txt
 
   test-maven:
     name: Run unit tests
@@ -119,85 +126,3 @@ jobs:
           name: test-results
           path: |
             **/target/surefire-reports/
-
-  build-image:
-    name: Build container image
-    runs-on: ubuntu-latest
-    needs: [build-maven, test-maven]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - name: Set up JDK
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 #v5.2.0
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: "maven"
-      - name: Cache maven target dir
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
-      - name: Inject slug vars
-        uses: rlespinasse/github-slug-action@e6f261660910b273384c5c42b17a0217881b217a #v5.6.0
-      - name: Determine tag
-        id: tag
-        run: | # TODO: metadata-action
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "This workflow was triggered by workflow_dispatch."
-            export TAG=${{ github.event.inputs.tag }}
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "This workflow was triggered by a tag push ${GITHUB_REF}"
-            export TAG=$(echo ${GITHUB_REF} | sed 's|^refs/tags/||')
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "This workflow was triggered by a pull request."
-            export TAG=pr-${{ github.event.pull_request.number }}-${GITHUB_HEAD_REF_SLUG}
-          elif [[ "${GITHUB_REF_POINT_SLUG}" == "main" ]]; then
-            export TAG="latest"
-          else
-            export TAG=${GITHUB_REF_POINT_SLUG}
-          fi
-          echo "Image tag will be: ${TAG}"
-          echo "image-tag=${TAG}" >> "${GITHUB_OUTPUT}"
-      - name: Determine image labels
-        # Apply Quay expiry only to branch builds that are not main; tags stay permanent.
-        id: image-labels
-        run: |
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            echo "labels=" >> "${GITHUB_OUTPUT}"
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "labels=" >> "${GITHUB_OUTPUT}"
-          else
-            echo "labels=quay.expires-after=60d" >> "${GITHUB_OUTPUT}"
-          fi
-      - name: Build image tarball
-        run: |
-          LABELS_ARG=""
-          if [[ -n "${{ steps.image-labels.outputs.labels }}" ]]; then
-            LABELS_ARG="-Djib.container.labels=${{ steps.image-labels.outputs.labels }}"
-          fi
-
-          BASE_IMAGE_ARG=""
-          if [[ -n "${{ vars.BASE_IMAGE }}" ]]; then
-            BASE_IMAGE_ARG="-Djib.from.image=${{ vars.BASE_IMAGE }}"
-          fi
-
-          mvn -B jib:buildTar -DskipTests \
-            -Djib.to.image=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }} \
-            -Djib.to.tags=${{ steps.tag.outputs.image-tag }} \
-            ${BASE_IMAGE_ARG} \
-            ${LABELS_ARG}
-      - name: Save image metadata
-        run: |
-          echo "image-tag=${{ steps.tag.outputs.image-tag }}" > target/image-metadata.env
-          echo "image-name=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}" >> target/image-metadata.env
-      - name: Upload image artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
-        with:
-          name: container-image
-          path: |
-            target/jib-image.tar
-            target/image-metadata.env
-          retention-days: 1
