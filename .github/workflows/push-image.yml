@@ -34,11 +34,20 @@ jobs:
     env:
       GITHUB_REF_ORIGIN: ${{ github.event.workflow_run.head_ref }}
       GITHUB_REF_BRANCH: ${{ github.event.workflow_run.head_branch }}
+      GITHUB_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
+      - name: Cache maven target dir
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+        with:
+          path: target
+          key: ${{ runner.os }}-maven-target-${{ github.event.workflow_run.head_sha || github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-maven-target-${{ github.event.workflow_run.head_sha || github.sha }}
       - name: Check secret access
         run: |
           echo "Github ref: $GITHUB_REF_ORIGIN"
           echo "Github branch: $GITHUB_REF_BRANCH"
+          echo "Github head sha: $GITHUB_HEAD_SHA"
           if [ -n "$TEST_SECRET" ]; then
             echo "Secret is accessible - would push image"
           else
@@ -47,3 +56,8 @@ jobs:
           fi
         env:
           TEST_SECRET: ${{ secrets.TEST_SECRET }}
+      - name: print artifact contents
+        run: |
+          echo "Artifact contents:"
+          ls -la target
+          cat target/test-artifact.txt
