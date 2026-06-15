@@ -5,18 +5,24 @@
 package jumper.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Tag;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import jumper.Constants;
 import jumper.config.SpectreConfiguration;
+import jumper.config.SpectreDirectPublishConfiguration;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
+import jumper.model.config.SpectreDirectPublishRule;
 import jumper.model.config.SpectreKind;
 import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +48,19 @@ import reactor.core.scheduler.Schedulers;
 @RequiredArgsConstructor
 public class SpectreService {
 
+  /** Generic Spectre event type used for all listeners (Horizon-Galaxy multiplexes from here). */
+  private static final String GENERIC_LISTENER_EVENT_TYPE = "de.telekom.ei.listener";
+
+  /**
+   * Counter incremented whenever an event is published directly to a team-specific event type.
+   * TEMPORARY (World Cup 2026 peak-load mitigation) — used to validate the Galaxy load drop.
+   */
+  private static final String METRIC_SPECTRE_DIRECT_PUBLISH = "jumper.spectre.direct_publish";
+
   private final TokenGeneratorService tokenGeneratorService;
   private final Tracer tracer;
+  private final SpectreDirectPublishConfiguration directPublishConfiguration;
+  private final MeterRegistry meterRegistry;
 
   @Qualifier("spectreServiceWebClient")
   private final WebClient spectreServiceWebClient;
@@ -108,13 +125,15 @@ public class SpectreService {
     data.setProvider(listener.getServiceOwner());
     data.setMethod(Objects.requireNonNull(rq.getMethod()).toString());
 
+    String eventType = resolveEventType(jc, listener);
+
     Spectre event =
         Spectre.builder()
             .specversion("1.0")
             .source(stargateUrl)
             .id(UUID.randomUUID())
             .datacontenttype("application/json")
-            .type("de.telekom.ei.listener")
+            .type(eventType)
             .data(data)
             .build();
 
@@ -129,6 +148,79 @@ public class SpectreService {
     newSpan.end();
 
     return event;
+  }
+
+  /**
+   * TEMPORARY (World Cup 2026 peak-load mitigation).
+   *
+   * <p>Determines the event type the Spectre event is published with. For consumer/route(/provider)
+   * tuples configured in {@link SpectreDirectPublishConfiguration}, the event is scoped directly to
+   * the team-specific target event type, bypassing the Horizon-Galaxy multiplex step. For all other
+   * traffic the generic {@code de.telekom.ei.listener} type is used (default behaviour).
+   *
+   * <p>Remove together with the direct-publish mechanism once Horizon-Galaxy performance is fixed.
+   */
+  private String resolveEventType(JumperConfig jc, RouteListener listener) {
+    return resolveTargetEventType(
+            directPublishConfiguration.getRules(),
+            jc.getConsumer(),
+            jc.getApiBasePath(),
+            listener.getServiceOwner())
+        .map(targetEventType -> recordDirectPublish(jc, targetEventType))
+        .orElse(GENERIC_LISTENER_EVENT_TYPE);
+  }
+
+  /**
+   * Returns the target event type of the first {@link SpectreDirectPublishRule} matching the given
+   * consumer / API base path / provider, or empty if none matches.
+   *
+   * <p>A rule matches when its {@code consumer} and {@code apiBasePath} equal the given values and
+   * its {@code provider} is either unset (not constrained) or equal to the given provider.
+   *
+   * <p>Package-private and static to keep the matching logic unit-testable without the surrounding
+   * Spring context.
+   */
+  static Optional<String> resolveTargetEventType(
+      List<SpectreDirectPublishRule> rules, String consumer, String apiBasePath, String provider) {
+    if (rules == null) {
+      return Optional.empty();
+    }
+
+    return rules.stream()
+        .filter(rule -> matchesRule(rule, consumer, apiBasePath, provider))
+        .map(SpectreDirectPublishRule::getTargetEventType)
+        .findFirst();
+  }
+
+  private static boolean matchesRule(
+      SpectreDirectPublishRule rule, String consumer, String apiBasePath, String provider) {
+    boolean consumerAndPathMatch =
+        Objects.equals(rule.getConsumer(), consumer)
+            && Objects.equals(rule.getApiBasePath(), apiBasePath);
+
+    // provider is optional: only constrain the match when the rule defines one
+    boolean providerMatches =
+        rule.getProvider() == null || Objects.equals(rule.getProvider(), provider);
+
+    return consumerAndPathMatch && providerMatches;
+  }
+
+  private String recordDirectPublish(JumperConfig jc, String targetEventType) {
+    // debug only: event volume is high under peak load, info-level would spam the logs
+    log.debug(
+        "Spectre direct-publish (temporary WC2026 fix): consumer={}, apiBasePath={} -> type={}",
+        jc.getConsumer(),
+        jc.getApiBasePath(),
+        targetEventType);
+
+    List<Tag> tags =
+        List.of(
+            Tag.of("consumer", jc.getConsumer()),
+            Tag.of("api_base_path", jc.getApiBasePath()),
+            Tag.of("target_event_type", targetEventType));
+    meterRegistry.counter(METRIC_SPECTRE_DIRECT_PUBLISH, tags).increment();
+
+    return targetEventType;
   }
 
   private Mono<Void> publishEvent(Spectre event, JumperConfig jc) {

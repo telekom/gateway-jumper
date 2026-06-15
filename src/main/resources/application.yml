@@ -144,6 +144,24 @@ jumper:
       - application/json-patch+json
       - application/json-patch-query+json
       - application/problem+json
+    # TEMPORARY (World Cup 2026 peak-load mitigation): publish Spectre events for these
+    # consumer/route(/provider) tuples directly to the team-specific event type, bypassing the
+    # Horizon-Galaxy multiplex + auto_event_route republish step (the peak-load bottleneck).
+    # Remove once Horizon-Galaxy performance is fixed. See PS-05:
+    # https://wiki.telekom.de/spaces/DHEI/pages/4212169506/Decouple+Listener+Spectre+and+PubSub+Traffic
+    direct-publish:
+      rules:
+        - apiBasePath: "/a4m/content/service-activation-configuration/v3"
+          consumer: "dot--uniform--peak-load-ott-tv-pre-activator"
+          targetEventType: de.telekom.ei.listener.sh-fsf--codebuster--pacman-controlit
+        - apiBasePath: "/a4m/content/ott-service/v2"
+          consumer: "coca--r2d2--amk"
+          provider: "a4m--pluto--sputnik-odin"
+          targetEventType: de.telekom.ei.listener.sh-fsf--codebuster--pacman-controlit
+        - apiBasePath: "/a4m/content/ott-provisioning-status/v1"
+          consumer: "coca--r2d2--amk"
+          provider: "a4m--pluto--sputnik-odin"
+          targetEventType: de.telekom.ei.listener.sh-fsf--codebuster--pacman-controlit
   security:
     dir: /keypair
     pk-file: tls.key
