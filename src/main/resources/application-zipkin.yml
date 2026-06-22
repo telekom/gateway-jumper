@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Zipkin trace exporter profile (activated via TRACING_EXPORTER=zipkin).
+# Both opentelemetry-exporter-otlp and opentelemetry-exporter-zipkin are on the
+# classpath, so we explicitly exclude the OTLP tracing auto-configuration to
+# guarantee that exactly one exporter (Zipkin) is active at runtime.
+#
+# Spans are POSTed as Zipkin v2 JSON to TRACING_URL. TRACING_URL must be the
+# FULL Zipkin v2 spans endpoint INCLUDING the path, e.g.
+# http://guardians-drax-collector.skoll:9411/api/v2/spans. The chart passes
+# global.tracing.collectorUrl verbatim (no trim/append), so Kong and Jumper
+# share the exact same URL.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.tracing.otlp.OtlpTracingAutoConfiguration
+
+management:
+  zipkin:
+    tracing:
+      endpoint: ${TRACING_URL:http://localhost:9411/api/v2/spans}

@@ -5,6 +5,13 @@
 spring:
   main:
     allow-bean-definition-overriding: true
+  # The 'test' profile replaces the runtime-selected exporter profile, and
+  # @AutoConfigureObservability forces tracing reporters to be created. Both
+  # exporter libraries are on the classpath, so pin tests to a single exporter
+  # (OTLP) to keep behaviour deterministic and avoid double export.
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinAutoConfiguration
   cloud:
     gateway:
       server:
