@@ -4,19 +4,24 @@
 
 package jumper.util;
 
-import tools.jackson.databind.DeserializationFeature;
+import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
+/**
+ * Static-access bridge to the single, Spring auto-configured Jackson 3 {@link ObjectMapper}. Spring
+ * beans should inject the {@code ObjectMapper} directly; this holder exists only for static / non-
+ * bean call sites (e.g. {@code JumperConfig} static helpers, {@code JumperInfoResponse#toString})
+ * that cannot be autowired. The component is eagerly constructed at context startup, well before
+ * any request-handling code calls {@link #getInstance()}.
+ */
+@Component
 public class ObjectMapperUtil {
 
-  // Jackson 3 ships JDK8 type support (Optional, etc.) in core, so no module needs to be
-  // registered. FAIL_ON_UNKNOWN_PROPERTIES already defaults to false in Jackson 3 but is kept
-  // explicit to document intent.
-  private static final ObjectMapper objectMapper =
-      JsonMapper.builder()
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-          .build();
+  private static ObjectMapper objectMapper;
+
+  public ObjectMapperUtil(ObjectMapper objectMapper) {
+    ObjectMapperUtil.objectMapper = objectMapper;
+  }
 
   public static ObjectMapper getInstance() {
     return objectMapper;

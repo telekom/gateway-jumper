@@ -79,11 +79,17 @@ on the classpath is transitive via `jjwt-jackson` (jjwt's own backend, runtime).
   (`@JsonProperty`, `@JsonInclude`, `@JsonIgnore`) is the same package in
   Jackson 3 — these imports were intentionally **not** touched
   (`Spectre`, `SpectreData`, `TokenInfo`, `JumperConfig`).
-- **Bean vs static usage**: Spring-managed beans inject the autowired Jackson 3
-  `ObjectMapper` (`SpectreService`, `SpectreBodyRewrite`,
-  `RedisZoneHealthStatusService`); static/non-bean call sites keep the shared
-  `ObjectMapperUtil.getInstance()` (now a Jackson 3 mapper) —
-  `JumperConfig` static methods, `JumperInfoResponse.toString`, `OauthTokenUtil`.
+- **Bean vs static usage / single global mapper**: there is now exactly one
+  Jackson 3 `ObjectMapper` — the Spring auto-configured bean. Spring-managed
+  beans inject it directly (`SpectreService`, `SpectreBodyRewrite`,
+  `RedisZoneHealthStatusService`). `ObjectMapperUtil` is a `@Component` that
+  captures that same autowired bean into a static field, so static/non-bean call
+  sites (`JumperConfig` static methods, `JumperInfoResponse.toString`,
+  `OauthTokenUtil`) reach it via `ObjectMapperUtil.getInstance()` instead of
+  building their own mappers. The eager component is constructed during context
+  refresh; every `getInstance()` call site runs only during request handling or
+  on `ApplicationReadyEvent` (warmup), so the static field is always populated
+  first — no null-ordering risk, no defensive fallback needed.
 - **Redis**: the old explicit Jackson 2 `@Bean ObjectMapper objectMapper()` in
   `RedisConfig` was **removed** (SB4 supplies the Jackson 3 bean). Redis pub/sub
   deserialization still requires `ZoneHealthMessage` to carry `@NoArgsConstructor`
@@ -104,7 +110,11 @@ on the classpath is transitive via `jjwt-jackson` (jjwt's own backend, runtime).
 - Horizon event verification (`MockHorizonServer.createVerifyEventType`) uses
   `retrieveAllEvents(minCount)` and intentionally does **not** filter by trace id
   (autoevents use a jumper-generated trace id); per-scenario `resetAll()` provides
-  isolation (`@After("@horizon")`).
+  isolation (`@After("@horizon")`). It is **order-independent**: WireMock's
+  `findAll` ordering is not guaranteed, so instead of positional `get(0)` it maps
+  every recorded event to its `getType()` and asserts the collection contains the
+  adjusted type `de.telekom.ei.listener.spectre`. (Positional access caused a
+  JVM-dependent flake — green on JDK 25, one deterministic failure on JDK 21/CI.)
 - Cucumber runner: `@SelectClasspathResource("features")` (harmless discovery
   warning suggesting the package selector — cosmetic only).
 

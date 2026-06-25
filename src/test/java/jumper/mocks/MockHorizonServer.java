@@ -190,15 +190,22 @@ public class MockHorizonServer {
   public void createVerifyEventType(String id) {
     List<LoggedRequest> recordedRequests = retrieveAllEvents(1);
 
-    String seEventString = bodyOf(recordedRequests.get(0));
+    // The order in which WireMock reports recorded events is not guaranteed, so locate the
+    // adjusted event by its type instead of relying on positional access (get(0)).
+    List<String> recordedTypes =
+        recordedRequests.stream()
+            .map(
+                request ->
+                    ObjectMapperUtil.getInstance()
+                        .readValue(bodyOf(request), Spectre.class)
+                        .getType())
+            .toList();
 
-    try {
-      assertEquals(
-          "de.telekom.ei.listener.spectre",
-          ObjectMapperUtil.getInstance().readValue(seEventString, Spectre.class).getType());
-    } catch (JacksonException e) {
-      throw new RuntimeException(e);
-    }
+    assertTrue(
+        recordedTypes.contains("de.telekom.ei.listener.spectre"),
+        "expected an adjusted horizon event of type 'de.telekom.ei.listener.spectre' but recorded"
+            + " types were "
+            + recordedTypes);
   }
 
   public void horizonCallback() {

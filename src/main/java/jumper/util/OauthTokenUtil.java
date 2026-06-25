@@ -12,16 +12,12 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
-import tools.jackson.databind.ObjectMapper;
-import tools.jackson.databind.json.JsonMapper;
 
 @Slf4j
 public final class OauthTokenUtil {
 
   private static final JwtParser jwtParser =
       Jwts.parser().unsecured().clockSkewSeconds(3600).build();
-
-  private static final ObjectMapper objectMapper = JsonMapper.builder().build();
 
   // jjwt >= 0.12 only parses unsecured JWTs whose header declares "alg":"none".
   // The consumer token is a signed JWT whose claims we read without verifying the
@@ -85,7 +81,7 @@ public final class OauthTokenUtil {
     try {
       byte[] json = Base64.getUrlDecoder().decode(base64UrlHeader);
       @SuppressWarnings("unchecked")
-      Map<String, Object> values = objectMapper.readValue(json, Map.class);
+      Map<String, Object> values = ObjectMapperUtil.getInstance().readValue(json, Map.class);
       return new MapHeader(values);
     } catch (Exception e) {
       throw new MalformedJwtException("Unable to read JWT header", e);
