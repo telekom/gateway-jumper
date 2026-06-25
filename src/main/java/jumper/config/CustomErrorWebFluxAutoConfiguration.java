@@ -14,12 +14,11 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.condition.SearchStrategy;
-import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.autoconfigure.web.WebProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.reactive.error.DefaultErrorAttributes;
-import org.springframework.boot.web.reactive.error.ErrorAttributes;
-import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
+import org.springframework.boot.webflux.error.DefaultErrorAttributes;
+import org.springframework.boot.webflux.error.ErrorAttributes;
+import org.springframework.boot.webflux.error.ErrorWebExceptionHandler;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,7 +30,7 @@ import org.springframework.web.reactive.result.view.ViewResolver;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = REACTIVE)
 @ConditionalOnClass(WebFluxConfigurer.class)
-@EnableConfigurationProperties({ServerProperties.class, WebProperties.class})
+@EnableConfigurationProperties({WebProperties.class})
 public class CustomErrorWebFluxAutoConfiguration {
 
   @Bean
@@ -43,14 +42,13 @@ public class CustomErrorWebFluxAutoConfiguration {
       ObjectProvider<ViewResolver> viewResolvers,
       ServerCodecConfigurer serverCodecConfigurer,
       ApplicationContext applicationContext,
-      ServerProperties serverProperties,
       Tracer tracer) {
 
     JsonErrorWebExceptionHandler exceptionHandler =
         new JsonErrorWebExceptionHandler(
             errorAttributes,
             webProperties.getResources(),
-            serverProperties.getError(),
+            webProperties.getError(),
             applicationContext,
             tracer);
 

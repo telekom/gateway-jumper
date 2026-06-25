@@ -7,8 +7,6 @@ package jumper.service;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import jumper.model.config.HealthStatus;
 import jumper.model.config.ZoneHealthMessage;
@@ -24,6 +22,7 @@ import org.springframework.data.redis.connection.DefaultMessage;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -49,7 +48,7 @@ class RedisZoneHealthStatusServiceTest extends AbstractIntegrationTest {
   @DisplayName(
       "Test if a zone is marked correctly after receiving message via redis with a unhealthy status"
           + " message")
-  void getZoneUnhealthyWithRedisPubSubListener() throws JsonProcessingException {
+  void getZoneUnhealthyWithRedisPubSubListener() {
     // given
     String zoneToTest = "zoneToTest";
     ZoneHealthMessage message = new ZoneHealthMessage(zoneToTest, HealthStatus.UNHEALTHY);

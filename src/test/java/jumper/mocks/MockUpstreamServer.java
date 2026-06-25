@@ -4,81 +4,91 @@
 
 package jumper.mocks;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static jumper.config.Config.REMOTE_HOST_PORT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockserver.integration.ClientAndServer.startClientAndServer;
-import static org.mockserver.model.HttpClassCallback.callback;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
-import static org.mockserver.model.Parameter.param;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.github.tomakehurst.wiremock.stubbing.ServeEvent;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwt;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
 import jumper.util.OauthTokenUtil;
-import org.mockserver.client.MockServerClient;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.matchers.Times;
-import org.mockserver.model.HttpError;
-import org.mockserver.model.HttpRequest;
-import org.mockserver.verify.VerificationTimes;
 
 public class MockUpstreamServer {
 
-  private ClientAndServer mockServer;
-  private MockServerClient mockServerClient;
-  int upstreamLocalPort = REMOTE_HOST_PORT;
+  private WireMockServer server;
+  final int upstreamLocalPort = REMOTE_HOST_PORT;
 
   public void startServer() {
-    mockServer = startClientAndServer(upstreamLocalPort);
-    String upstreamLocalHost = "localhost";
-    mockServerClient = new MockServerClient(upstreamLocalHost, upstreamLocalPort);
+    server =
+        new WireMockServer(
+            options()
+                .port(upstreamLocalPort)
+                .gzipDisabled(true)
+                .extensions(new TestExpectationCallback()));
+    server.start();
   }
 
+  /**
+   * Restart the upstream as a TLS server on the same port. WireMock cannot serve plain HTTP and
+   * HTTPS on the same port, so the http listener is disabled and the https listener bound to the
+   * upstream port the route points at.
+   */
   public void secure() {
-    mockServer.withSecure(true);
+    server.stop();
+    server =
+        new WireMockServer(
+            options()
+                .httpDisabled(true)
+                .httpsPort(upstreamLocalPort)
+                .gzipDisabled(true)
+                .extensions(new TestExpectationCallback()));
+    server.start();
   }
 
   public void stopServer() {
-    mockServer.stop();
+    if (server != null) {
+      server.stop();
+    }
   }
 
   public void callbackRequest() {
-    mockServerClient
-        .when(
-            request()
-                .withPath("/callback")
-                .withQueryStringParameters(param("statusCode", "[0-9]+")))
-        .respond(callback().withCallbackClass("jumper.mocks.TestExpectationCallback"));
+    server.stubFor(
+        any(urlPathEqualTo("/callback"))
+            .withQueryParam("statusCode", matching("[0-9]+"))
+            .willReturn(aResponse().withTransformers(TestExpectationCallback.NAME)));
   }
 
   public void failoverRequest(String path) {
-    mockServerClient
-        .when(request().withPath(path), Times.exactly(1))
-        .respond(callback().withCallbackClass("jumper.mocks.TestExpectationCallback"));
+    server.stubFor(
+        any(urlPathEqualTo(path))
+            .willReturn(aResponse().withTransformers(TestExpectationCallback.NAME)));
   }
 
   public void callbackRequestWithTimeout() {
-    mockServerClient
-        .when(request().withPath("/callback"))
-        .error(HttpError.error().withDelay(TimeUnit.SECONDS, 62));
+    server.stubFor(
+        any(urlPathEqualTo("/callback"))
+            .willReturn(aResponse().withStatus(200).withFixedDelay(62_000)));
   }
 
   public void callbackRequestWithDropConnection() {
-    mockServerClient
-        .when(request().withPath("/callback"))
-        .error(HttpError.error().withDropConnection(true));
+    server.stubFor(
+        any(urlPathEqualTo("/callback")).willReturn(aResponse().withFault(Fault.EMPTY_RESPONSE)));
   }
 
   public void testEndpoint(String id, String path) {
-    mockServerClient
-        .when(request().withPath(path), Times.exactly(1))
-        .withId(id)
-        .respond(response().withStatusCode(200).withHeaders(request().getHeaders()));
+    server.stubFor(any(urlPathEqualTo(path)).willReturn(aResponse().withStatus(200)));
   }
 
   public void verifyCount(String id, int count) {
-    mockServerClient.verify(id, VerificationTimes.exactly(count));
+    assertEquals(count, server.getAllServeEvents().size());
   }
 
   public void verifyTokenRequestPath(String expectedValue) {
@@ -86,18 +96,21 @@ public class MockUpstreamServer {
   }
 
   public void verifyTokenClaim(String claim, String expectedValue) {
-    HttpRequest[] recordedRequests = mockServerClient.retrieveRecordedRequests(request());
-
-    String token = recordedRequests[0].getFirstHeader("Authorization");
+    LoggedRequest request = firstRecordedRequest();
+    String token = request.getHeader("Authorization");
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
     assertEquals(expectedValue, claimsFromToken.getBody().get(claim, String.class));
   }
 
   public void verifyQueryParam(String expectedName, String expectedValue) {
-    HttpRequest[] recordedRequests = mockServerClient.retrieveRecordedRequests(request());
-
-    String value = recordedRequests[0].getFirstQueryStringParameter(expectedName);
-
+    LoggedRequest request = firstRecordedRequest();
+    String value = request.queryParameter(expectedName).firstValue();
     assertEquals(expectedValue, value);
+  }
+
+  private LoggedRequest firstRecordedRequest() {
+    List<ServeEvent> events = server.getAllServeEvents();
+    // WireMock returns serve events most-recent first; the oldest is the original request.
+    return events.get(events.size() - 1).getRequest();
   }
 }

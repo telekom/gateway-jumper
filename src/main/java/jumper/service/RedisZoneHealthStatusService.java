@@ -4,8 +4,6 @@
 
 package jumper.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.context.ContextExecutorService;
 import io.micrometer.context.ContextSnapshotFactory;
 import java.util.concurrent.CompletableFuture;
@@ -27,6 +25,8 @@ import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.retry.support.RetryTemplateBuilder;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @ConditionalOnBean(RedisConfig.class)
@@ -66,7 +66,7 @@ public class RedisZoneHealthStatusService implements MessageListener {
       }
       zoneHealthCheckService.setZoneHealth(
           zoneHealthMessage.getZone(), zoneHealthMessage.getStatus() == HealthStatus.HEALTHY);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("Error deserializing message", e);
     } catch (Exception e) {
       log.error("Error processing message", e);

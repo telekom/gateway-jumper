@@ -86,7 +86,7 @@ public class TokenGeneratorService {
     Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
     Date expiration = consumerTokenClaims.getBody().getExpiration();
     String sub = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    String aud = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
+    String aud = OauthTokenUtil.getAudience(consumerTokenClaims.getBody());
 
     HashMap<String, String> claims = new HashMap<>();
     claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");

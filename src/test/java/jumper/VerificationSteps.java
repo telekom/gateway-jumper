@@ -233,7 +233,7 @@ public class VerificationSteps {
 
     assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
     assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("subscriberId", String.class));
-    assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("aud", String.class));
+    assertEquals(PUBSUB_SUBSCRIBER, OauthTokenUtil.getAudience(claimsFromToken.getBody()));
   }
 
   private void checkScopes(String token) {
@@ -245,7 +245,7 @@ public class VerificationSteps {
   private void checkAud(String token) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
-    assertEquals("testAudience", claimsFromToken.getBody().get("aud", String.class));
+    assertEquals("testAudience", OauthTokenUtil.getAudience(claimsFromToken.getBody()));
   }
 
   private void checkMeshToken(String token) {

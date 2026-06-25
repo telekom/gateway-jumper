@@ -4,7 +4,6 @@
 
 package jumper.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.util.HashMap;
@@ -18,7 +17,6 @@ import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
-import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +34,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Slf4j
 @Service
@@ -44,6 +44,7 @@ public class SpectreService {
 
   private final TokenGeneratorService tokenGeneratorService;
   private final Tracer tracer;
+  private final ObjectMapper objectMapper;
 
   @Qualifier("spectreServiceWebClient")
   private final WebClient spectreServiceWebClient;
@@ -226,9 +227,10 @@ public class SpectreService {
 
       log.debug("json compatible content-type, will try to parse as json payload");
       try {
-        // try to return payload as json
-        return ObjectMapperUtil.getInstance().readTree(payload);
-      } catch (JsonProcessingException e) {
+        // Parse into a structural value (Map/List/scalar) so the outbound WebClient encoder
+        // serializes the original JSON content rather than treating it as a single String.
+        return objectMapper.readValue(payload, Object.class);
+      } catch (JacksonException e) {
         log.error("error while parsing json payload for spectre", e);
       }
     }

@@ -9,6 +9,7 @@ spring:
     gateway:
       server:
         webflux:
+          trusted-proxies: ".*"
           httpclient:
             connect-timeout: 2000
             response-timeout: 5s # ingress 60s
