@@ -16,32 +16,6 @@ MockServer with WireMock. Status: complete, full suite green
 - Surefire reports under `target/surefire-reports/*.txt` are read-blocked/binary
   (use `grep -a`). Service logs are JSON to stdout.
 
-## CI-only cucumber failures — shared-JVM global-state pollution
-
-- Symptom: green locally, red on CI (GitHub `ubuntu-24.04`, Zulu 21). ~75/138
-  cucumber scenarios failed — downstream `X-B3-*` trace headers missing on
-  proxied requests, and error responses mis-mapped (e.g. `401`→`204`).
-- **Not** a JDK issue: reproduced the exact CI JDK locally via
-  `sdk install java 21.0.11.crac-zulu` (Zulu21.50+19-CRaC, build 21.0.11+10) →
-  full suite green. Also not a stale-cache issue (CI fully recompiles) and not
-  reproducible under no-`clean`, 1/2-CPU `taskset`, or full-suite runs locally.
-- Root cause: surefire defaults to `forkCount=1, reuseForks=true`, so **all** test
-  classes share one JVM, and the default run order is `filesystem`
-  (non-deterministic, differs CI vs local). The app leans on process-global
-  singletons — the static `ObjectMapperUtil` holder, brave `Tracing.current()`,
-  reactor `Hooks`, BlockHound (installed by `RunCucumberTest.@BeforeAll`). Under
-  CI's class order the cucumber suite inherited poisoned global tracing state.
-  `RunCucumberTest` passes in isolation (`-Dtest=RunCucumberTest`).
-- Proof of the coupling: `-DreuseForks=false` breaks 22 pure unit tests with
-  `ObjectMapperUtil.getInstance()` == null — those tests silently depend on an
-  earlier `@SpringBootTest` populating that static in the same JVM.
-- Fix: run `RunCucumberTest` in its **own** surefire execution (`cucumber-test`)
-  so it gets a fresh JVM with pristine global state, independent of run order;
-  the other tests keep their shared JVM (so the `ObjectMapperUtil` static stays
-  populated by a `@SpringBootTest` for the unit tests that need it). See the
-  `maven-surefire-plugin` `<executions>` in `pom.xml`. Result: two executions,
-  `140` + `138` tests.
-
 ## jjwt 0.11.5 → 0.13.0 — `aud` claim modeled as a Set
 
 - jjwt **0.12+** always models the `aud` claim internally as `Set<String>`,
