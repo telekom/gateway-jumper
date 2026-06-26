@@ -133,17 +133,32 @@ SPDX-License-Identifier: Apache-2.0
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-micrometer-tracing-brave</artifactId>
+			<artifactId>spring-boot-micrometer-tracing-opentelemetry</artifactId>
 		</dependency>
 
 		<dependency>
 			<groupId>io.micrometer</groupId>
-			<artifactId>micrometer-tracing-bridge-brave</artifactId>
+			<artifactId>micrometer-tracing-bridge-otel</artifactId>
+		</dependency>
+
+		<!-- Trace exporters: both OTLP and Zipkin are kept on the classpath so the
+		     active exporter can be selected at runtime via the Spring profile
+		     (TRACING_EXPORTER=otlp|zipkin). Only the selected one is configured. -->
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-exporter-otlp</artifactId>
 		</dependency>
 
 		<dependency>
-			<groupId>io.zipkin.reporter2</groupId>
-      		<artifactId>zipkin-reporter-brave</artifactId>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-exporter-zipkin</artifactId>
+		</dependency>
+
+		<!-- Required so the OpenTelemetry bridge can emit/consume B3 propagation
+		     headers, preserving trace continuity with Kong and Tardis correlation. -->
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-extension-trace-propagators</artifactId>
 		</dependency>
 
 		<dependency>

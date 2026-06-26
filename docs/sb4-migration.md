@@ -33,9 +33,43 @@ MockServer with WireMock. Status: complete, full suite green
 - Unsecured-claim parsing changed: jjwt ≥ 0.12 only parses unsecured JWTs whose
   header declares `"alg":"none"`. Reading a signed token's claims without
   verification requires stripping the signature and swapping in an unsecured
-  header (see `OauthTokenUtil.getAllClaimsFromToken`).
+   header (see `OauthTokenUtil.getAllClaimsFromToken`).
+
+## Tracing — OpenTelemetry (merged from main) + SB4 module rename
+
+- `main` adopted **OpenTelemetry** (PR #124: `micrometer-tracing-bridge-otel`,
+  `opentelemetry-exporter-otlp` + `opentelemetry-exporter-zipkin`,
+  `opentelemetry-extension-trace-propagators`). This SB4 branch originally used
+  **Brave**. The two were reconciled onto **OTel** when main was merged in.
+- **CI-only failure trap**: the SB4 branch forked before PR #124. Merging the PR
+  into main produced a pom with *both* Brave and OTel bridges (no textual
+  conflict, so git auto-merged silently). With both bridges present Spring Boot
+  wires a non-functional tracer → **no spans**: zero `traceId` in logs and empty
+  `X-B3-TraceId`/`SpanId` propagated downstream → ~75 cucumber failures (missing
+  B3 headers, mis-mapped error responses). Reproduced only in the *merge*, never
+  in a plain branch checkout (which had Brave only) — JDK/CPU/test-order were all
+  red herrings. Lesson: a branch that touches `pom.xml` tracing deps must be kept
+  in sync with main; a clean textual merge can still be a semantic conflict.
+- **SB4 module rename**: the actuator tracing auto-configurations moved out of
+  `spring-boot-actuator-autoconfigure` into dedicated modules. Use
+  `spring-boot-micrometer-tracing-opentelemetry` (the OTel analogue of
+  `spring-boot-micrometer-tracing-brave`). Auto-config class names changed too —
+  `spring.autoconfigure.exclude` entries had to be updated from the SB3.5 paths
+  (`org.springframework.boot.actuate.autoconfigure.tracing.{otlp,zipkin}.*`) to
+  the SB4 paths under
+  `org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.*`
+  (`otlp.OtlpTracingAutoConfiguration`,
+  `zipkin.ZipkinWithOpenTelemetryTracingAutoConfiguration`). SB4 fails startup on
+  an unknown excluded class, so stale paths are not silently ignored.
+- **Exporter toggle is preserved**: both OTLP and Zipkin exporter libs stay on
+  the classpath; `TRACING_EXPORTER` (→ `spring.profiles.active`, default
+  `zipkin`) activates `application-otlp.yml` / `application-zipkin.yml`, each
+  excluding the *other* exporter's auto-config so exactly one is active. Both run
+  on the OpenTelemetry tracer (B3 propagation kept). Tests pin to one exporter
+  via `application-test.yml` (excludes the SB4 Zipkin auto-config → OTLP active).
 
 ## Spring Cloud Gateway 5.0 — `trusted-proxies`
+
 
 - New SCG 5.0 security control (remediation for `Forwarded`/`X-Forwarded-*`
   spoofing). Did not exist in SCG 4.x, so nothing needed configuring before.

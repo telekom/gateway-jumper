@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2023 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# OTLP trace exporter profile (activated via TRACING_EXPORTER=otlp).
+# Both opentelemetry-exporter-otlp and opentelemetry-exporter-zipkin are on the
+# classpath, so we explicitly exclude the Zipkin tracing auto-configuration to
+# guarantee that exactly one exporter (OTLP) is active at runtime.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.zipkin.ZipkinWithOpenTelemetryTracingAutoConfiguration
+
+management:
+  otlp:
+    tracing:
+      # OTLP/HTTP exporter. TRACING_URL must be the FULL OTLP traces endpoint
+      # INCLUDING the path, e.g. http://otel-collector:4318/v1/traces. The chart
+      # passes global.tracing.collectorUrl verbatim (no trim/append), so Kong
+      # and Jumper share the exact same URL. For gRPC (port 4317) set
+      # transport: grpc instead.
+      endpoint: ${TRACING_URL:http://localhost:4318/v1/traces}
+      transport: http

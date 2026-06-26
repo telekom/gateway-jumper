@@ -33,10 +33,15 @@ management:
     sampling:
       probability: 1.0
     propagation:
+      # Keep B3 so traces stay correlated with Kong (and the x-tardis-traceid
+      # header flow) across the mesh. Export format (OTLP or Zipkin) is
+      # independent of wire propagation (B3).
       type: B3_MULTI
-  zipkin:
-    tracing:
-      endpoint: ${TRACING_URL:http://localhost:9411}/api/v2/spans
+  # Trace exporter selection is profile-driven so exactly one exporter is active
+  # at runtime, even though both exporter libraries are on the classpath:
+  #   TRACING_EXPORTER=otlp   -> application-otlp.yml
+  #   TRACING_EXPORTER=zipkin -> application-zipkin.yml (default)
+  # The chart sets TRACING_EXPORTER; locally it defaults to zipkin.
 
 cache-manager:
   caffeine-caches:
@@ -44,6 +49,13 @@ cache-manager:
       spec: maximumSize=${jumper.tokencache.maxSize:10000}, expireAfterWrite=${jumper.tokencache.expireAfterWriteMinutes:30}m
 
 spring:
+  profiles:
+    # Selects the active trace exporter at runtime. The chart sets
+    # TRACING_EXPORTER (otlp|zipkin); defaults to zipkin for local runs.
+    # Each profile (application-otlp.yml / application-zipkin.yml) configures
+    # its endpoint and excludes the other exporter's auto-configuration so that
+    # exactly one exporter is active even though both libraries are present.
+    active: ${TRACING_EXPORTER:zipkin}
   task:
     scheduling:
       pool:
