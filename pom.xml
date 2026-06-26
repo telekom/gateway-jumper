@@ -323,6 +323,44 @@ SPDX-License-Identifier: Apache-2.0
           <excludedGroups>ignore</excludedGroups>
           <argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
         </configuration>
+        <!--
+          The cucumber suite (RunCucumberTest) is a full @SpringBootTest gateway
+          run that also installs BlockHound and relies on micrometer/brave tracing.
+          The other tests share a single forked JVM (reuseForks defaults to true)
+          and leak process-global state (static ObjectMapperUtil holder, brave
+          Tracing.current(), reactor Hooks). Because the surefire run order is
+          non-deterministic across machines, on CI the cucumber suite could inherit
+          poisoned global state and fail (no downstream B3 trace headers, error
+          responses mis-mapped) while passing locally. Running RunCucumberTest in
+          its OWN surefire execution gives it a fresh JVM with pristine global
+          state, independent of run order. The unit/integration tests keep their
+          shared JVM (a @SpringBootTest there still populates the ObjectMapperUtil
+          static that some pure unit tests depend on).
+        -->
+        <executions>
+          <execution>
+            <id>default-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <excludes>
+                <exclude>**/RunCucumberTest.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <execution>
+            <id>cucumber-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <includes>
+                <include>**/RunCucumberTest.java</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.google.cloud.tools</groupId>
