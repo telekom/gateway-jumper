@@ -59,14 +59,25 @@ MockServer with WireMock. Status: complete, full suite green
   the SB4 paths under
   `org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.*`
   (`otlp.OtlpTracingAutoConfiguration`,
-  `zipkin.ZipkinWithOpenTelemetryTracingAutoConfiguration`). SB4 fails startup on
-  an unknown excluded class, so stale paths are not silently ignored.
+  `zipkin.ZipkinWithOpenTelemetryTracingAutoConfiguration`). **Caution:** Spring
+  Boot **silently ignores** an excluded class that is not on the classpath (only
+  classpath-present non-auto-config classes fail startup). A stale/typo'd exclude
+  is therefore a no-op — it does *not* crash, it just leaves *both* exporters
+  active. Hence the guard tests below assert the exclusion actually took effect.
 - **Exporter toggle is preserved**: both OTLP and Zipkin exporter libs stay on
   the classpath; `TRACING_EXPORTER` (→ `spring.profiles.active`, default
   `zipkin`) activates `application-otlp.yml` / `application-zipkin.yml`, each
   excluding the *other* exporter's auto-config so exactly one is active. Both run
   on the OpenTelemetry tracer (B3 propagation kept). Tests pin to one exporter
   via `application-test.yml` (excludes the SB4 Zipkin auto-config → OTLP active).
+- **Guard tests**: `TracingOtlpExporterProfileTest` / `TracingZipkinExporterProfileTest`
+  boot the app under `test,otlp` / `test,zipkin` and assert the right tracing
+  auto-config bean is present and the other excluded. The real `SpanExporter`
+  beans are not instantiated under `@AutoConfigureTracing`, so the auto-config
+  *class* beans are asserted instead. These guard against stale/typo'd exclude
+  class names (which Spring Boot silently ignores). Note: `spring.autoconfigure.exclude`
+  is replace-not-merge across profiles, so the later-activated exporter profile's
+  exclude wins over `application-test.yml`'s — both toggle paths resolve correctly.
 
 ## Spring Cloud Gateway 5.0 — `trusted-proxies`
 
