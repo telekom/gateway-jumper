@@ -165,11 +165,49 @@ on the classpath is transitive via `jjwt-jackson` (jjwt's own backend, runtime).
 
 ## Jetty version pinning
 
-- Pin **all** Jetty artifacts to `12.0.30` via a dedicated
-  `wiremock-jetty.version=12.0.30` property plus `jetty-bom` / `jetty-ee10-bom`
-  imports.
+- Pin **all** Jetty artifacts to `12.0.36` via a dedicated
+  `wiremock-jetty.version=12.0.36` property plus `jetty-bom` / `jetty-ee10-bom`
+  imports. WireMock 3.x (latest 3.13.2) ships/tests against Jetty **12.0.x** only;
+  SB4 manages Jetty at 12.1.x, and the 12.0/12.1 mix breaks `ServletContextHandler`.
+  Jetty is **test-only** (Jumper runs on Netty), so the pin never ships in the image.
+  Kept at the latest 12.0.x patch (`12.0.36`) to clear test-scope Jetty CVEs
+  (CVE-2026-1605/CVE-2026-2332/CVE-2025-11143). Only WireMock **4.x** (still beta)
+  targets Jetty 12.1; revisit the pin if/when it goes GA.
 - **Never** touch SB4's own `jetty.version` property — use the separate
   `wiremock-jetty.version` to align WireMock's embedded Jetty.
+
+## Java 25 runtime — Netty native-access warning (benign, left unaddressed)
+
+On startup in-cluster the JVM logs (once, to stderr):
+
+```
+WARNING: A restricted method in java.lang.System has been called
+WARNING: java.lang.System::loadLibrary has been called by io.netty.util.internal.NativeLibraryUtil
+         in an unnamed module (file:/app/libs/netty-common-4.2.15.Final.jar)
+WARNING: Use --enable-native-access=ALL-UNNAMED to avoid a warning for callers in this module
+WARNING: Restricted methods will be blocked in a future release unless native access is enabled
+```
+
+- **Cause**: JEP 472 (JDK 24+). Netty loads its native transport (epoll/DNS) via
+  `System.loadLibrary`, a *restricted* method. `netty-common` is on the classpath
+  → **unnamed module** → no native-access grant → warning. Surfaced purely by the
+  JDK 21 → 25 upgrade; nothing functional changed (the library still loads, app
+  runs fine).
+- **Impact**: cosmetic **today**; a future JDK will *block* restricted methods by
+  default, turning this into a hard startup failure unless native access is granted.
+- **Who can fix it**: by JEP 472 design, **only the application/deployer** can grant
+  native access — a classpath library cannot self-grant. Netty's only lever is
+  becoming a real JPMS module (it is currently an *automatic* module,
+  `Automatic-Module-Name: io.netty.common`), which would merely let the grant be
+  scoped to `io.netty.common` instead of `ALL-UNNAMED`; the flag would still be
+  required. Migrating Netty to Panama FFM does **not** remove the need (FFM downcalls
+  are restricted too). So this is an application-packaging concern, not a Netty bug.
+- **Decision: left unaddressed for now** (warning only). When needed, grant via the
+  Jib container launch — `--enable-native-access=ALL-UNNAMED` in
+  `jib-maven-plugin` `<container><jvmFlags>` (or `JDK_JAVA_OPTIONS`), or the fat-jar
+  manifest attribute `Enable-Native-Access: ALL-UNNAMED`. `ALL-UNNAMED` is correct
+  because Netty is classpath (unnamed module), not a named module. Tests don't show
+  the warning (different launch path; epoll only loads on Linux).
 
 ## Test data / keys
 
