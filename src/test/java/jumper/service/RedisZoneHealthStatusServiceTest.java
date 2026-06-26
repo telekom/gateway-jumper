@@ -63,7 +63,12 @@ class RedisZoneHealthStatusServiceTest extends AbstractIntegrationTest {
     // then
     Mockito.verify(zoneHealthCheckService, Mockito.timeout(5000L).times(1))
         .setZoneHealth(Mockito.eq(zoneToTest), Mockito.eq(false));
-    assertFalse(zoneHealthCheckService.getZoneHealth(zoneToTest));
+    // Mockito's timeout-verify unblocks when setZoneHealth is *entered* on the Redis
+    // listener thread, before its final zoneHealthCache.put(...) runs. Poll the read to
+    // avoid a race where getZoneHealth still returns the default (CI-only flake).
+    await()
+        .atMost(Duration.ofSeconds(5))
+        .untilAsserted(() -> assertFalse(zoneHealthCheckService.getZoneHealth(zoneToTest)));
   }
 
   @ParameterizedTest
