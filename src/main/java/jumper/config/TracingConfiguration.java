@@ -88,6 +88,8 @@ public class TracingConfiguration {
 
     gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.id");
     gatewayContext.removeLowCardinalityKeyValue("spring.cloud.gateway.route.uri");
+    moveLowToHighCardinality(gatewayContext, "http.method");
+    moveLowToHighCardinality(gatewayContext, "http.status_code");
 
     String xTardisTraceId = request.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
     appendXTardisTraceIdHeader(gatewayContext, xTardisTraceId);
@@ -110,6 +112,14 @@ public class TracingConfiguration {
 
     String xTardisTraceId = request.headers().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID);
     appendXTardisTraceIdHeader(clientRequestContext, xTardisTraceId);
+  }
+
+  private static void moveLowToHighCardinality(Observation.Context context, String key) {
+    KeyValue kv = context.getLowCardinalityKeyValue(key);
+    if (kv != null) {
+      context.removeLowCardinalityKeyValue(key);
+      context.addHighCardinalityKeyValue(kv);
+    }
   }
 
   private static void appendXTardisTraceIdHeader(
