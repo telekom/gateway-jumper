@@ -182,7 +182,11 @@ on the classpath is transitive via `jjwt-jackson` (jjwt's own backend, runtime).
 
 ## Environment / config reference
 
-- Java target = 21 (pom unchanged). Build/runtime JVM observed: Temurin 25.0.1.
+- Java target = 25 (`<java.version>25</java.version>`; class file v69). Build/runtime
+  JVM: Temurin 25.0.1. Runtime base image moved `gcr.io/distroless/java21-debian12`
+  → `gcr.io/distroless/java25-debian13:nonroot` (Temurin 25; Distroless dropped the
+  debian12 Java line and now ships Java images on debian13 only, LTS 17/21/25).
+  CI `JAVA_VERSION` default bumped 21 → 25 in `.github/workflows/build.yml`.
 - spring-data-redis resolves to 3.5.7.
 - `RedisZoneHealthStatusServiceTest` uses Testcontainers `redis:latest` (Docker);
   autowired `RedisTemplate<String,String>` = `stringRedisTemplate`.
