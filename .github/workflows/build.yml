@@ -6,15 +6,15 @@ name: Build
 
 # Required environment setup:
 # Variables:
-# - REGISTRY_HOST: Container registry host (e.g. mtr.devops.telekom.de)
-# - REGISTRY_REPO: Repository path (e.g. /tardis-internal/gateway/jumper-sse)
-# - REGISTRY_USER: Container registry username
+# - REGISTRY_HOST: Container registry host (e.g. artifactory.devops.telekom.de)
+# - REGISTRY_REPO: Repository path (e.g. /tardis-oci-local/tardis/components/gateway/jumper)
 # - JAVA_VERSION: Java version to use (defaults to '21' if not specified)
 # - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'temurin' if not specified)
 # - BASE_IMAGE: The base image used for the container build (defaults to gcr.io/distroless/java21-debian12:nonroot)
 #
 # Required secrets:
-# - REGISTRY_TOKEN: Container registry token/password
+# - ARTIFACTORY_O28M_PUSH_USER: Container registry username
+# - ARTIFACTORY_O28M_PUSH_TOKEN: Container registry token/password
 # - OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY: Token for accessing ORT repository
 
 on:
@@ -184,8 +184,8 @@ jobs:
           mvn -B jib:build -DskipTests \
             -Djib.to.image=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }} \
             -Djib.to.tags=${{ steps.tag.outputs.image-tag }} \
-            -Djib.to.auth.username=${{ vars.REGISTRY_USER }} \
-            -Djib.to.auth.password=${{ secrets.REGISTRY_TOKEN }} \
+            -Djib.to.auth.username=${{ secrets.ARTIFACTORY_O28M_PUSH_USER }} \
+            -Djib.to.auth.password=${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }} \
             ${BASE_IMAGE_ARG} \
             ${LABELS_ARG}
 
@@ -213,8 +213,8 @@ jobs:
           DIGEST: ${{ steps.build-push.outputs.digest }}
           REGISTRY: ${{ vars.REGISTRY_HOST }}
           REGISTRY_REPO: ${{ vars.REGISTRY_REPO }}
-          REGISTRY_USER: ${{ vars.REGISTRY_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}
+          REGISTRY_USER: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
       - name: Verify signature
@@ -234,8 +234,8 @@ jobs:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
         env:
-          TRIVY_USERNAME: ${{ vars.REGISTRY_USER }}
-          TRIVY_PASSWORD: ${{ secrets.REGISTRY_TOKEN }}
+          TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
         with:
           image-ref: "${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}@${{ needs.build-push-image.outputs.image-digest }}"
           exit-code: "0"
