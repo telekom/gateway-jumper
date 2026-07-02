@@ -11,11 +11,12 @@ spring:
   # (OTLP) to keep behaviour deterministic and avoid double export.
   autoconfigure:
     exclude:
-      - org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinAutoConfiguration
+      - org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.zipkin.ZipkinWithOpenTelemetryTracingAutoConfiguration
   cloud:
     gateway:
       server:
         webflux:
+          trusted-proxies: ".*"
           httpclient:
             connect-timeout: 2000
             response-timeout: 5s # ingress 60s

@@ -164,7 +164,7 @@ public class HttpClientConfiguration {
         proxySpec.type(proxyProperties.getType()).host(proxyProperties.getHost());
 
     PropertyMapper map = PropertyMapper.get();
-    map.from(proxyProperties::getPort).whenNonNull().to(builder::port);
+    map.from(proxyProperties::getPort).when(java.util.Objects::nonNull).to(builder::port);
     map.from(proxyProperties::getNonProxyHostsPattern).whenHasText().to(builder::nonProxyHosts);
 
     return builder;

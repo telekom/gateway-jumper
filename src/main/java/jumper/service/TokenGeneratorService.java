@@ -14,7 +14,6 @@ import jumper.util.OauthTokenUtil;
 import jumper.util.RsaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -28,9 +27,18 @@ public class TokenGeneratorService {
 
   private String fromRealm(
       HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
+    return fromRealm(claims, issuer, expiration, issuedAt, Set.of());
+  }
+
+  private String fromRealm(
+      HashMap<String, String> claims,
+      String issuer,
+      Date expiration,
+      Date issuedAt,
+      Set<String> audiences) {
     log.debug("GatewayToken or OneToken: Loading keyInfo");
     KeyInfo keyInfo = keyInfoService.getKeyInfo();
-    return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
+    return generateToken(claims, issuer, expiration, issuedAt, keyInfo, audiences);
   }
 
   private String fromKey(
@@ -44,7 +52,7 @@ public class TokenGeneratorService {
           HttpStatus.UNAUTHORIZED, "Invalid key configuration: " + e.getMessage());
     }
 
-    return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
+    return generateToken(claims, issuer, expiration, issuedAt, keyInfo, Set.of());
   }
 
   public String createJwtTokenFromKey(
@@ -53,23 +61,48 @@ public class TokenGeneratorService {
   }
 
   private String generateToken(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, KeyInfo key) {
+      HashMap<String, String> claims,
+      String issuer,
+      Date expiration,
+      Date issuedAt,
+      KeyInfo key,
+      Set<String> audiences) {
     try {
-      return Jwts.builder()
-          .setClaims(claims)
-          .setIssuer(issuer)
-          .setExpiration(expiration)
-          .setIssuedAt(issuedAt)
-          .signWith(key.getPk(), SignatureAlgorithm.RS256)
-          .setHeaderParam("kid", key.getKid())
-          .setHeaderParam("typ", "JWT")
-          .compact();
+      JwtBuilder builder =
+          Jwts.builder()
+              .claims(claims)
+              .issuer(issuer)
+              .expiration(expiration)
+              .issuedAt(issuedAt)
+              .header()
+              .keyId(key.getKid())
+              .add("typ", "JWT")
+              .and();
+
+      if (!audiences.isEmpty()) {
+        builder = builder.audience().add(audiences).and();
+      }
+
+      return builder.signWith(key.getPk(), Jwts.SIG.RS256).compact();
     } catch (WeakKeyException e) {
-      throw new ResponseStatusException(
-          HttpStatus.UNAUTHORIZED,
-          "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used"
-              + " with RS256 MUST have a size >= 2048 bits.");
+      throw weakKeyResponse();
+    } catch (io.jsonwebtoken.security.SignatureException e) {
+      // jjwt's signWith(Key, SecureDigestAlgorithm) - the non-deprecated replacement for
+      // signWith(Key, SignatureAlgorithm) - validates key strength lazily inside compact() and
+      // wraps the resulting WeakKeyException in a SignatureException, unlike the deprecated
+      // overload which threw WeakKeyException directly.
+      if (e.getCause() instanceof WeakKeyException) {
+        throw weakKeyResponse();
+      }
+      throw e;
     }
+  }
+
+  private static ResponseStatusException weakKeyResponse() {
+    return new ResponseStatusException(
+        HttpStatus.UNAUTHORIZED,
+        "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used"
+            + " with RS256 MUST have a size >= 2048 bits.");
   }
 
   public String generateEnhancedLastMileGatewayToken(
@@ -86,7 +119,9 @@ public class TokenGeneratorService {
     Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
     Date expiration = consumerTokenClaims.getBody().getExpiration();
     String sub = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    String aud = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_AUD, String.class);
+    // the incoming consumer token's own audience(s) - possibly more than one, per RFC 7519 - take
+    // precedence below over the subscriber-derived one.
+    Set<String> consumerAudiences = OauthTokenUtil.getAudiences(consumerTokenClaims.getBody());
 
     HashMap<String, String> claims = new HashMap<>();
     claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
@@ -115,15 +150,16 @@ public class TokenGeneratorService {
 
       if (Objects.nonNull(subscriberId)) {
         claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
-        claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
       }
     }
 
-    if (StringUtils.isNotBlank(aud)) {
-      claims.put(Constants.TOKEN_CLAIM_AUD, aud);
+    Set<String> audiences =
+        Objects.nonNull(subscriberId) && !legacy ? Set.of(subscriberId) : Set.of();
+    if (!consumerAudiences.isEmpty()) {
+      audiences = consumerAudiences;
     }
 
-    return fromRealm(claims, issuer, expiration, issuedAt);
+    return fromRealm(claims, issuer, expiration, issuedAt, audiences);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

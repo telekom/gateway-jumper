@@ -6,8 +6,6 @@ package jumper.model.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwt;
 import java.util.*;
@@ -20,6 +18,8 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -73,7 +73,7 @@ public class JumperConfig {
     try {
       String decodedJson = ObjectMapperUtil.getInstance().writeValueAsString(o);
       jsonConfigBase64 = Base64.getEncoder().encodeToString(decodedJson.getBytes());
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       log.error("can not base64encode object: " + o);
     }
 
@@ -84,7 +84,7 @@ public class JumperConfig {
     String decodedJson = new String(Base64.getDecoder().decode(jsonConfigBase64.getBytes()));
     try {
       return ObjectMapperUtil.getInstance().readValue(decodedJson, typeReference);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException("can not base64decode header: " + jsonConfigBase64);
     }
   }
@@ -100,7 +100,7 @@ public class JumperConfig {
   private void fillWithLegacyHeaders(ServerHttpRequest request) {
 
     // proxy & real
-    if (request.getHeaders().containsKey(Constants.HEADER_REMOTE_API_URL)) {
+    if (request.getHeaders().containsHeader(Constants.HEADER_REMOTE_API_URL)) {
       setRemoteApiUrl(
           HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REMOTE_API_URL));
     } else if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
@@ -122,7 +122,7 @@ public class JumperConfig {
 
     // real
     setApiBasePath(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_API_BASE_PATH));
-    if (request.getHeaders().containsKey(Constants.HEADER_ACCESS_TOKEN_FORWARDING)) {
+    if (request.getHeaders().containsHeader(Constants.HEADER_ACCESS_TOKEN_FORWARDING)) {
       setAccessTokenForwarding(
           Boolean.valueOf(
               HeaderUtil.getLastValueFromHeaderField(

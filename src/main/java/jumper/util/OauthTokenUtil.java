@@ -5,7 +5,12 @@
 package jumper.util;
 
 import io.jsonwebtoken.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
@@ -13,7 +18,15 @@ import org.jspecify.annotations.NonNull;
 public final class OauthTokenUtil {
 
   private static final JwtParser jwtParser =
-      Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build();
+      Jwts.parser().unsecured().clockSkewSeconds(3600).build();
+
+  // jjwt >= 0.12 only parses unsecured JWTs whose header declares "alg":"none".
+  // The consumer token is a signed JWT whose claims we read without verifying the
+  // signature, so we strip the signature and swap in an unsecured header for parsing.
+  private static final String UNSECURED_HEADER =
+      Base64.getUrlEncoder()
+          .withoutPadding()
+          .encodeToString("{\"alg\":\"none\"}".getBytes(StandardCharsets.UTF_8));
 
   // Private constructor to prevent instantiation
   private OauthTokenUtil() {
@@ -32,14 +45,50 @@ public final class OauthTokenUtil {
     return getAllClaimsFromToken(consumerToken).getBody().get(claimName, String.class);
   }
 
+  /**
+   * Returns the single {@code aud} claim value, or {@code null} when absent. If multiple audiences
+   * are present, the first is returned.
+   */
+  public static String getAudience(Claims claims) {
+    Set<String> audience = claims.getAudience();
+    if (Objects.isNull(audience) || audience.isEmpty()) {
+      return null;
+    }
+    return audience.iterator().next();
+  }
+
+  /** Returns all {@code aud} claim values, or an empty set when absent. */
+  public static Set<String> getAudiences(Claims claims) {
+    Set<String> audience = claims.getAudience();
+    return Objects.isNull(audience) ? Set.of() : audience;
+  }
+
   public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
     String tokenWithoutSignature = getTokenWithoutSignature(consumerToken);
 
+    // Parse the claims with an unsecured header (jjwt requires "alg":"none"), but keep
+    // the original header so callers still observe the token's real algorithm/type.
+    int firstDot = tokenWithoutSignature.indexOf('.');
+    String originalHeader = tokenWithoutSignature.substring(0, firstDot);
+    String unsecuredToken = UNSECURED_HEADER + tokenWithoutSignature.substring(firstDot);
+
     try {
-      return jwtParser.parseClaimsJwt(tokenWithoutSignature);
+      Claims claims = jwtParser.parseUnsecuredClaims(unsecuredToken).getPayload();
+      return new UnverifiedJwt(parseHeader(originalHeader), claims);
     } catch (Exception e) {
       log.error("Failed to parse consumer token", e);
       throw e;
+    }
+  }
+
+  private static Header parseHeader(String base64UrlHeader) {
+    try {
+      byte[] json = Base64.getUrlDecoder().decode(base64UrlHeader);
+      @SuppressWarnings("unchecked")
+      Map<String, Object> values = ObjectMapperUtil.getInstance().readValue(json, Map.class);
+      return new MapHeader(values);
+    } catch (Exception e) {
+      throw new MalformedJwtException("Unable to read JWT header", e);
     }
   }
 
@@ -76,4 +125,56 @@ public final class OauthTokenUtil {
   }
 
   private record TokenParts(String headerWithPayload, String signature) {}
+
+  /** Minimal {@link Header} backed by the decoded header map of the original token. */
+  private static final class MapHeader extends LinkedHashMap<String, Object> implements Header {
+
+    private MapHeader(Map<String, Object> values) {
+      super(values);
+    }
+
+    @Override
+    public String getType() {
+      return (String) get("typ");
+    }
+
+    @Override
+    public String getContentType() {
+      return (String) get("cty");
+    }
+
+    @Override
+    public String getAlgorithm() {
+      return (String) get("alg");
+    }
+
+    @Override
+    public String getCompressionAlgorithm() {
+      return (String) get("zip");
+    }
+  }
+
+  /** Carries the original (unverified) header together with the parsed claims. */
+  private record UnverifiedJwt(Header header, Claims claims) implements Jwt<Header, Claims> {
+
+    @Override
+    public Header getHeader() {
+      return header;
+    }
+
+    @Override
+    public Claims getBody() {
+      return claims;
+    }
+
+    @Override
+    public Claims getPayload() {
+      return claims;
+    }
+
+    @Override
+    public <T> T accept(JwtVisitor<T> visitor) {
+      return visitor.visit(this);
+    }
+  }
 }

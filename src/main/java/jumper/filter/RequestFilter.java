@@ -126,7 +126,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
             } else {
               // ALL NON MESH SCENARIOS
 
-              if (readOnlyRequest.getHeaders().containsKey(Constants.HEADER_X_TOKEN_EXCHANGE)
+              if (readOnlyRequest.getHeaders().containsHeader(Constants.HEADER_X_TOKEN_EXCHANGE)
                   && isInternetFacingZone(currentZone)) {
 
                 log.debug("----------------X-TOKEN-EXCHANGE HEADER-------------");

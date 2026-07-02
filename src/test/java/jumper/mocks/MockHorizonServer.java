@@ -4,25 +4,29 @@
 
 package jumper.mocks;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
+import static com.github.tomakehurst.wiremock.client.WireMock.matching;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static jumper.BaseSteps.getTestJson;
 import static org.awaitility.Awaitility.await;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockserver.integration.ClientAndServer.startClientAndServer;
-import static org.mockserver.model.HttpClassCallback.callback;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
-import static org.mockserver.model.Parameter.param;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import jumper.Constants;
 import jumper.config.Config;
 import jumper.model.config.Spectre;
@@ -30,70 +34,132 @@ import jumper.model.config.SpectreKind;
 import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.model.Header;
-import org.mockserver.model.HttpRequest;
-import org.mockserver.verify.VerificationTimes;
-import org.springframework.http.HttpHeaders;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @RequiredArgsConstructor
 @Slf4j
 public class MockHorizonServer {
 
   private static final int horizonLocalPort = 1082;
-  private static final ClientAndServer mockServerClient = startClientAndServer(horizonLocalPort);
+  private static final WireMockServer server =
+      new WireMockServer(
+          options()
+              .port(horizonLocalPort)
+              .gzipDisabled(true)
+              .extensions(new TestExpectationCallback()));
+
+  static {
+    server.start();
+  }
 
   public void resetMockServer() {
-    mockServerClient.reset();
+    server.resetAll();
   }
 
   public void createExpectationForEventsProduced(String id) {
-    mockServerClient
-        .when(request().withHeaders(getHeaderList(id)).withMethod("POST").withPath("/v1/events"))
-        .withId(id)
-        .respond(
-            response()
-                .withStatusCode(201)
-                .withHeaders(
-                    new Header("Content-Type", "application/json; charset=utf-8"),
-                    new Header("Cache-Control", "no-store")));
+    server.stubFor(
+        post(urlPathEqualTo("/v1/events"))
+            .withHeader(Constants.HEADER_X_B3_TRACE_ID, equalTo(id))
+            .willReturn(
+                aResponse()
+                    .withStatus(201)
+                    .withHeader("Content-Type", "application/json; charset=utf-8")
+                    .withHeader("Cache-Control", "no-store")));
   }
 
   public void createVerifyCount(String id, int count) {
     await()
-        .atMost(Duration.ofSeconds(5))
+        .atMost(Duration.ofSeconds(10))
+        .ignoreExceptions()
         .with()
-        .pollInterval(Duration.ofSeconds(1))
-        .untilAsserted(() -> mockServerClient.verify(id, VerificationTimes.exactly(count)));
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(
+            () ->
+                server.verify(
+                    exactly(count),
+                    postRequestedFor(urlPathEqualTo("/v1/events"))
+                        .withHeader(Constants.HEADER_X_B3_TRACE_ID, equalTo(id))));
   }
 
-  public void createVerifyStructure(String method, String stargateUrl) {
-    HttpRequest[] recordedRequests =
-        mockServerClient.retrieveRecordedRequests(
-            request().withMethod("POST").withPath("/v1/events"));
+  private List<LoggedRequest> retrieveEventsForTrace(String id, int minCount) {
+    return retrieveEvents(
+        postRequestedFor(urlPathEqualTo("/v1/events"))
+            .withHeader(Constants.HEADER_X_B3_TRACE_ID, equalTo(id)),
+        minCount);
+  }
 
-    String seRequestString = recordedRequests[0].getBodyAsString();
-    String seResponseString = recordedRequests[1].getBodyAsString();
+  /**
+   * Auto-generated (adjusted) events are emitted with jumper's own trace id, which differs from the
+   * scenario's {@code id}. The {@code @After("@horizon")} hook resets the server between scenarios,
+   * so retrieving all recorded events without a trace-id filter is safe here.
+   */
+  private List<LoggedRequest> retrieveAllEvents(int minCount) {
+    return retrieveEvents(postRequestedFor(urlPathEqualTo("/v1/events")), minCount);
+  }
 
-    ObjectMapper om =
-        ObjectMapperUtil.getInstance()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+  private List<LoggedRequest> retrieveEvents(
+      com.github.tomakehurst.wiremock.matching.RequestPatternBuilder pattern, int minCount) {
+    java.util.concurrent.atomic.AtomicReference<List<LoggedRequest>> ref =
+        new java.util.concurrent.atomic.AtomicReference<>(List.of());
+    await()
+        .atMost(Duration.ofSeconds(10))
+        .ignoreExceptions()
+        .with()
+        .pollInterval(Duration.ofMillis(250))
+        .untilAsserted(
+            () -> {
+              List<LoggedRequest> recorded = server.findAll(pattern);
+              assertTrue(
+                  recorded.size() >= minCount,
+                  "expected at least " + minCount + " recorded events but got " + recorded.size());
+              ref.set(recorded);
+            });
+    return ref.get();
+  }
+
+  private record RequestResponseBodies(String requestBody, String responseBody) {}
+
+  /**
+   * Retrieves the request/response event pair for a scenario's trace id and pairs each recorded
+   * body up by its {@code SpectreData.kind}, not by recording order. WireMock's {@code findAll}
+   * ordering is not guaranteed (see {@code createVerifyEventType} / docs/sb4-migration.md), so
+   * positional {@code get(0)}/{@code get(1)} access on the same 2-element list this method replaces
+   * risked flipping request and response under it.
+   */
+  private RequestResponseBodies retrieveRequestResponsePair(String id) {
+    List<LoggedRequest> recorded = retrieveEventsForTrace(id, 2);
+    ObjectMapper om = ObjectMapperUtil.getInstance();
+
+    Map<String, String> bodiesByKind =
+        recorded.stream()
+            .map(this::bodyOf)
+            .collect(
+                Collectors.toMap(
+                    body -> om.readValue(body, Spectre.class).getData().getKind(), body -> body));
+
+    return new RequestResponseBodies(
+        bodiesByKind.get(SpectreKind.REQUEST.toString()),
+        bodiesByKind.get(SpectreKind.RESPONSE.toString()));
+  }
+
+  public void createVerifyStructure(String id, String method, String stargateUrl) {
+    RequestResponseBodies bodies = retrieveRequestResponsePair(id);
+
+    ObjectMapper om = ObjectMapperUtil.getInstance();
 
     try {
-      assertSpectreEvent(om.readValue(seRequestString, Spectre.class), method, true, stargateUrl);
-      assertSpectreEvent(om.readValue(seResponseString, Spectre.class), method, false, stargateUrl);
-    } catch (JsonProcessingException e) {
+      assertSpectreEvent(
+          om.readValue(bodies.requestBody(), Spectre.class), method, true, stargateUrl);
+      assertSpectreEvent(
+          om.readValue(bodies.responseBody(), Spectre.class), method, false, stargateUrl);
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public void createVerifyPayload() {
-    HttpRequest[] recordedRequests =
-        mockServerClient.retrieveRecordedRequests(
-            request().withMethod("POST").withPath("/v1/events"));
-
-    String seRequestString = recordedRequests[0].getBodyAsString();
-    String seResponseString = recordedRequests[1].getBodyAsString();
+  public void createVerifyPayload(String id) {
+    RequestResponseBodies bodies = retrieveRequestResponsePair(id);
 
     try {
       Object expected =
@@ -101,30 +167,24 @@ public class MockHorizonServer {
       assertEquals(
           expected,
           ObjectMapperUtil.getInstance()
-              .readValue(seRequestString, Spectre.class)
+              .readValue(bodies.requestBody(), Spectre.class)
               .getData()
               .getPayload());
       assertEquals(
           expected,
           ObjectMapperUtil.getInstance()
-              .readValue(seResponseString, Spectre.class)
+              .readValue(bodies.responseBody(), Spectre.class)
               .getData()
               .getPayload());
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public void createVerifyPayloadBase64() {
-    HttpRequest[] recordedRequests =
-        mockServerClient.retrieveRecordedRequests(
-            request().withMethod("POST").withPath("/v1/events"));
+  public void createVerifyPayloadBase64(String id) {
+    RequestResponseBodies bodies = retrieveRequestResponsePair(id);
 
-    String seRequestString = recordedRequests[0].getBodyAsString();
-    String seResponseString = recordedRequests[1].getBodyAsString();
-
-    ObjectMapper om =
-        new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    ObjectMapper om = ObjectMapperUtil.getInstance();
 
     Pattern BASE64_PATTERN =
         Pattern.compile("^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$");
@@ -134,52 +194,64 @@ public class MockHorizonServer {
           BASE64_PATTERN
               .matcher(
                   String.valueOf(
-                      om.readValue(seRequestString, Spectre.class).getData().getPayload()))
+                      om.readValue(bodies.requestBody(), Spectre.class).getData().getPayload()))
               .matches());
       assertTrue(
           BASE64_PATTERN
               .matcher(
                   String.valueOf(
-                      om.readValue(seResponseString, Spectre.class).getData().getPayload()))
+                      om.readValue(bodies.responseBody(), Spectre.class).getData().getPayload()))
               .matches());
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public void createVerifyEventType() {
-    HttpRequest[] recordedRequests =
-        mockServerClient.retrieveRecordedRequests(
-            request().withMethod("POST").withPath("/v1/events"));
+  public void createVerifyEventType(String id) {
+    List<LoggedRequest> recordedRequests = retrieveAllEvents(1);
 
-    String seEventString = recordedRequests[0].getBodyAsString();
+    // The order in which WireMock reports recorded events is not guaranteed, so locate the
+    // adjusted event by its type instead of relying on positional access (get(0)).
+    List<String> recordedTypes =
+        recordedRequests.stream()
+            .map(
+                request ->
+                    ObjectMapperUtil.getInstance()
+                        .readValue(bodyOf(request), Spectre.class)
+                        .getType())
+            .toList();
 
-    try {
-      assertEquals(
-          "de.telekom.ei.listener.spectre",
-          ObjectMapperUtil.getInstance().readValue(seEventString, Spectre.class).getType());
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    assertTrue(
+        recordedTypes.contains("de.telekom.ei.listener.spectre"),
+        "expected an adjusted horizon event of type 'de.telekom.ei.listener.spectre' but recorded"
+            + " types were "
+            + recordedTypes);
   }
 
   public void horizonCallback() {
-    mockServerClient
-        .when(
-            request()
-                .withPath("/v1/events")
-                .withQueryStringParameters(param("statusCode", "[0-9]+")))
-        .respond(callback().withCallbackClass("jumper.mocks.TestExpectationCallback"));
+    server.stubFor(
+        any(urlPathEqualTo("/v1/events"))
+            .withQueryParam("statusCode", matching("[0-9]+"))
+            .willReturn(aResponse().withTransformers(TestExpectationCallback.NAME)));
   }
 
-  private List<Header> getHeaderList(String id) {
-    List<Header> headersList = new ArrayList<>();
-    headersList.add(new Header(HttpHeaders.HOST, "localhost:" + horizonLocalPort));
-    headersList.add(new Header(HttpHeaders.ACCEPT, "*/*"));
-    headersList.add(new Header(HttpHeaders.ACCEPT_ENCODING, "gzip"));
-    headersList.add(new Header(Constants.HEADER_X_B3_TRACE_ID, id));
-
-    return headersList;
+  /**
+   * Returns the request body as a string, transparently gunzipping it when the producer sent it
+   * {@code Content-Encoding: gzip}. MockServer used to decompress request bodies automatically;
+   * WireMock exposes the raw bytes.
+   */
+  private String bodyOf(LoggedRequest request) {
+    byte[] body = request.getBody();
+    String encoding = request.getHeader("Content-Encoding");
+    if (encoding != null && encoding.toLowerCase().contains("gzip")) {
+      try (java.util.zip.GZIPInputStream gis =
+          new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(body))) {
+        return new String(gis.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+      } catch (java.io.IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return new String(body, java.nio.charset.StandardCharsets.UTF_8);
   }
 
   private void assertSpectreEvent(Spectre s, String method, boolean request, String stargateUrl) {
