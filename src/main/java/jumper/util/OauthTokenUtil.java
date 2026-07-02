@@ -10,6 +10,7 @@ import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
@@ -45,18 +46,21 @@ public final class OauthTokenUtil {
   }
 
   /**
-   * Reads the {@code aud} claim defensively. Since jjwt &gt;= 0.12 always models the audience as a
-   * {@code Set<String>} (regardless of whether the wire format is a JSON string or array), {@code
-   * claims.get("aud", String.class)} would throw. This returns the single audience value, or {@code
-   * null} when absent. If multiple audiences are present, the first is returned to preserve the
-   * pre-migration single-value behavior.
+   * Returns the single {@code aud} claim value, or {@code null} when absent. If multiple audiences
+   * are present, the first is returned.
    */
   public static String getAudience(Claims claims) {
-    java.util.Set<String> audience = claims.getAudience();
+    Set<String> audience = claims.getAudience();
     if (Objects.isNull(audience) || audience.isEmpty()) {
       return null;
     }
     return audience.iterator().next();
+  }
+
+  /** Returns all {@code aud} claim values, or an empty set when absent. */
+  public static Set<String> getAudiences(Claims claims) {
+    Set<String> audience = claims.getAudience();
+    return Objects.isNull(audience) ? Set.of() : audience;
   }
 
   public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {

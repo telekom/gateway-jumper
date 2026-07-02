@@ -24,7 +24,9 @@ import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import jumper.Constants;
 import jumper.config.Config;
 import jumper.model.config.Spectre;
@@ -116,27 +118,48 @@ public class MockHorizonServer {
     return ref.get();
   }
 
-  public void createVerifyStructure(String id, String method, String stargateUrl) {
-    List<LoggedRequest> recordedRequests = retrieveEventsForTrace(id, 2);
+  private record RequestResponseBodies(String requestBody, String responseBody) {}
 
-    String seRequestString = bodyOf(recordedRequests.get(0));
-    String seResponseString = bodyOf(recordedRequests.get(1));
+  /**
+   * Retrieves the request/response event pair for a scenario's trace id and pairs each recorded
+   * body up by its {@code SpectreData.kind}, not by recording order. WireMock's {@code findAll}
+   * ordering is not guaranteed (see {@code createVerifyEventType} / docs/sb4-migration.md), so
+   * positional {@code get(0)}/{@code get(1)} access on the same 2-element list this method replaces
+   * risked flipping request and response under it.
+   */
+  private RequestResponseBodies retrieveRequestResponsePair(String id) {
+    List<LoggedRequest> recorded = retrieveEventsForTrace(id, 2);
+    ObjectMapper om = ObjectMapperUtil.getInstance();
+
+    Map<String, String> bodiesByKind =
+        recorded.stream()
+            .map(this::bodyOf)
+            .collect(
+                Collectors.toMap(
+                    body -> om.readValue(body, Spectre.class).getData().getKind(), body -> body));
+
+    return new RequestResponseBodies(
+        bodiesByKind.get(SpectreKind.REQUEST.toString()),
+        bodiesByKind.get(SpectreKind.RESPONSE.toString()));
+  }
+
+  public void createVerifyStructure(String id, String method, String stargateUrl) {
+    RequestResponseBodies bodies = retrieveRequestResponsePair(id);
 
     ObjectMapper om = ObjectMapperUtil.getInstance();
 
     try {
-      assertSpectreEvent(om.readValue(seRequestString, Spectre.class), method, true, stargateUrl);
-      assertSpectreEvent(om.readValue(seResponseString, Spectre.class), method, false, stargateUrl);
+      assertSpectreEvent(
+          om.readValue(bodies.requestBody(), Spectre.class), method, true, stargateUrl);
+      assertSpectreEvent(
+          om.readValue(bodies.responseBody(), Spectre.class), method, false, stargateUrl);
     } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }
 
   public void createVerifyPayload(String id) {
-    List<LoggedRequest> recordedRequests = retrieveEventsForTrace(id, 2);
-
-    String seRequestString = bodyOf(recordedRequests.get(0));
-    String seResponseString = bodyOf(recordedRequests.get(1));
+    RequestResponseBodies bodies = retrieveRequestResponsePair(id);
 
     try {
       Object expected =
@@ -144,13 +167,13 @@ public class MockHorizonServer {
       assertEquals(
           expected,
           ObjectMapperUtil.getInstance()
-              .readValue(seRequestString, Spectre.class)
+              .readValue(bodies.requestBody(), Spectre.class)
               .getData()
               .getPayload());
       assertEquals(
           expected,
           ObjectMapperUtil.getInstance()
-              .readValue(seResponseString, Spectre.class)
+              .readValue(bodies.responseBody(), Spectre.class)
               .getData()
               .getPayload());
     } catch (JacksonException e) {
@@ -159,10 +182,7 @@ public class MockHorizonServer {
   }
 
   public void createVerifyPayloadBase64(String id) {
-    List<LoggedRequest> recordedRequests = retrieveEventsForTrace(id, 2);
-
-    String seRequestString = bodyOf(recordedRequests.get(0));
-    String seResponseString = bodyOf(recordedRequests.get(1));
+    RequestResponseBodies bodies = retrieveRequestResponsePair(id);
 
     ObjectMapper om = ObjectMapperUtil.getInstance();
 
@@ -174,13 +194,13 @@ public class MockHorizonServer {
           BASE64_PATTERN
               .matcher(
                   String.valueOf(
-                      om.readValue(seRequestString, Spectre.class).getData().getPayload()))
+                      om.readValue(bodies.requestBody(), Spectre.class).getData().getPayload()))
               .matches());
       assertTrue(
           BASE64_PATTERN
               .matcher(
                   String.valueOf(
-                      om.readValue(seResponseString, Spectre.class).getData().getPayload()))
+                      om.readValue(bodies.responseBody(), Spectre.class).getData().getPayload()))
               .matches());
     } catch (JacksonException e) {
       throw new RuntimeException(e);

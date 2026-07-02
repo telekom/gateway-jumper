@@ -227,9 +227,8 @@ public class SpectreService {
 
       log.debug("json compatible content-type, will try to parse as json payload");
       try {
-        // Parse into a structural value (Map/List/scalar) so the outbound WebClient encoder
-        // serializes the original JSON content rather than treating it as a single String.
-        return objectMapper.readValue(payload, Object.class);
+        // try to return payload as json
+        return objectMapper.readTree(payload);
       } catch (JacksonException e) {
         log.error("error while parsing json payload for spectre", e);
       }
