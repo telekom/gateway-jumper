@@ -54,6 +54,14 @@ Feature: proper authorization token reaches provider endpoint
     And API consumer receives a 200 status code
     And API Provider receives header x-tardis-traceid that matches regex dummy
 
+  Scenario: Consumer calls proxy route with iris token containing multiple aud, OneToken preserves all audiences
+    Given RealRoute headers are set
+    And authorization token with multiple aud set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithMultipleAud
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route and realm header contains several values, correct issuer set in OneToken
     Given RealRoute headers are set
     And several realm fields are contained in the header

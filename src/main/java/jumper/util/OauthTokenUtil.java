@@ -5,6 +5,8 @@
 package jumper.util;
 
 import io.jsonwebtoken.*;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -13,7 +15,15 @@ import org.jspecify.annotations.NonNull;
 public final class OauthTokenUtil {
 
   private static final JwtParser jwtParser =
-      Jwts.parserBuilder().setAllowedClockSkewSeconds(3600).build();
+      Jwts.parser().unsecured().clockSkewSeconds(3600).build();
+
+  // jjwt >= 0.12 only parses unsecured JWTs whose header declares "alg":"none".
+  // The consumer token is a signed JWT whose claims we read without verifying the
+  // signature, so we strip the signature and swap in an unsecured header for parsing.
+  private static final String UNSECURED_HEADER =
+      Base64.getUrlEncoder()
+          .withoutPadding()
+          .encodeToString("{\"alg\":\"none\"}".getBytes(StandardCharsets.UTF_8));
 
   // Private constructor to prevent instantiation
   private OauthTokenUtil() {
@@ -35,8 +45,11 @@ public final class OauthTokenUtil {
   public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
     String tokenWithoutSignature = getTokenWithoutSignature(consumerToken);
 
+    int firstDot = tokenWithoutSignature.indexOf('.');
+    String unsecuredToken = UNSECURED_HEADER + tokenWithoutSignature.substring(firstDot);
+
     try {
-      return jwtParser.parseClaimsJwt(tokenWithoutSignature);
+      return jwtParser.parseUnsecuredClaims(unsecuredToken);
     } catch (Exception e) {
       log.error("Failed to parse consumer token", e);
       throw e;

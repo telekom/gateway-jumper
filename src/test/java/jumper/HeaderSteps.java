@@ -7,6 +7,7 @@ package jumper;
 import static jumper.config.Config.*;
 import static jumper.util.JumperConfigUtil.addIdSuffix;
 import static jumper.util.TokenUtil.getConsumerAccessTokenWithAud;
+import static jumper.util.TokenUtil.getConsumerAccessTokenWithMultipleAud;
 
 import io.cucumber.java.ParameterType;
 import io.cucumber.java.en.And;
@@ -145,6 +146,13 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
             httpHeaders -> httpHeaders.setBearerAuth(getConsumerAccessTokenWithAud())));
+  }
+
+  @And("authorization token with multiple aud set")
+  public void setAuthorizationWithMultipleAud() {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> httpHeaders.setBearerAuth(getConsumerAccessTokenWithMultipleAud())));
   }
 
   @And("technical headers added")

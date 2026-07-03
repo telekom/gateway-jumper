@@ -6,7 +6,7 @@ package jumper.config;
 
 import jumper.Constants;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.web.embedded.netty.NettyServerCustomizer;
+import org.springframework.boot.reactor.netty.NettyServerCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

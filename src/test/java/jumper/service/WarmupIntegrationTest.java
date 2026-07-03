@@ -4,26 +4,29 @@
 
 package jumper.service;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.any;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockserver.integration.ClientAndServer.startClientAndServer;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwt;
+import java.util.List;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
 import jumper.util.OauthTokenUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.mockserver.client.MockServerClient;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.model.HttpRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
+import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
@@ -31,22 +34,22 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {"jumper.warmup.enabled=false"})
 @ActiveProfiles("test")
-@AutoConfigureObservability
+@AutoConfigureMetrics
+@AutoConfigureTracing
 @AutoConfigureWebTestClient(timeout = "PT10S")
 class WarmupIntegrationTest {
 
   private static final int MOCK_UPSTREAM_PORT = 1090;
 
-  static ClientAndServer mockUpstream;
-  static MockServerClient mockClient;
+  static WireMockServer mockUpstream;
 
   @Autowired WebTestClient webTestClient;
 
   @BeforeAll
   static void startMockUpstream() {
-    mockUpstream = startClientAndServer(MOCK_UPSTREAM_PORT);
-    mockClient = new MockServerClient("localhost", MOCK_UPSTREAM_PORT);
-    mockClient.when(request()).respond(response().withStatusCode(200));
+    mockUpstream = new WireMockServer(options().port(MOCK_UPSTREAM_PORT));
+    mockUpstream.start();
+    mockUpstream.stubFor(any(anyUrl()).willReturn(aResponse().withStatus(200)));
   }
 
   @AfterAll
@@ -87,14 +90,14 @@ class WarmupIntegrationTest {
         .isOk();
 
     // Verify the mock upstream received the request
-    HttpRequest[] recordedRequests = mockClient.retrieveRecordedRequests(request());
+    List<LoggedRequest> recordedRequests = mockUpstream.findAll(anyRequestedFor(anyUrl()));
     assertThat(recordedRequests)
         .as("Mock upstream should have received the warmup request")
         .isNotEmpty();
 
     // Verify the upstream received a Bearer authorization header (LMS token, not the consumer
     // token)
-    String authHeader = recordedRequests[0].getFirstHeader("Authorization");
+    String authHeader = recordedRequests.get(0).getHeader("Authorization");
     assertThat(authHeader).startsWith("Bearer ");
 
     // Parse the LMS token and verify it has expected claims

@@ -9,7 +9,7 @@
 spring:
   autoconfigure:
     exclude:
-      - org.springframework.boot.actuate.autoconfigure.tracing.zipkin.ZipkinAutoConfiguration
+      - org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.zipkin.ZipkinWithOpenTelemetryTracingAutoConfiguration
 
 management:
   otlp:

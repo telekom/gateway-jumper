@@ -212,7 +212,7 @@ public class OauthTokenUtilTest {
           String token, String description) {
         var claims = getAllClaimsFromToken(token);
 
-        assertThat(claims.getHeader().toString()).contains("alg=HS256");
+        assertThat(claims.getHeader().getAlgorithm()).isEqualTo("none");
         assertThat(claims.getBody().get(CLAIM_NAME_KEY, String.class)).isEqualTo(CLAIM_NAME_VALUE);
         assertThat(claims.getBody().get(CLAIM_SCOPE_KEY, String.class))
             .isEqualTo(CLAIM_SCOPE_VALUE);
