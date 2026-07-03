@@ -44,21 +44,6 @@ public final class OauthTokenUtil {
     return getAllClaimsFromToken(consumerToken).getBody().get(claimName, String.class);
   }
 
-  /**
-   * Reads the {@code aud} claim defensively. Since jjwt &gt;= 0.12 always models the audience as a
-   * {@code Set<String>} (regardless of whether the wire format is a JSON string or array), {@code
-   * claims.get("aud", String.class)} would throw. This returns the single audience value, or {@code
-   * null} when absent. If multiple audiences are present, the first is returned to preserve the
-   * pre-migration single-value behavior.
-   */
-  public static String getAudience(Claims claims) {
-    java.util.Set<String> audience = claims.getAudience();
-    if (Objects.isNull(audience) || audience.isEmpty()) {
-      return null;
-    }
-    return audience.iterator().next();
-  }
-
   public static Jwt<?, Claims> getAllClaimsFromToken(String consumerToken) {
     String tokenWithoutSignature = getTokenWithoutSignature(consumerToken);
 

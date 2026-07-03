@@ -8,15 +8,16 @@ import static jumper.config.Config.LOCAL_ISSUER;
 import static jumper.config.Config.REMOTE_ISSUER;
 
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import lombok.Builder;
+import lombok.Singular;
 
 @Builder
 public class AccessToken {
@@ -25,7 +26,13 @@ public class AccessToken {
   private String env;
   private String originZone;
   private String originStargate;
-  private String audience;
+
+  /**
+   * Token audiences. Use {@code .audience("x")} to add a single value or {@code
+   * .audiences(List.of(...))} for several — a multi-valued {@code aud} is emitted as a JSON array.
+   */
+  @Singular("audience")
+  private List<String> audiences;
 
   public String getConsumerAccessToken() {
     HashMap<String, String> claims = new HashMap<>();
@@ -35,9 +42,8 @@ public class AccessToken {
     claims.put("originZone", originZone);
     claims.put("originStargate", originStargate);
     claims.put("clientId", clientId);
-    if (audience != null) claims.put("aud", audience);
 
-    return buildAccessToken(claims, LOCAL_ISSUER);
+    return buildAccessToken(claims, audiences, LOCAL_ISSUER);
   }
 
   public String getIdpToken() {
@@ -50,10 +56,10 @@ public class AccessToken {
     claims.put("originZone", originZone);
     claims.put("originStargate", originStargate);
 
-    return buildAccessToken(claims, REMOTE_ISSUER);
+    return buildAccessToken(claims, List.of(), REMOTE_ISSUER);
   }
 
-  private String buildAccessToken(Map<String, String> claims, String issuer) {
+  private String buildAccessToken(Map<String, String> claims, List<String> aud, String issuer) {
 
     Date issuedAt = new Date(System.currentTimeMillis());
     Date expiration = new Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(5));
@@ -68,14 +74,19 @@ public class AccessToken {
     String keyId = "123456";
 
     assert privateKey != null;
-    return Jwts.builder()
-        .setClaims(claims)
-        .setIssuer(issuer)
-        .setExpiration(expiration)
-        .setIssuedAt(issuedAt)
-        .signWith(privateKey, SignatureAlgorithm.RS256)
-        .setHeaderParam("kid", keyId)
-        .setHeaderParam("typ", "JWT")
+    var builder =
+        Jwts.builder().claims(claims).issuer(issuer).expiration(expiration).issuedAt(issuedAt);
+
+    if (aud != null && !aud.isEmpty()) {
+      builder.audience().add(aud).and();
+    }
+
+    return builder
+        .signWith(privateKey, Jwts.SIG.RS256)
+        .header()
+        .keyId(keyId)
+        .add("typ", "JWT")
+        .and()
         .compact();
   }
 }

@@ -21,15 +21,35 @@ MockServer with WireMock. Status: complete, full suite green
 - jjwt **0.12+** always models the `aud` claim internally as `Set<String>`,
   regardless of whether the JSON wire value is a string or an array.
   Therefore `claims.get("aud", String.class)` now **throws** `RequiredTypeException`.
-- This was a **read-side** bug only. Fix: read audience via the canonical
-  `Claims.getAudience()` and take the single value.
-  - Helper: `OauthTokenUtil.getAudience(Claims)`.
-  - Production read site: `TokenGeneratorService` (inbound consumer-token `aud`).
-  - Test reads: `VerificationSteps#checkPubSub` / `#checkAud`.
+- **Read side:** read audience via the canonical `Claims.getAudience()`
+  (`Set<String>`). Production read site: `TokenGeneratorService`
+  (inbound consumer-token `aud`). Test reads: `VerificationSteps#checkPubSub`
+  / `#checkAud` / `#checkMultipleAud`.
+- **Multiple audiences are now preserved end-to-end.** An earlier interim helper
+  (`OauthTokenUtil.getAudience`) collapsed the audience to the first value; it has
+  been **removed**. `TokenGeneratorService` was refactored off the old
+  `HashMap<String,String>` claims container onto jjwt's native `ClaimsBuilder` /
+  `Claims`, so `aud` is set via the typed `.audience().add(Collection).and()`
+  builder and a multi-valued consumer-token audience flows through intact.
+  - **Precedence (unchanged semantics):** the consumer token's audience(s) win
+    when present; otherwise a non-legacy `subscriberId` is the fallback.
+    `ClaimsBuilder#audience` is **additive** (it unions, it does not replace), so
+    the two branches are expressed as a single exclusive `if/else-if` — a naive
+    line-by-line translation of the old `map.put("aud", …)` (which replaces) would
+    silently union `subscriberId` with the consumer audiences.
 - **Emit wire format is preserved automatically**: jjwt 0.12.4+ restored
   backward-compat — a single-element audience serializes as a JSON **string**,
-  multiple as a JSON array. So putting a single `aud` String via `setClaims`
-  still emits a string, matching pre-migration 0.11.5. No emit change required.
+  multiple as a JSON array. So a single `aud` still emits a string, matching
+  pre-migration 0.11.5. No emit change required.
+- **Weak-key error mapping moved off the exception type.** The modern
+  `Jwts.builder().signWith(key, Jwts.SIG.RS256)` surfaces a too-weak RSA key as a
+  `io.jsonwebtoken.security.SignatureException` at sign time — **not** the old
+  `WeakKeyException` that the deprecated `signWith(key, SignatureAlgorithm.RS256)`
+  threw. Catching `WeakKeyException` therefore silently stopped mapping to 401
+  (→ 500). `TokenGeneratorService` now checks RSA modulus bit length up front
+  (`RSAKey#getModulus().bitLength() < 2048`) and throws the 401 explicitly,
+  independent of jjwt's internal exception type (see the `errorResponse.feature`
+  "external IDP weak key configured" scenario + `TokenGeneratorServiceTest`).
 - Unsecured-claim parsing changed: jjwt ≥ 0.12 only parses unsecured JWTs whose
   header declares `"alg":"none"`. Reading a signed token's claims without
   verification requires stripping the signature and swapping in an unsecured

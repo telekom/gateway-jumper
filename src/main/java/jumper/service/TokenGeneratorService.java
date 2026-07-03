@@ -5,7 +5,8 @@
 package jumper.service;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.WeakKeyException;
+import java.security.Key;
+import java.security.interfaces.RSAKey;
 import java.util.*;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
@@ -14,7 +15,6 @@ import jumper.util.OauthTokenUtil;
 import jumper.util.RsaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,15 +26,13 @@ public class TokenGeneratorService {
 
   private final KeyInfoService keyInfoService;
 
-  private String fromRealm(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt) {
+  private String fromRealm(Claims claims, String issuer, Date expiration, Date issuedAt) {
     log.debug("GatewayToken or OneToken: Loading keyInfo");
     KeyInfo keyInfo = keyInfoService.getKeyInfo();
     return generateToken(claims, issuer, expiration, issuedAt, keyInfo);
   }
 
-  private String fromKey(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, String key) {
+  private String fromKey(Claims claims, String issuer, Date expiration, Date issuedAt, String key) {
 
     KeyInfo keyInfo = new KeyInfo();
     try {
@@ -48,23 +46,37 @@ public class TokenGeneratorService {
   }
 
   public String createJwtTokenFromKey(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, String key) {
+      Claims claims, String issuer, Date expiration, Date issuedAt, String key) {
     return fromKey(claims, issuer, expiration, issuedAt, key);
   }
 
   private String generateToken(
-      HashMap<String, String> claims, String issuer, Date expiration, Date issuedAt, KeyInfo key) {
-    try {
-      return Jwts.builder()
-          .setClaims(claims)
-          .setIssuer(issuer)
-          .setExpiration(expiration)
-          .setIssuedAt(issuedAt)
-          .signWith(key.getPk(), SignatureAlgorithm.RS256)
-          .setHeaderParam("kid", key.getKid())
-          .setHeaderParam("typ", "JWT")
-          .compact();
-    } catch (WeakKeyException e) {
+      Claims claims, String issuer, Date expiration, Date issuedAt, KeyInfo key) {
+    // Enforce RFC 7518 (Section 3.3) up front: RS256 requires RSA keys >= 2048 bits. jjwt surfaces
+    // a too-weak key as a SignatureException at signing time; checking here keeps the 401 mapping
+    // explicit and independent of jjwt's internal exception type.
+    assertKeyStrongEnoughForRs256(key.getPk());
+
+    JwtBuilder builder =
+        Jwts.builder()
+            .claims(claims)
+            .issuer(issuer)
+            .expiration(expiration)
+            .issuedAt(issuedAt)
+            .signWith(key.getPk(), Jwts.SIG.RS256);
+
+    // Preserve the historical header shape: {"typ":"JWT","alg":"RS256"} (+ "kid" when present).
+    // A null kid (e.g. the external-IDP client assertion signed via fromKey) must be omitted.
+    var header = builder.header().add("typ", "JWT");
+    if (Objects.nonNull(key.getKid())) {
+      header.keyId(key.getKid());
+    }
+
+    return header.and().compact();
+  }
+
+  private static void assertKeyStrongEnoughForRs256(Key key) {
+    if (key instanceof RSAKey rsaKey && rsaKey.getModulus().bitLength() < 2048) {
       throw new ResponseStatusException(
           HttpStatus.UNAUTHORIZED,
           "Key is too weak: The JWT JWA Specification (RFC 7518, Section 3.3) states that keys used"
@@ -83,54 +95,62 @@ public class TokenGeneratorService {
     Jwt<?, Claims> consumerTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(jc.getConsumerToken());
 
-    Date issuedAt = consumerTokenClaims.getBody().getIssuedAt();
-    Date expiration = consumerTokenClaims.getBody().getExpiration();
-    String sub = consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    String aud = OauthTokenUtil.getAudience(consumerTokenClaims.getBody());
+    Date issuedAt = consumerTokenClaims.getPayload().getIssuedAt();
+    Date expiration = consumerTokenClaims.getPayload().getExpiration();
+    String sub = consumerTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
+    Set<String> consumerAudiences = consumerTokenClaims.getPayload().getAudience();
 
-    HashMap<String, String> claims = new HashMap<>();
-    claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
-    claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
-    claims.put(Constants.TOKEN_CLAIM_SUB, sub);
-    claims.put(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
-    claims.put(Constants.TOKEN_CLAIM_OPERATION, operation);
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer());
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone());
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
+    ClaimsBuilder claims =
+        Jwts.claims()
+            .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
+            .add(Constants.TOKEN_CLAIM_AZP, "stargate")
+            .subject(sub)
+            .add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath())
+            .add(Constants.TOKEN_CLAIM_OPERATION, operation)
+            .add(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer())
+            .add(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone())
+            .add(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
     if (legacy) {
       String consumerTokenSignature = OauthTokenUtil.getSignature(jc.getConsumerToken());
-      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
 
     } else {
-      claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
 
       if (Objects.nonNull(jc.getSecurityScopes())) {
-        claims.put(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
+        claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
       }
 
       if (Objects.nonNull(publisherId)) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
       }
 
       if (Objects.nonNull(subscriberId)) {
-        claims.put(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
-        claims.put(Constants.TOKEN_CLAIM_AUD, subscriberId);
+        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
       }
     }
 
-    if (StringUtils.isNotBlank(aud)) {
-      claims.put(Constants.TOKEN_CLAIM_AUD, aud);
+    // Audience precedence (preserved from the pre-refactor logic): the consumer token's
+    // audience(s) win when present; otherwise a non-legacy subscriberId is the fallback.
+    // ClaimsBuilder#audience is *additive*, so this must be a single, exclusive choice — the
+    // consumer branch now carries the full Set instead of only the first value.
+    if (Objects.nonNull(consumerAudiences) && !consumerAudiences.isEmpty()) {
+      claims.audience().add(consumerAudiences).and();
+    } else if (!legacy && Objects.nonNull(subscriberId)) {
+      claims.audience().add(subscriberId).and();
     }
 
-    return fromRealm(claims, issuer, expiration, issuedAt);
+    return fromRealm(claims.build(), issuer, expiration, issuedAt);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {
-    HashMap<String, String> claims = new HashMap<>();
-    claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
-    claims.put(Constants.TOKEN_CLAIM_AZP, "stargate");
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, "gateway");
+    Claims claims =
+        Jwts.claims()
+            .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
+            .add(Constants.TOKEN_CLAIM_AZP, "stargate")
+            .add(Constants.TOKEN_CLAIM_CLIENT_ID, "gateway")
+            .build();
 
     return fromRealm(
         claims,
