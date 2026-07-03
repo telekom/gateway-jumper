@@ -63,7 +63,9 @@ public class RedisHealthCheck {
     if (connection instanceof RedisClusterConnection) {
       ((RedisClusterConnection) connection).clusterGetClusterInfo();
     } else {
-      connection.serverCommands().info("server");
+      // Use PING (category @fast/@connection) instead of INFO (category @dangerous)
+      // so the health check works with hardened Valkey/Redis ACLs (e.g. +@all -@dangerous).
+      connection.ping();
     }
   }
 
