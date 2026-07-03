@@ -4,10 +4,10 @@
 
 package jumper.model.response;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import jumper.util.ObjectMapperUtil;
 import lombok.Getter;
 import lombok.Setter;
+import tools.jackson.core.JacksonException;
 
 @Getter
 @Setter
@@ -18,7 +18,7 @@ public class JumperInfoResponse {
   public String toString() {
     try {
       return ObjectMapperUtil.getInstance().writeValueAsString(incomingResponse);
-    } catch (JsonProcessingException e) {
+    } catch (JacksonException e) {
       throw new RuntimeException(e);
     }
   }

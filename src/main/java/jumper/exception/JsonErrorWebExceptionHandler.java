@@ -18,9 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.autoconfigure.web.WebProperties.Resources;
-import org.springframework.boot.autoconfigure.web.reactive.error.DefaultErrorWebExceptionHandler;
 import org.springframework.boot.web.error.ErrorAttributeOptions;
-import org.springframework.boot.web.reactive.error.ErrorAttributes;
+import org.springframework.boot.webflux.autoconfigure.error.DefaultErrorWebExceptionHandler;
+import org.springframework.boot.webflux.error.ErrorAttributes;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.MergedAnnotation;
 import org.springframework.core.annotation.MergedAnnotations;
@@ -166,7 +166,7 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
 
   private String formatError(Throwable ex, ServerRequest request) {
     String reason = ex.getClass().getSimpleName() + ": " + ex.getMessage();
-    return "Resolved [" + reason + "] for HTTP " + request.methodName() + " " + request.path();
+    return "Resolved [" + reason + "] for HTTP " + request.method().name() + " " + request.path();
   }
 
   private String determineMessage(

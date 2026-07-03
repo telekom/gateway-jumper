@@ -6,12 +6,13 @@ package jumper.service;
 
 import static jumper.Constants.TOKEN_REQUEST_METHOD_POST;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.handler.ssl.SslHandshakeTimeoutException;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
@@ -184,10 +185,14 @@ public class TokenFetchService {
     exp - REQUIRED. Expiration time on or after which the JWT MUST NOT be accepted for processing.
     iat - OPTIONAL. Time at which the JWT was issued.
     */
-    HashMap<String, String> claims = new HashMap<>();
-    claims.put(Constants.TOKEN_CLAIM_SUB, oauthCredentials.getClientId());
-    claims.put(Constants.TOKEN_CLAIM_AUD, tokenEndpoint);
-    claims.put(Constants.TOKEN_CLAIM_JTI, UUID.randomUUID().toString());
+    Claims claims =
+        Jwts.claims()
+            .subject(oauthCredentials.getClientId())
+            .audience()
+            .add(tokenEndpoint)
+            .and()
+            .id(UUID.randomUUID().toString())
+            .build();
 
     return tokenGeneratorService.createJwtTokenFromKey(
         claims,

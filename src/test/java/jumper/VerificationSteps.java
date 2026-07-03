@@ -12,6 +12,7 @@ import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwt;
 import java.util.Base64;
+import java.util.Set;
 import java.util.regex.Pattern;
 import jumper.util.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
@@ -131,6 +132,13 @@ public class VerificationSteps {
           .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkAud);
+    } else if (tokenType.equalsIgnoreCase("OneTokenWithMultipleAud")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkMultipleAud);
     } else if (tokenType.equalsIgnoreCase("MeshToken")) {
       this.baseSteps
           .getRequestExchange()
@@ -233,7 +241,7 @@ public class VerificationSteps {
 
     assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
     assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("subscriberId", String.class));
-    assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("aud", String.class));
+    assertEquals(Set.of(PUBSUB_SUBSCRIBER), claimsFromToken.getBody().getAudience());
   }
 
   private void checkScopes(String token) {
@@ -245,7 +253,13 @@ public class VerificationSteps {
   private void checkAud(String token) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
 
-    assertEquals("testAudience", claimsFromToken.getBody().get("aud", String.class));
+    assertEquals(Set.of("testAudience"), claimsFromToken.getBody().getAudience());
+  }
+
+  private void checkMultipleAud(String token) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+
+    assertEquals(Set.of("testAudience1", "testAudience2"), claimsFromToken.getBody().getAudience());
   }
 
   private void checkMeshToken(String token) {

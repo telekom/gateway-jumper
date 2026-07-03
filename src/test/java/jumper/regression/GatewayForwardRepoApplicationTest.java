@@ -4,15 +4,17 @@
 
 package jumper.regression;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockserver.model.HttpRequest.request;
 
+import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.model.HttpResponse;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
@@ -32,7 +34,7 @@ import org.springframework.web.client.RestClient;
 @Import(CloudXForwardedConfiguration.class)
 public class GatewayForwardRepoApplicationTest {
 
-  private static ClientAndServer mockserver;
+  private static WireMockServer mockserver;
 
   @LocalServerPort private int port;
 
@@ -45,10 +47,10 @@ public class GatewayForwardRepoApplicationTest {
 
   @BeforeAll
   static void startMockServer() {
-    mockserver = ClientAndServer.startClientAndServer(0);
-    mockserver
-        .when(request().withMethod("GET"))
-        .respond(HttpResponse.response().withStatusCode(200).withBody("a nice response"));
+    mockserver = new WireMockServer(options().dynamicPort());
+    mockserver.start();
+    mockserver.stubFor(
+        get(anyUrl()).willReturn(aResponse().withStatus(200).withBody("a nice response")));
   }
 
   @AfterAll
@@ -58,7 +60,7 @@ public class GatewayForwardRepoApplicationTest {
 
   @DynamicPropertySource
   static void dynamicProperty(DynamicPropertyRegistry registry) {
-    registry.add("mockserver.port", () -> mockserver.getPort());
+    registry.add("mockserver.port", () -> mockserver.port());
   }
 
   @Test

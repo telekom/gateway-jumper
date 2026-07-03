@@ -4,9 +4,10 @@
 
 package jumper.config;
 
-import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
+import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 
@@ -14,6 +15,7 @@ import org.springframework.test.context.ContextConfiguration;
 @ActiveProfiles("test")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient(timeout = "PT10S") // PT65S - PT = Period time, S = seconds
-@AutoConfigureObservability
+@AutoConfigureMetrics
+@AutoConfigureTracing
 @ContextConfiguration(classes = {CustomHttpClientConfiguration.class})
 public class CucumberContextConfiguration {}

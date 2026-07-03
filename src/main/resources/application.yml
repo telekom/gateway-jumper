@@ -42,11 +42,6 @@ management:
   #   TRACING_EXPORTER=otlp   -> application-otlp.yml
   #   TRACING_EXPORTER=zipkin -> application-zipkin.yml (default)
   # The chart sets TRACING_EXPORTER; locally it defaults to zipkin.
-  metrics:
-    distribution:
-      slo:
-        spring.cloud.gateway.http.client.requests: 1ms,2ms,5ms,10ms,20ms,50ms,100ms,200ms,500ms,1000ms,2000ms,5000ms,10000ms,30000ms,60000ms
-
 
 cache-manager:
   caffeine-caches:
@@ -73,8 +68,6 @@ spring:
     name: ${JUMPER_NAME:jumper}
   cloud:
     gateway:
-      metrics:
-        enabled: true
       server:
         webflux:
           forwarded:

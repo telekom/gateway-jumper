@@ -48,6 +48,18 @@ public class TokenUtil {
     return consumerAccessToken.getConsumerAccessToken();
   }
 
+  public static String getConsumerAccessTokenWithMultipleAud() {
+    AccessToken consumerAccessToken =
+        AccessToken.builder()
+            .env("local")
+            .clientId("eni--local-team--local-app")
+            .originZone("localZone")
+            .originStargate("https://zone.local.de")
+            .audiences(java.util.List.of("testAudience1", "testAudience2"))
+            .build();
+    return consumerAccessToken.getConsumerAccessToken();
+  }
+
   public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());

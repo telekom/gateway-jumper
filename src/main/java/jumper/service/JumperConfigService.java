@@ -25,7 +25,7 @@ public class JumperConfigService {
   public JumperConfig resolveJumperConfig(ServerHttpRequest readOnlyRequest) {
     JumperConfig jumperConfig;
     // failover logic if routing_config header present
-    if (readOnlyRequest.getHeaders().containsKey(Constants.HEADER_ROUTING_CONFIG)) {
+    if (readOnlyRequest.getHeaders().containsHeader(Constants.HEADER_ROUTING_CONFIG)) {
       // evaluate routingConfig for failover scenario
       List<JumperConfig> jumperConfigList = JumperConfig.parseJumperConfigListFrom(readOnlyRequest);
       log.debug("failover case, routing_config: {}", jumperConfigList);
