@@ -40,7 +40,7 @@ jobs:
         with:
           extra_plugins: |
             semantic-release-export-data
-            conventional-changelog-conventionalcommits
+            conventional-changelog-conventionalcommits@9.3.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
