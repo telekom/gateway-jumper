@@ -14,13 +14,23 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import tools.jackson.databind.json.JsonMapper;
 
 public class OauthTokenUtilTest {
+
+  @BeforeAll
+  static void initObjectMapper() {
+    // getAllClaimsFromToken parses the JWT header via ObjectMapperUtil, which is normally populated
+    // by Spring. Populate the static holder so this context-less unit test does not depend on some
+    // other Spring-context test having run first (previously an order-dependent MalformedJwt).
+    new ObjectMapperUtil(JsonMapper.builder().build());
+  }
 
   private static final String CLAIM_NAME_KEY = "name";
   private static final String CLAIM_NAME_VALUE = "test user";

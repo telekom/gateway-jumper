@@ -14,14 +14,24 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import jumper.model.config.JumperConfig;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ServerWebExchange;
+import tools.jackson.databind.json.JsonMapper;
 
 class ExchangeStateManagerTest {
 
   private ServerWebExchange exchange;
   private Map<String, Object> attributes;
+
+  @BeforeAll
+  static void initObjectMapper() {
+    // JumperConfig (de)serialization goes through ObjectMapperUtil, which is normally populated by
+    // Spring. Populate the static holder so this context-less unit test does not depend on some
+    // other Spring-context test having run first (previously an order-dependent NPE).
+    new ObjectMapperUtil(JsonMapper.builder().build());
+  }
 
   @BeforeEach
   void setUp() {
