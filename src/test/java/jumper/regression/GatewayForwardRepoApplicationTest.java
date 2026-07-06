@@ -6,7 +6,10 @@ package jumper.regression;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.anyUrl;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -84,6 +87,7 @@ public class GatewayForwardRepoApplicationTest {
             .header("X-Forwarded-Host", "example.org")
             .header("X-Forwarded-Port", "443")
             .header("X-Forwarded-Proto", "https")
+            .header("X-Forwarded-Path", "/gateway/path")
             .header("X-Forwarded-Prefix", "/evil")
             .retrieve()
             .toEntity(String.class);
@@ -93,5 +97,8 @@ public class GatewayForwardRepoApplicationTest {
     var body = result.getBody();
     assertNotNull(body);
     assertTrue(body.contains("a nice response"), "Body\n%s".formatted(body));
+    mockserver.verify(
+        getRequestedFor(urlPathEqualTo("/get"))
+            .withHeader("X-Forwarded-Path", equalTo("/gateway/path")));
   }
 }
