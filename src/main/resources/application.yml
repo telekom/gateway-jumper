@@ -74,6 +74,7 @@ spring:
     gateway:
       server:
         webflux:
+          trusted-proxies: '${SPRING_CLOUD_GATEWAY_SERVER_WEBFLUX_TRUSTED_PROXIES:127\.0\.0\.1|::1|0:0:0:0:0:0:0:1|localhost}'
           forwarded:
             enabled: false
           x-forwarded:
@@ -217,4 +218,3 @@ logging:
       console: logstash
   level:
     jumper.service.AuditLogService: INFO
-
