@@ -37,6 +37,10 @@ management:
       # header flow) across the mesh. Export format (OTLP or Zipkin) is
       # independent of wire propagation (B3).
       type: B3_MULTI
+  metrics:
+    distribution:
+      slo:
+        spring.cloud.gateway.http.client.requests: 1ms,2ms,5ms,10ms,20ms,50ms,100ms,200ms,500ms,1000ms,2000ms,5000ms,10000ms,30000ms,60000ms
   # Trace exporter selection is profile-driven so exactly one exporter is active
   # at runtime, even though both exporter libraries are on the classpath:
   #   TRACING_EXPORTER=otlp   -> application-otlp.yml
