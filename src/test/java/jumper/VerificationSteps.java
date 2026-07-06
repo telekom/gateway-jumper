@@ -145,7 +145,7 @@ public class VerificationSteps {
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkMeshToken)
           .expectHeader()
-          .valueMatches(Constants.HEADER_CONSUMER_TOKEN, "Bearer " + baseSteps.authHeader);
+          .doesNotExist(Constants.HEADER_CONSUMER_TOKEN);
     } else if (tokenType.equalsIgnoreCase("ExternalConfigured")) {
       this.baseSteps
           .getRequestExchange()

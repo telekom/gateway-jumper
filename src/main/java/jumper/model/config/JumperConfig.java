@@ -40,7 +40,7 @@ public class JumperConfig {
   String consumer;
   String consumerOriginStargate;
   String consumerOriginZone;
-  String consumerToken;
+  String authorizationToken;
   String externalTokenEndpoint;
 
   @JsonProperty("issuer")
@@ -151,25 +151,33 @@ public class JumperConfig {
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
 
     // processing
-    setConsumerToken(
+    setAuthorizationToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
-    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    Jwt<?, Claims> authorizationTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(authorizationToken);
+    setConsumer(
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+        authorizationTokenClaims
+            .getBody()
+            .get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
   }
 
   public void fillProcessingInfo(ServerHttpRequest request) {
-    setConsumerToken(
+    setAuthorizationToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
-    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    Jwt<?, Claims> authorizationTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(authorizationToken);
+    setConsumer(
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+        authorizationTokenClaims
+            .getBody()
+            .get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
 
     // Spectre stuff
     JumperConfig jc =

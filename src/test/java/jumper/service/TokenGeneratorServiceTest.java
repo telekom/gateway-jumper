@@ -79,7 +79,7 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("consumer-token audience overrides the subscriberId default")
+  @DisplayName("consumer token audience overrides the subscriberId default")
   void singleConsumerAudience_overridesSubscriberId() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
@@ -114,7 +114,7 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("multiple consumer-token audiences are all preserved in the gateway token")
+  @DisplayName("multiple consumer token audiences are all preserved in the provider LMS token")
   void multipleConsumerAudiences_allPreserved() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("aud1", "aud2", "aud3"));
@@ -131,7 +131,7 @@ class TokenGeneratorServiceTest {
 
   @Test
   @DisplayName(
-      "a single consumer-token audience is emitted as a JSON string, not a one-element array")
+      "a single consumer token audience is emitted as a JSON string, not a one-element array")
   void singleConsumerAudience_emitsPlainStringOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
@@ -168,7 +168,7 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("multiple consumer-token audiences are emitted as a JSON array")
+  @DisplayName("multiple consumer token audiences are emitted as a JSON array")
   void multipleConsumerAudiences_emitJsonArrayOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("aud1", "aud2"));
@@ -224,10 +224,10 @@ class TokenGeneratorServiceTest {
         .getConsumerAccessToken();
   }
 
-  private static JumperConfig jumperConfig(String consumerToken) {
+  private static JumperConfig jumperConfig(String authorizationToken) {
     JumperConfig jc = new JumperConfig();
     // production stores the raw Authorization header value, i.e. with the "Bearer " prefix
-    jc.setConsumerToken("Bearer " + consumerToken);
+    jc.setAuthorizationToken("Bearer " + authorizationToken);
     jc.setRequestPath("/base/path");
     jc.setConsumer("eni--local-team--local-app");
     jc.setConsumerOriginZone("localZone");

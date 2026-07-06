@@ -84,7 +84,7 @@ public class SpectreService {
 
     if (http instanceof ServerHttpRequest) {
       Map<String, String> httpHeaders = new HashMap<>(rq.getHeaders().toSingleValueMap());
-      httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
+      httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getAuthorizationToken());
       httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
       data.setHeader(httpHeaders);
       data.setKind(SpectreKind.REQUEST.toString());

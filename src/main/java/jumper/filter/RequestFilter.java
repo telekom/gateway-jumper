@@ -79,6 +79,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           enrichTracingWithDataFrom(readOnlyRequest);
 
           JumperConfig jumperConfig = jumperConfigService.resolveJumperConfig(readOnlyRequest);
+          ExchangeStateManager.setMeshRoute(exchange, jumperConfig.isMeshRoute());
 
           // calculate routing stuff and add it to exchange and JumperConfig
           URI finalApiUri =
@@ -111,15 +112,10 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
               jumperInfoRequest.ifPresent(
                   i -> i.setInfoScenario(false, false, true, false, false, false));
 
-              HeaderUtil.addHeader(
-                  requestMutationBuilder,
-                  Constants.HEADER_CONSUMER_TOKEN,
-                  jumperConfig.getConsumerToken());
-
               checkForInternetFacingZone(
                   requestMutationBuilder,
                   jumperConfig.getConsumerOriginZone(),
-                  jumperConfig.getConsumerToken());
+                  jumperConfig.getAuthorizationToken());
 
               ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 

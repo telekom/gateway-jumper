@@ -101,13 +101,13 @@ public class TokenGeneratorService {
       String publisherId,
       String subscriberId) {
 
-    Jwt<?, Claims> consumerTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(jc.getConsumerToken());
+    Jwt<?, Claims> authorizationTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
 
-    Date issuedAt = consumerTokenClaims.getPayload().getIssuedAt();
-    Date expiration = consumerTokenClaims.getPayload().getExpiration();
-    String sub = consumerTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    Set<String> consumerAudiences = consumerTokenClaims.getPayload().getAudience();
+    Date issuedAt = authorizationTokenClaims.getPayload().getIssuedAt();
+    Date expiration = authorizationTokenClaims.getPayload().getExpiration();
+    String sub = authorizationTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
+    Set<String> audiences = authorizationTokenClaims.getPayload().getAudience();
 
     ClaimsBuilder claims =
         Jwts.claims()
@@ -145,11 +145,11 @@ public class TokenGeneratorService {
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
     // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
     // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(consumerAudiences) && !consumerAudiences.isEmpty()) {
-      if (consumerAudiences.size() == 1) {
-        claims.audience().single(consumerAudiences.iterator().next());
+    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
+      if (audiences.size() == 1) {
+        claims.audience().single(audiences.iterator().next());
       } else {
-        claims.audience().add(consumerAudiences).and();
+        claims.audience().add(audiences).and();
       }
     } else if (Objects.nonNull(subscriberId)) {
       claims.audience().single(subscriberId);
