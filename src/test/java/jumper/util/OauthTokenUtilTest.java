@@ -35,7 +35,7 @@ public class OauthTokenUtilTest {
   // Token providers
   // ---------------------------------------------------------------------------
 
-  /** All token variants that parseTokenParts must accept as valid. */
+  /** All token variants that getTokenWithoutSignature must accept as valid. */
   static Stream<Arguments> provideValidTestTokens() {
     return Stream.of(
         Arguments.of(getTestToken(true), "standard Bearer prefix"),
@@ -46,7 +46,7 @@ public class OauthTokenUtilTest {
 
   /**
    * Tokens that lack a proper Bearer prefix or JWT structure and must trigger
-   * IllegalArgumentException from parseTokenParts.
+   * IllegalArgumentException during token parsing.
    */
   static Stream<Arguments> provideInvalidBearerTokens() {
     String rawJwt = getTestToken(false);
@@ -94,41 +94,6 @@ public class OauthTokenUtilTest {
       public void testGetTokenWithoutSignature_invalidToken_throwsException(
           String token, String description) {
         assertThrows(IllegalArgumentException.class, () -> getTokenWithoutSignature(token));
-      }
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Tests for getSignature
-  // ---------------------------------------------------------------------------
-
-  @Nested
-  class getSignatureTests {
-
-    @Nested
-    @DisplayName("Valid tokens")
-    class ValidTokens {
-
-      @ParameterizedTest(name = "{1}")
-      @MethodSource("jumper.util.OauthTokenUtilTest#provideValidTestTokens")
-      @DisplayName("Should return the signature part from a valid JWT token")
-      public void testGetSignature_validToken_returnsSignature(String token, String description) {
-        String normalized = token.trim().substring("Bearer ".length()).trim();
-        String expected = normalized.substring(normalized.lastIndexOf(".") + 1);
-
-        assertThat(getSignature(token)).isEqualTo(expected);
-      }
-    }
-
-    @Nested
-    @DisplayName("Invalid tokens")
-    class InvalidTokens {
-
-      @ParameterizedTest(name = "{1}")
-      @MethodSource("jumper.util.OauthTokenUtilTest#provideInvalidBearerTokens")
-      @DisplayName("Should throw IllegalArgumentException for")
-      public void testGetSignature_invalidToken_throwsException(String token, String description) {
-        assertThrows(IllegalArgumentException.class, () -> getSignature(token));
       }
     }
   }

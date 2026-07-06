@@ -30,10 +30,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Unit tests for {@link TokenGeneratorService}. These characterize the existing legacy /
- * publisher-token behavior and pin the {@code aud}-claim semantics (single-audience override of
- * {@code subscriberId}, {@code subscriberId} fallback, and — the fix — preservation of multiple
- * audiences carried by the consumer token).
+ * Unit tests for {@link TokenGeneratorService}. These characterize publisher-token behavior and pin
+ * the {@code aud}-claim semantics (single-audience override of {@code subscriberId}, {@code
+ * subscriberId} fallback, and preservation of multiple audiences carried by the consumer token).
  */
 class TokenGeneratorServiceTest {
 
@@ -63,32 +62,6 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("legacy token carries the consumer token signature as accessTokenSignature")
-  void legacyToken_setsAccessTokenSignature() {
-    // arrange
-    String consumerToken =
-        AccessToken.builder()
-            .clientId("eni--local-team--local-app")
-            .originZone("localZone")
-            .originStargate("https://zone.local.de")
-            .build()
-            .getConsumerAccessToken();
-    JumperConfig jc = jumperConfig(consumerToken);
-    String expectedSignature = OauthTokenUtil.getSignature("Bearer " + consumerToken);
-
-    // act
-    String token =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, true);
-    Claims claims = parse(token);
-
-    // assert
-    assertThat(claims.get("accessTokenSignature", String.class)).isEqualTo(expectedSignature);
-    assertThat(claims.get("typ", String.class)).isEqualTo("Bearer");
-    assertThat(claims.get("azp", String.class)).isEqualTo("stargate");
-    assertThat(claims.getIssuer()).isEqualTo(ISSUER);
-  }
-
-  @Test
   @DisplayName("publisher gateway token carries the expected static claims")
   void publisherToken_setsExpectedClaims() {
     // act
@@ -114,7 +87,7 @@ class TokenGeneratorServiceTest {
     // act
     String token =
         tokenGeneratorService.generateProviderLmsToken(
-            jc, "GET", ISSUER, "publisher-1", "subscriber-1", false);
+            jc, "GET", ISSUER, "publisher-1", "subscriber-1");
     Claims claims = parse(token);
 
     // assert: consumer aud wins, subscriberId still present in its own claim
@@ -132,8 +105,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateProviderLmsToken(
-            jc, "GET", ISSUER, null, "subscriber-1", false);
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
     Claims claims = parse(token);
 
     // assert
@@ -148,8 +120,7 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, false);
+    String token = tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
     Claims claims = parse(token);
 
     // assert
@@ -165,8 +136,7 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, false);
+    String token = tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
 
     // assert: inspect the raw JWT payload JSON directly. Claims#getAudience() normalizes both
     // wire forms (string or array) into a Set on read, so it cannot catch a regression here -
@@ -186,8 +156,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateProviderLmsToken(
-            jc, "GET", ISSUER, null, "subscriber-1", false);
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
 
     // assert
     JsonNode aud = rawPayloadJson(token).get("aud");
@@ -203,8 +172,7 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, false);
+    String token = tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
 
     // assert
     JsonNode aud = rawPayloadJson(token).get("aud");

@@ -100,7 +100,6 @@ public class Constants {
   public static final String TOKEN_CLAIM_IAT = "iat";
   public static final String TOKEN_CLAIM_OPERATION = "operation";
   public static final String TOKEN_CLAIM_REQUEST_PATH = "requestPath";
-  public static final String TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE = "accessTokenSignature";
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT = "env";
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID = "publisherId";
   public static final String TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID = "subscriberId";

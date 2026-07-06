@@ -174,8 +174,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                             HeaderUtil.getLastValueFromHeaderField(
                                 readOnlyRequest, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                             HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
-                            false);
+                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID));
 
                     HeaderUtil.addHeader(
                         requestMutationBuilder,

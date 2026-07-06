@@ -99,8 +99,7 @@ public class TokenGeneratorService {
       String operation,
       String issuer,
       String publisherId,
-      String subscriberId,
-      boolean legacy) {
+      String subscriberId) {
 
     Jwt<?, Claims> consumerTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(jc.getConsumerToken());
@@ -125,28 +124,22 @@ public class TokenGeneratorService {
       claims.add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
     }
 
-    if (legacy) {
-      String consumerTokenSignature = OauthTokenUtil.getSignature(jc.getConsumerToken());
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
+    // env is only set on provider LMS tokens, not on mesh LMS tokens, because
+    // consumer-side proxy routes do not inject the `environment` header.
+    if (Objects.nonNull(jc.getEnvName())) {
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
+    }
 
-    } else {
-      // env is only set on provider LMS tokens, not on mesh LMS tokens, because
-      // the `environment` header is not injected on proxy routes.
-      if (Objects.nonNull(jc.getEnvName())) {
-        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
-      }
+    if (Objects.nonNull(jc.getSecurityScopes())) {
+      claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
+    }
 
-      if (Objects.nonNull(jc.getSecurityScopes())) {
-        claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
-      }
+    if (Objects.nonNull(publisherId)) {
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+    }
 
-      if (Objects.nonNull(publisherId)) {
-        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
-      }
-
-      if (Objects.nonNull(subscriberId)) {
-        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
-      }
+    if (Objects.nonNull(subscriberId)) {
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
     }
 
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
@@ -158,7 +151,7 @@ public class TokenGeneratorService {
       } else {
         claims.audience().add(consumerAudiences).and();
       }
-    } else if (!legacy && Objects.nonNull(subscriberId)) {
+    } else if (Objects.nonNull(subscriberId)) {
       claims.audience().single(subscriberId);
     }
 
@@ -172,13 +165,8 @@ public class TokenGeneratorService {
    * API.
    */
   public String generateProviderLmsToken(
-      JumperConfig jc,
-      String operation,
-      String issuer,
-      String publisherId,
-      String subscriberId,
-      boolean legacy) {
-    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId, legacy);
+      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
+    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
   }
 
   /**
@@ -188,7 +176,7 @@ public class TokenGeneratorService {
    * validates this token against the consumer zone's StarGate JWKS.
    */
   public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
-    return generateLmsToken(jc, "gateway", operation, issuer, null, null, false);
+    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

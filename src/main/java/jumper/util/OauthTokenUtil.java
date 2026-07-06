@@ -30,12 +30,17 @@ public final class OauthTokenUtil {
     throw new UnsupportedOperationException("Utility class");
   }
 
-  public static String getSignature(String consumerToken) {
-    return parseTokenParts(consumerToken).signature();
-  }
-
   static String getTokenWithoutSignature(String consumerToken) {
-    return parseTokenParts(consumerToken).headerWithPayload();
+    String fullyProcessedToken = processToken(consumerToken);
+
+    int firstDot = fullyProcessedToken.indexOf(".");
+    int secondDot = fullyProcessedToken.indexOf(".", firstDot + 1);
+
+    if (secondDot == -1) {
+      throw new IllegalArgumentException("Invalid token format");
+    }
+
+    return fullyProcessedToken.substring(0, secondDot + 1);
   }
 
   public static String getClaimFromToken(String consumerToken, String claimName) {
@@ -56,22 +61,6 @@ public final class OauthTokenUtil {
     }
   }
 
-  private static TokenParts parseTokenParts(String consumerToken) {
-    String fullyProcessedToken = processToken(consumerToken);
-
-    int firstDot = fullyProcessedToken.indexOf(".");
-    int secondDot = fullyProcessedToken.indexOf(".", firstDot + 1);
-
-    if (secondDot == -1) {
-      throw new IllegalArgumentException("Invalid token format");
-    }
-
-    String headerAndPayload = fullyProcessedToken.substring(0, secondDot + 1);
-    String signature = fullyProcessedToken.substring(secondDot + 1);
-
-    return new TokenParts(headerAndPayload, signature);
-  }
-
   private static @NonNull String processToken(String consumerToken) {
     if (Objects.isNull(consumerToken)) {
       throw new IllegalArgumentException("Consumer token not provided, but expected");
@@ -87,6 +76,4 @@ public final class OauthTokenUtil {
     String tokenWithoutBearer = trimmedConsumerToken.substring(BEARER_PREFIX.length());
     return tokenWithoutBearer.trim();
   }
-
-  private record TokenParts(String headerWithPayload, String signature) {}
 }
