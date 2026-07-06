@@ -78,8 +78,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, true);
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, true);
     Claims claims = parse(token);
 
     // assert
@@ -114,7 +113,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+        tokenGeneratorService.generateProviderLmsToken(
             jc, "GET", ISSUER, "publisher-1", "subscriber-1", false);
     Claims claims = parse(token);
 
@@ -133,7 +132,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+        tokenGeneratorService.generateProviderLmsToken(
             jc, "GET", ISSUER, null, "subscriber-1", false);
     Claims claims = parse(token);
 
@@ -150,8 +149,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, false);
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, false);
     Claims claims = parse(token);
 
     // assert
@@ -168,8 +166,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, false);
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, false);
 
     // assert: inspect the raw JWT payload JSON directly. Claims#getAudience() normalizes both
     // wire forms (string or array) into a Set on read, so it cannot catch a regression here -
@@ -189,7 +186,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+        tokenGeneratorService.generateProviderLmsToken(
             jc, "GET", ISSUER, null, "subscriber-1", false);
 
     // assert
@@ -207,8 +204,7 @@ class TokenGeneratorServiceTest {
 
     // act
     String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, false);
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null, false);
 
     // assert
     JsonNode aud = rawPayloadJson(token).get("aud");

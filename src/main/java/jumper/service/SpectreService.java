@@ -134,8 +134,7 @@ public class SpectreService {
 
   private Mono<Void> publishEvent(Spectre event, JumperConfig jc) {
 
-    // determine environment for local issuer and routing path on qa
-    String envName = determineEnvironment(jc);
+    String envName = jc.getRealmName();
 
     return publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
@@ -147,17 +146,6 @@ public class SpectreService {
               log.error("Error publishing Spectre event", throwable);
               return Mono.empty(); // Don't fail the main request flow
             });
-  }
-
-  private String determineEnvironment(JumperConfig jc) {
-
-    // should be always available
-    if (jc.getGatewayClient().getIssuer() != null) {
-      return jc.getGatewayClient().getIssuer().replaceFirst(".*realms/", "");
-    }
-
-    // as a fallback value we use realm already defined within jumper config
-    return jc.getRealmName();
   }
 
   private Mono<Void> publishEventMono(String url, String token, Spectre event) {

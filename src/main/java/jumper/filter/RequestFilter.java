@@ -105,7 +105,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
 
-            if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
+            if (jumperConfig.isMeshRoute()) {
               // GW-2-GW MESH TOKEN GENERATION
               log.debug("----------------GATEWAY MESH-------------");
               jumperInfoRequest.ifPresent(
@@ -167,7 +167,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+                        tokenGeneratorService.generateProviderLmsToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),
