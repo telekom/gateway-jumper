@@ -121,11 +121,11 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           Objects.requireNonNullElse(jumperConfig.getRealmName(), Constants.DEFAULT_REALM);
       return Mono.fromCallable(
               () -> {
-                String token =
+                String meshLmsToken =
                     tokenGeneratorService.generateMeshLmsToken(
                         jumperConfig, request.getMethod().name(), localIssuerUrl + "/" + realmName);
                 TokenInfo tokenInfo = new TokenInfo();
-                tokenInfo.setAccessToken(token);
+                tokenInfo.setAccessToken(meshLmsToken);
                 return tokenInfo;
               })
           .subscribeOn(Schedulers.parallel())

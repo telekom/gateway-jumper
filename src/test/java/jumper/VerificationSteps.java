@@ -202,8 +202,8 @@ public class VerificationSteps {
         .valueMatches(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS);
   }
 
-  private void checkOneToken(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkOneToken(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
@@ -220,8 +220,8 @@ public class VerificationSteps {
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }
 
-  private void checkOneTokenSimple(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkOneTokenSimple(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
@@ -236,34 +236,34 @@ public class VerificationSteps {
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }
 
-  private void checkPubSub(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkPubSub(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
     assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("subscriberId", String.class));
     assertEquals(Set.of(PUBSUB_SUBSCRIBER), claimsFromToken.getBody().getAudience());
   }
 
-  private void checkScopes(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkScopes(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(SCOPES, claimsFromToken.getBody().get("scope", String.class));
   }
 
-  private void checkAud(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkAud(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(Set.of("testAudience"), claimsFromToken.getBody().getAudience());
   }
 
-  private void checkMultipleAud(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkMultipleAud(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(Set.of("testAudience1", "testAudience2"), claimsFromToken.getBody().getAudience());
   }
 
-  private void checkMeshToken(String token) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(token);
+  private void checkMeshToken(String meshLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(meshLmsToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     // Mesh LMS token carries the real consumer identity, not the "gateway" client

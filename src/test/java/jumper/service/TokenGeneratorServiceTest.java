@@ -62,11 +62,12 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("publisher gateway token carries the expected static claims")
+  @DisplayName("publisher token carries the expected static claims")
   void publisherToken_setsExpectedClaims() {
     // act
-    String token = tokenGeneratorService.generateGatewayTokenForPublisher(ISSUER, "default");
-    Claims claims = parse(token);
+    String publisherToken =
+        tokenGeneratorService.generateGatewayTokenForPublisher(ISSUER, "default");
+    Claims claims = parse(publisherToken);
 
     // assert
     assertThat(claims.get("typ", String.class)).isEqualTo("Bearer");
@@ -85,10 +86,10 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
+    String providerLmsToken =
         tokenGeneratorService.generateProviderLmsToken(
             jc, "GET", ISSUER, "publisher-1", "subscriber-1");
-    Claims claims = parse(token);
+    Claims claims = parse(providerLmsToken);
 
     // assert: consumer aud wins, subscriberId still present in its own claim
     assertThat(claims.getAudience()).containsExactly("consumerAud");
@@ -104,9 +105,9 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
+    String providerLmsToken =
         tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
-    Claims claims = parse(token);
+    Claims claims = parse(providerLmsToken);
 
     // assert
     assertThat(claims.getAudience()).containsExactly("subscriber-1");
@@ -120,8 +121,9 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token = tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
-    Claims claims = parse(token);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    Claims claims = parse(providerLmsToken);
 
     // assert
     assertThat(claims.getAudience()).containsExactlyInAnyOrder("aud1", "aud2", "aud3");
@@ -136,13 +138,14 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token = tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
 
     // assert: inspect the raw JWT payload JSON directly. Claims#getAudience() normalizes both
     // wire forms (string or array) into a Set on read, so it cannot catch a regression here -
     // jjwt's ClaimsBuilder#audience().add(...) emits a JSON array even for one element; only
     // .single(...) collapses to a plain string, matching pre-migration wire format.
-    JsonNode aud = rawPayloadJson(token).get("aud");
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
     assertThat(aud.isString()).isTrue();
     assertThat(aud.asString()).isEqualTo("consumerAud");
   }
@@ -155,11 +158,11 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
+    String providerLmsToken =
         tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
 
     // assert
-    JsonNode aud = rawPayloadJson(token).get("aud");
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
     assertThat(aud.isString()).isTrue();
     assertThat(aud.asString()).isEqualTo("subscriber-1");
   }
@@ -172,10 +175,11 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token = tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
 
     // assert
-    JsonNode aud = rawPayloadJson(token).get("aud");
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
     assertThat(aud.isArray()).isTrue();
     assertThat(aud.size()).isEqualTo(2);
   }
