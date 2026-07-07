@@ -16,6 +16,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options
 import static jumper.BaseSteps.getTestJson;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -267,7 +268,7 @@ public class MockHorizonServer {
     assertEquals(Config.ORIGIN_STARGATE, s.getData().getHeader().get("X-Origin-Stargate"));
     assertEquals("zone.local.de", s.getData().getHeader().get("X-Forwarded-Host"));
     assertEquals("443", s.getData().getHeader().get("X-Forwarded-Port"));
-    assertNotNull(s.getData().getHeader().get("Authorization"));
+    assertFalse(s.getData().getHeader().containsKey("Authorization"));
     assertEquals(Config.ENVIRONMENT, s.getData().getHeader().get("environment"));
     assertEquals("default", s.getData().getHeader().get("realm"));
     if (request) {

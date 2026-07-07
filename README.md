@@ -24,7 +24,34 @@ Its purpose is mainly advanced token (OAuth 2.0) handling, enabling support for:
 On the incoming side, it is called by Kong. On the outgoing side, it is the last component that calls the provider.
 For its functionality, it relies on information provided by the Kong component using headers, while remaining stateless itself.
 
-![flow!](pictures/jumper1_flow.png "usual flow")
+```mermaid
+flowchart LR
+    consumer((Consumer))
+    iris[Iris]
+
+    subgraph gateway [Gateway]
+        direction TB
+        kong[Kong]
+        jumper[Jumper]
+        issuerService[Issuer Service]
+    end
+
+    providerIdp[Provider IdP]
+    provider((Provider))
+
+    consumer -.->|request token| iris
+    iris -.->|token| consumer
+    consumer -->|request| kong
+    kong --> jumper
+    jumper -.->|optional token request| providerIdp
+    jumper --> provider
+    provider -.->|get public key| issuerService
+
+    classDef gatewayNode fill:#f8d7da,stroke:#c0392b,stroke-width:1px,color:#111;
+    classDef external fill:#f7f7f7,stroke:#666,stroke-width:1px,color:#111;
+    class kong,jumper,issuerService gatewayNode;
+    class consumer,iris,providerIdp,provider external;
+```
 
 ## Getting Started
 
@@ -184,7 +211,6 @@ A legacy scenario where Jumper forwards both the original token and a new LMS to
   "clientId": "<taken from incoming token>",
   "azp": "stargate",
   "originZone": "aws",
-  "accessTokenSignature": "<signature of incoming token>",
   "typ": "Bearer",
   "operation": "<performed operation>",
   "requestPath": "<taken from header>",
@@ -199,31 +225,88 @@ A legacy scenario where Jumper forwards both the original token and a new LMS to
 * `Authorization` - Original incoming token
 * `X-Gateway-Token` - New LMS token
 
-#### Mesh Token
+#### Mesh LMS Token
 
 Scenario with multiple Gateway instances involved.
-Jumper fetches an OAuth token from another zone's identity provider (so-called Mesh Token),
-while the original authorization token is passed in a `Consumer-Token` header.
+For gateway-to-gateway calls, Jumper creates a short-lived, self-signed Mesh LMS token from the
+incoming consumer token claims and sends it as the upstream `Authorization` header. The original
+consumer token is not forwarded to the downstream gateway.
 
-Mesh tokens are cached, so fetching is performed only if a valid token is not available.
+```mermaid
+flowchart LR
+    consumer((Consumer))
+    idpA[Identity Provider<br/>Zone A]
+    provider((Provider))
 
-![mesh flow!](pictures/jumper2_mesh.png "mesh flow")
+    subgraph zoneA [Zone A]
+        direction TB
+        kongA[Kong]
+        jumperA[Jumper]
+        issuerA[Issuer Service]
+    end
+
+    subgraph zoneB [Zone B]
+        direction TB
+        kongB[Kong]
+        jumperB[Jumper]
+        issuerB[Issuer Service]
+    end
+
+    consumer -.->|request token| idpA
+    idpA -.->|token| consumer
+    consumer --> kongA
+    kongA --> jumperA
+    jumperA -->|Mesh LMS token| kongB
+    kongB --> jumperB
+    jumperB -.->|validate Mesh LMS token| issuerA
+    jumperB -->|provider LMS token| provider
+    provider -.->|get public key| issuerB
+
+    classDef gatewayNode fill:#f8d7da,stroke:#c0392b,stroke-width:1px,color:#111;
+    classDef external fill:#f7f7f7,stroke:#666,stroke-width:1px,color:#111;
+    class kongA,jumperA,issuerA,kongB,jumperB,issuerB gatewayNode;
+    class consumer,idpA,provider external;
+```
 
 **Required Headers:**
 * `remote_api_url` - URL (including service base path) of the other zone's Gateway, to which the request is forwarded
-* `issuer` - Issuer of the other zone's identity provider
-* `client_id` - Client ID for dedicated client on the other zone's identity provider
-* `client_secret` - Client secret for dedicated client on the other zone's identity provider
+* `jumper_config` - Base64 encoded structure with `mesh` set to `true`
+* `issuer` - Legacy fallback discriminator for pre-migration proxy routes
 
 **Outgoing Headers:**
-* `Authorization` - Mesh token
-* `Consumer-Token` - Original incoming token
+* `Authorization` - Mesh LMS token
 
 #### External Authorization Token
 
 Jumper forwards requests with tokens fetched from provider-defined identity providers (Spacegate only).
 
-![oauth flow!](pictures/jumper3_external.png "oauth flow")
+```mermaid
+flowchart LR
+    consumer((Consumer))
+    idp[Identity Provider]
+    extIdp[External Identity Provider]
+    provider((Provider))
+
+    subgraph gateway [Gateway]
+        direction TB
+        kong[Kong]
+        jumper[Jumper]
+        issuer[Issuer Service]
+    end
+
+    consumer -.->|request token| idp
+    idp -.->|token| consumer
+    consumer --> kong
+    kong --> jumper
+    jumper -.->|request token| extIdp
+    extIdp -.->|token| jumper
+    jumper --> provider
+
+    classDef gatewayNode fill:#f8d7da,stroke:#c0392b,stroke-width:1px,color:#111;
+    classDef external fill:#f7f7f7,stroke:#666,stroke-width:1px,color:#111;
+    class kong,jumper,issuer gatewayNode;
+    class consumer,idp,extIdp,provider external;
+```
 
 **Required Headers:**
 * `remote_api_url` - Target URL
@@ -322,7 +405,35 @@ If enabled, Jumper can route requests to a failover zone when the primary zone f
 
 The following diagram shows how Jumper processes requests in case of an active failover:
 
-![jumper request processing with failover!](pictures/jumper_request_processing_with_failover.png)
+```mermaid
+flowchart TD
+    start([Jumper receives request])
+    hasRoutingConfig{routing_config present?}
+    normal[Use regular jumper_config processing]
+    selectConfig[Take next jumper_config<br/>from routing_config]
+    secondary{targetZone missing?}
+    targetUnavailable{targetZone skipped<br/>or zone is down?}
+    useConfig[Use selected jumper_config<br/>for routing]
+    useSecondary[Use secondary/provider config]
+    hasNext{another jumper_config exists?}
+    unavailable[Respond with 503]
+    done((done))
+
+    start --> hasRoutingConfig
+    hasRoutingConfig -->|no| normal
+    hasRoutingConfig -->|yes| selectConfig
+    selectConfig --> secondary
+    secondary -->|yes| useSecondary
+    secondary -->|no| targetUnavailable
+    targetUnavailable -->|no| useConfig
+    targetUnavailable -->|yes| hasNext
+    hasNext -->|yes| selectConfig
+    hasNext -->|no| unavailable
+    normal --> done
+    useSecondary --> done
+    useConfig --> done
+    unavailable --> done
+```
 
 #### Header Enhancement
 
@@ -359,31 +470,98 @@ Spectre-specific filters:
 * `SpectreResponseFilter` - Creates Spectre response event (if configured for given consumer/provider combination)
 * `SpectreRoutingFilter` - Sets authorization header and adapts routing path to Horizon
 
-To understand the filter chains per route, please refer to the route implementation in [Application.java](src/main/java/jumper/Application.java).
-The images below give some guidance, but the actual filters used in the current implementation can vary.
+To understand the filter chains per route, please refer to the route implementation in [RoutingConfiguration.java](src/main/java/jumper/config/RoutingConfiguration.java).
+The diagrams below summarize the current route definitions. Response-side filters are shown on the
+return path, even when their Gateway filter wraps the whole exchange internally.
 
 #### Proxy Route (`jumper_route`)
 
 The default route type that processes the majority of traffic. All token handling scenarios are supported.
 
-![proxy route!](pictures/jumperRoute1_proxy.png "proxy route")
+```mermaid
+sequenceDiagram
+    participant call
+    participant RequestFilter
+    participant UpstreamOAuthFilter
+    participant RemoveRequestHeaderFilter
+    participant PlaintextValidationFilter
+    participant ResponseFilter
+    participant upstream
+
+    call->>RequestFilter: request
+    Note over RequestFilter,PlaintextValidationFilter: request path
+    RequestFilter->>UpstreamOAuthFilter: next
+    UpstreamOAuthFilter->>RemoveRequestHeaderFilter: next
+    RemoveRequestHeaderFilter->>PlaintextValidationFilter: next
+    PlaintextValidationFilter->>upstream: request
+    Note over upstream,ResponseFilter: response path
+    upstream-->>ResponseFilter: response
+    ResponseFilter-->>call: response
+```
 
 #### Listener Route (`listener_route`)
 
 Supports payload listening via *Spectre* in addition to the basic functionality of the proxy route.
 
-![listener route!](pictures/jumperRoute2_listener.png "listener route")
+```mermaid
+sequenceDiagram
+    participant call
+    participant RequestFilter
+    participant UpstreamOAuthFilter
+    participant RemoveRequestHeaderFilter
+    participant RequestTransformationFilter
+    participant SpectreRequestFilter
+    participant ResponseFilter
+    participant ResponseTransformationFilter
+    participant SpectreResponseFilter
+    participant upstream
+
+    call->>RequestFilter: request
+    Note over RequestFilter,SpectreRequestFilter: request path
+    RequestFilter->>UpstreamOAuthFilter: next
+    UpstreamOAuthFilter->>RemoveRequestHeaderFilter: next
+    RemoveRequestHeaderFilter->>RequestTransformationFilter: next
+    RequestTransformationFilter->>SpectreRequestFilter: next
+    SpectreRequestFilter->>upstream: request
+    Note over upstream,ResponseFilter: response path
+    upstream-->>ResponseTransformationFilter: response
+    ResponseTransformationFilter-->>SpectreResponseFilter: cached response body
+    SpectreResponseFilter-->>ResponseFilter: response event handled
+    ResponseFilter-->>call: response
+```
 
 #### Spectre POST Route (`auto_event_route_post`)
 
 Receives event callback from Horizon. Only required for *Spectre*.
 The generic event type is modified to a listener specific one and forwarded to Horizon for further processing.
 
-![spectre route!](pictures/jumperRoute3_spectrePost.png "spectre post route")
+```mermaid
+sequenceDiagram
+    participant subscriber as Horizon subscriber
+    participant ModifyRequestBody
+    participant RemoveRequestParameter as removeRequestParameter
+    participant SpectreRoutingFilter
+    participant producer as Horizon producer
+
+    subscriber->>ModifyRequestBody: callback
+    ModifyRequestBody->>RemoveRequestParameter: SpectreBodyRewrite
+    RemoveRequestParameter->>SpectreRoutingFilter: next
+    SpectreRoutingFilter->>producer: publish event
+```
 
 #### Spectre HEAD Route (`auto_event_route_head`)
 
 Because Jumper acts as a Horizon callback consumer, it has to support a HEAD request for possible healthchecks.
 Only required for *Spectre*.
 
-![spectre route!](pictures/jumperRoute4_spectreHead.png "spectre head route")
+```mermaid
+sequenceDiagram
+    participant subscriber as Horizon subscriber
+    participant RemoveRequestParameter as removeRequestParameter
+    participant SpectreRoutingFilter
+    participant producer as Horizon producer
+
+    subscriber->>RemoveRequestParameter: healthcheck
+    RemoveRequestParameter->>SpectreRoutingFilter: next
+    SpectreRoutingFilter->>producer: healthcheck
+```

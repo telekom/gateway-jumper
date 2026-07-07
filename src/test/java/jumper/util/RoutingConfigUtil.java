@@ -19,7 +19,8 @@ public class RoutingConfigUtil {
   public static Consumer<HttpHeaders> getSecondaryRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondary(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondary());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
     };
   }
 
@@ -27,41 +28,70 @@ public class RoutingConfigUtil {
       BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(
-          Constants.HEADER_ROUTING_CONFIG, getRcSecondaryLoadbalancing(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondaryLoadbalancing());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
     };
   }
 
   public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxy(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxy());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
     };
   }
 
-  public static String getRcSecondary(String id) {
+  public static Consumer<HttpHeaders> getProxyRouteHeadersLegacyIssuer(BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxyLegacyIssuer(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
+    };
+  }
+
+  public static String getRcSecondary() {
     // proxy + real
-    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJc()));
+    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME), getRealRouteJc()));
   }
 
-  public static String getRcSecondaryLoadbalancing(String id) {
+  public static String getRcSecondaryLoadbalancing() {
     // proxy + real (with loadbalancing)
-    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME, id), getRealRouteJcLb()));
+    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME), getRealRouteJcLb()));
   }
 
-  public static String getRcProxy(String id) {
+  public static String getRcProxy() {
     // proxy + proxy
     return toJsonBase64(
-        List.of(
-            getProxyRouteJc(REMOTE_ZONE_NAME, id), getProxyRouteJc(REMOTE_FAILOVER_ZONE_NAME, id)));
+        List.of(getProxyRouteJc(REMOTE_ZONE_NAME), getProxyRouteJc(REMOTE_FAILOVER_ZONE_NAME)));
   }
 
-  private static JumperConfig getProxyRouteJc(String targetZone, String id) {
+  public static String getRcProxyLegacyIssuer(String id) {
+    // proxy + proxy, using the legacy issuer trigger as transitional fallback
+    return toJsonBase64(
+        List.of(
+            getProxyRouteJcLegacyIssuer(REMOTE_ZONE_NAME, id),
+            getProxyRouteJcLegacyIssuer(REMOTE_FAILOVER_ZONE_NAME, id)));
+  }
+
+  private static JumperConfig getProxyRouteJc(String targetZone) {
+    JumperConfig jc = new JumperConfig();
+    jc.setMesh(true);
+
+    setProxyRouteTarget(jc, targetZone);
+    return jc;
+  }
+
+  private static JumperConfig getProxyRouteJcLegacyIssuer(String targetZone, String id) {
     JumperConfig jc = new JumperConfig();
     jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/default");
     jc.setClientId(addIdSuffix("stargate", id));
     jc.setClientSecret("secret");
 
+    setProxyRouteTarget(jc, targetZone);
+    return jc;
+  }
+
+  private static void setProxyRouteTarget(JumperConfig jc, String targetZone) {
     switch (targetZone) {
       case REMOTE_ZONE_NAME -> {
         jc.setTargetZoneName(REMOTE_ZONE_NAME);
@@ -72,7 +102,6 @@ public class RoutingConfigUtil {
         jc.setRemoteApiUrl(REMOTE_HOST + REMOTE_FAILOVER_BASE_PATH);
       }
     }
-    return jc;
   }
 
   private static JumperConfig getRealRouteJc() {

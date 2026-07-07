@@ -84,8 +84,7 @@ public class SpectreService {
 
     if (http instanceof ServerHttpRequest) {
       Map<String, String> httpHeaders = new HashMap<>(rq.getHeaders().toSingleValueMap());
-      httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getConsumerToken());
-      httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
+      httpHeaders.remove(Constants.HEADER_AUTHORIZATION);
       data.setHeader(httpHeaders);
       data.setKind(SpectreKind.REQUEST.toString());
       data.setPayload(parsePayload(rq.getHeaders().getContentType(), payload));
@@ -95,6 +94,7 @@ public class SpectreService {
       spanName = ("Spectre response");
 
       Map<String, String> httpHeaders = new HashMap<>(rs.getHeaders().toSingleValueMap());
+      httpHeaders.remove(Constants.HEADER_AUTHORIZATION);
       httpHeaders.put(
           Constants.HEADER_X_TARDIS_TRACE_ID,
           rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
@@ -134,8 +134,7 @@ public class SpectreService {
 
   private Mono<Void> publishEvent(Spectre event, JumperConfig jc) {
 
-    // determine environment for local issuer and routing path on qa
-    String envName = determineEnvironment(jc);
+    String envName = jc.getRealmName();
 
     return publishEventMono(
             publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
@@ -147,17 +146,6 @@ public class SpectreService {
               log.error("Error publishing Spectre event", throwable);
               return Mono.empty(); // Don't fail the main request flow
             });
-  }
-
-  private String determineEnvironment(JumperConfig jc) {
-
-    // should be always available
-    if (jc.getGatewayClient().getIssuer() != null) {
-      return jc.getGatewayClient().getIssuer().replaceFirst(".*realms/", "");
-    }
-
-    // as a fallback value we use realm already defined within jumper config
-    return jc.getRealmName();
   }
 
   private Mono<Void> publishEventMono(String url, String token, Spectre event) {

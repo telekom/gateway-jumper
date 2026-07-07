@@ -30,10 +30,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Unit tests for {@link TokenGeneratorService}. These characterize the existing legacy /
- * publisher-token behavior and pin the {@code aud}-claim semantics (single-audience override of
- * {@code subscriberId}, {@code subscriberId} fallback, and — the fix — preservation of multiple
- * audiences carried by the consumer token).
+ * Unit tests for {@link TokenGeneratorService}. These characterize publisher-token behavior and pin
+ * the {@code aud}-claim semantics (single-audience override of {@code subscriberId}, {@code
+ * subscriberId} fallback, and preservation of multiple audiences carried by the consumer token).
  */
 class TokenGeneratorServiceTest {
 
@@ -63,38 +62,12 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("legacy token carries the consumer token signature as accessTokenSignature")
-  void legacyToken_setsAccessTokenSignature() {
-    // arrange
-    String consumerToken =
-        AccessToken.builder()
-            .clientId("eni--local-team--local-app")
-            .originZone("localZone")
-            .originStargate("https://zone.local.de")
-            .build()
-            .getConsumerAccessToken();
-    JumperConfig jc = jumperConfig(consumerToken);
-    String expectedSignature = OauthTokenUtil.getSignature("Bearer " + consumerToken);
-
-    // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, true);
-    Claims claims = parse(token);
-
-    // assert
-    assertThat(claims.get("accessTokenSignature", String.class)).isEqualTo(expectedSignature);
-    assertThat(claims.get("typ", String.class)).isEqualTo("Bearer");
-    assertThat(claims.get("azp", String.class)).isEqualTo("stargate");
-    assertThat(claims.getIssuer()).isEqualTo(ISSUER);
-  }
-
-  @Test
-  @DisplayName("publisher gateway token carries the expected static claims")
+  @DisplayName("publisher token carries the expected static claims")
   void publisherToken_setsExpectedClaims() {
     // act
-    String token = tokenGeneratorService.generateGatewayTokenForPublisher(ISSUER, "default");
-    Claims claims = parse(token);
+    String publisherToken =
+        tokenGeneratorService.generateGatewayTokenForPublisher(ISSUER, "default");
+    Claims claims = parse(publisherToken);
 
     // assert
     assertThat(claims.get("typ", String.class)).isEqualTo("Bearer");
@@ -106,17 +79,17 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
-  @DisplayName("consumer-token audience overrides the subscriberId default")
+  @DisplayName("consumer token audience overrides the subscriberId default")
   void singleConsumerAudience_overridesSubscriberId() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, "publisher-1", "subscriber-1", false);
-    Claims claims = parse(token);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(
+            jc, "GET", ISSUER, "publisher-1", "subscriber-1");
+    Claims claims = parse(providerLmsToken);
 
     // assert: consumer aud wins, subscriberId still present in its own claim
     assertThat(claims.getAudience()).containsExactly("consumerAud");
@@ -132,27 +105,25 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, "subscriber-1", false);
-    Claims claims = parse(token);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
+    Claims claims = parse(providerLmsToken);
 
     // assert
     assertThat(claims.getAudience()).containsExactly("subscriber-1");
   }
 
   @Test
-  @DisplayName("multiple consumer-token audiences are all preserved in the gateway token")
+  @DisplayName("multiple consumer token audiences are all preserved in the provider LMS token")
   void multipleConsumerAudiences_allPreserved() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("aud1", "aud2", "aud3"));
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, false);
-    Claims claims = parse(token);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    Claims claims = parse(providerLmsToken);
 
     // assert
     assertThat(claims.getAudience()).containsExactlyInAnyOrder("aud1", "aud2", "aud3");
@@ -160,22 +131,21 @@ class TokenGeneratorServiceTest {
 
   @Test
   @DisplayName(
-      "a single consumer-token audience is emitted as a JSON string, not a one-element array")
+      "a single consumer token audience is emitted as a JSON string, not a one-element array")
   void singleConsumerAudience_emitsPlainStringOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, false);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
 
     // assert: inspect the raw JWT payload JSON directly. Claims#getAudience() normalizes both
     // wire forms (string or array) into a Set on read, so it cannot catch a regression here -
     // jjwt's ClaimsBuilder#audience().add(...) emits a JSON array even for one element; only
     // .single(...) collapses to a plain string, matching pre-migration wire format.
-    JsonNode aud = rawPayloadJson(token).get("aud");
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
     assertThat(aud.isString()).isTrue();
     assertThat(aud.asString()).isEqualTo("consumerAud");
   }
@@ -188,30 +158,28 @@ class TokenGeneratorServiceTest {
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, "subscriber-1", false);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
 
     // assert
-    JsonNode aud = rawPayloadJson(token).get("aud");
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
     assertThat(aud.isString()).isTrue();
     assertThat(aud.asString()).isEqualTo("subscriber-1");
   }
 
   @Test
-  @DisplayName("multiple consumer-token audiences are emitted as a JSON array")
+  @DisplayName("multiple consumer token audiences are emitted as a JSON array")
   void multipleConsumerAudiences_emitJsonArrayOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("aud1", "aud2"));
     JumperConfig jc = jumperConfig(consumerToken);
 
     // act
-    String token =
-        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
-            jc, "GET", ISSUER, null, null, false);
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
 
     // assert
-    JsonNode aud = rawPayloadJson(token).get("aud");
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
     assertThat(aud.isArray()).isTrue();
     assertThat(aud.size()).isEqualTo(2);
   }
@@ -256,10 +224,10 @@ class TokenGeneratorServiceTest {
         .getConsumerAccessToken();
   }
 
-  private static JumperConfig jumperConfig(String consumerToken) {
+  private static JumperConfig jumperConfig(String authorizationToken) {
     JumperConfig jc = new JumperConfig();
     // production stores the raw Authorization header value, i.e. with the "Bearer " prefix
-    jc.setConsumerToken("Bearer " + consumerToken);
+    jc.setAuthorizationToken("Bearer " + authorizationToken);
     jc.setRequestPath("/base/path");
     jc.setConsumer("eni--local-team--local-app");
     jc.setConsumerOriginZone("localZone");

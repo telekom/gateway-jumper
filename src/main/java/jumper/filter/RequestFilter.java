@@ -79,6 +79,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           enrichTracingWithDataFrom(readOnlyRequest);
 
           JumperConfig jumperConfig = jumperConfigService.resolveJumperConfig(readOnlyRequest);
+          ExchangeStateManager.setMeshRoute(exchange, jumperConfig.isMeshRoute());
 
           // calculate routing stuff and add it to exchange and JumperConfig
           URI finalApiUri =
@@ -105,21 +106,16 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
 
-            if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
+            if (jumperConfig.isMeshRoute()) {
               // GW-2-GW MESH TOKEN GENERATION
               log.debug("----------------GATEWAY MESH-------------");
               jumperInfoRequest.ifPresent(
                   i -> i.setInfoScenario(false, false, true, false, false, false));
 
-              HeaderUtil.addHeader(
-                  requestMutationBuilder,
-                  Constants.HEADER_CONSUMER_TOKEN,
-                  jumperConfig.getConsumerToken());
-
               checkForInternetFacingZone(
                   requestMutationBuilder,
                   jumperConfig.getConsumerOriginZone(),
-                  jumperConfig.getConsumerToken());
+                  jumperConfig.getAuthorizationToken());
 
               ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
@@ -167,15 +163,14 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+                        tokenGeneratorService.generateProviderLmsToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),
                             HeaderUtil.getLastValueFromHeaderField(
                                 readOnlyRequest, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                             HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID),
-                            false);
+                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID));
 
                     HeaderUtil.addHeader(
                         requestMutationBuilder,

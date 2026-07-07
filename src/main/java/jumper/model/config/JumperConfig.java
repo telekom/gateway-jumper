@@ -4,6 +4,7 @@
 
 package jumper.model.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.jsonwebtoken.Claims;
@@ -39,7 +40,7 @@ public class JumperConfig {
   String consumer;
   String consumerOriginStargate;
   String consumerOriginZone;
-  String consumerToken;
+  String authorizationToken;
   String externalTokenEndpoint;
 
   @JsonProperty("issuer")
@@ -48,6 +49,9 @@ public class JumperConfig {
   String clientId;
   String clientSecret;
   Boolean accessTokenForwarding;
+
+  // Mesh-route discriminator set by the control plane in the jumper_config / routing_config blob.
+  Boolean mesh;
 
   @JsonProperty("realm")
   String realmName;
@@ -147,25 +151,33 @@ public class JumperConfig {
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
 
     // processing
-    setConsumerToken(
+    setAuthorizationToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
-    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    Jwt<?, Claims> authorizationTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(authorizationToken);
+    setConsumer(
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+        authorizationTokenClaims
+            .getBody()
+            .get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
   }
 
   public void fillProcessingInfo(ServerHttpRequest request) {
-    setConsumerToken(
+    setAuthorizationToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
-    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    Jwt<?, Claims> authorizationTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(authorizationToken);
+    setConsumer(
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+        authorizationTokenClaims
+            .getBody()
+            .get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
 
     // Spectre stuff
     JumperConfig jc =
@@ -209,6 +221,22 @@ public class JumperConfig {
   public boolean isListenerMatched() {
     return Objects.nonNull(getRouteListener())
         && Objects.nonNull(getRouteListener().get(getConsumer()));
+  }
+
+  /**
+   * Whether this route is a cross-zone mesh (proxy) route and should generate a mesh LMS token
+   * instead of a provider LMS token.
+   *
+   * <p>{@code mesh} is the canonical signal set by the control plane in the jumper_config /
+   * routing_config blob. The {@code internalTokenEndpoint} (issuer header) clause is a transitional
+   * fallback for pre-migration proxy routes that still carry {@code issuer} but no {@code mesh}.
+   *
+   * <p>TODO: drop the {@code internalTokenEndpoint} clause once the control-plane migration for the
+   * mesh LMS feature is fully complete.
+   */
+  @JsonIgnore
+  public boolean isMeshRoute() {
+    return Boolean.TRUE.equals(mesh) || Objects.nonNull(internalTokenEndpoint);
   }
 
   public Optional<BasicAuthCredentials> getBasicAuthCredentials() {

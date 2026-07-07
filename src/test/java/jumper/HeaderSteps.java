@@ -37,6 +37,12 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithXtokenExchange(baseSteps));
   }
 
+  @Given("ProxyRoute headers are set with legacy issuer")
+  public void proxyRouteHeadersSetWithLegacyIssuer() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersLegacyIssuer(baseSteps));
+  }
+
   @Given("A header {word} is set with value {word}")
   public void tardisTraceIdSet(String headerName, String headerValue) {
     baseSteps.setHttpHeadersOfRequest(
@@ -94,6 +100,13 @@ public class HeaderSteps {
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getProxyRouteHeaders(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set with legacy issuer")
+  public void proxyRoutingConfigHeaderSetWithLegacyIssuer() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getProxyRouteHeadersLegacyIssuer(baseSteps));
   }
 
   @Given("RealRoute headers without Authorization are set")
