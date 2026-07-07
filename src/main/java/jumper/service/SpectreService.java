@@ -84,8 +84,7 @@ public class SpectreService {
 
     if (http instanceof ServerHttpRequest) {
       Map<String, String> httpHeaders = new HashMap<>(rq.getHeaders().toSingleValueMap());
-      httpHeaders.replace(Constants.HEADER_AUTHORIZATION, jc.getAuthorizationToken());
-      httpHeaders.remove(Constants.HEADER_CONSUMER_TOKEN);
+      httpHeaders.remove(Constants.HEADER_AUTHORIZATION);
       data.setHeader(httpHeaders);
       data.setKind(SpectreKind.REQUEST.toString());
       data.setPayload(parsePayload(rq.getHeaders().getContentType(), payload));
@@ -95,6 +94,7 @@ public class SpectreService {
       spanName = ("Spectre response");
 
       Map<String, String> httpHeaders = new HashMap<>(rs.getHeaders().toSingleValueMap());
+      httpHeaders.remove(Constants.HEADER_AUTHORIZATION);
       httpHeaders.put(
           Constants.HEADER_X_TARDIS_TRACE_ID,
           rq.getHeaders().getFirst(Constants.HEADER_X_TARDIS_TRACE_ID));
