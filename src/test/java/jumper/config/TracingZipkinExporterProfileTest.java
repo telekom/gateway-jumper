@@ -38,6 +38,8 @@ class TracingZipkinExporterProfileTest {
   private static final String ZIPKIN_TRACING_AUTOCONFIG =
       "org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.zipkin"
           + ".ZipkinWithOpenTelemetryTracingAutoConfiguration";
+  private static final String ZIPKIN_AUTOCONFIG =
+      "org.springframework.boot.zipkin.autoconfigure.ZipkinAutoConfiguration";
 
   @Autowired private ApplicationContext context;
 
@@ -48,6 +50,10 @@ class TracingZipkinExporterProfileTest {
     assertThat(context.containsBean(ZIPKIN_TRACING_AUTOCONFIG))
         .withFailMessage(
             "Zipkin tracing auto-configuration must be active under the 'zipkin' profile")
+        .isTrue();
+    assertThat(context.containsBean(ZIPKIN_AUTOCONFIG))
+        .withFailMessage(
+            "Zipkin sender auto-configuration must be active under the 'zipkin' profile")
         .isTrue();
     assertThat(context.containsBean(OTLP_TRACING_AUTOCONFIG))
         .withFailMessage(
