@@ -18,6 +18,7 @@ spring:
       - org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.OtlpTracingAutoConfiguration
 
 management:
-  zipkin:
-    tracing:
-      endpoint: ${TRACING_URL:http://localhost:9411/api/v2/spans}
+  tracing:
+    export:
+      zipkin:
+        endpoint: ${TRACING_URL:http://localhost:9411/api/v2/spans}

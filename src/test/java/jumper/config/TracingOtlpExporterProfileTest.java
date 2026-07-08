@@ -8,6 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.micrometer.tracing.opentelemetry.autoconfigure.otlp.OtlpTracingProperties;
 import org.springframework.boot.micrometer.tracing.test.autoconfigure.AutoConfigureTracing;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
@@ -23,7 +24,9 @@ import org.springframework.test.context.ActiveProfiles;
  * <p>The actual {@code SpanExporter} beans are not instantiated under
  * {@code @AutoConfigureTracing}, so the auto-configuration class beans are asserted instead.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+    properties = "TRACING_URL=http://collector.example:4318/v1/traces")
 @ActiveProfiles({"test", "otlp"})
 @AutoConfigureTracing
 class TracingOtlpExporterProfileTest {
@@ -37,6 +40,8 @@ class TracingOtlpExporterProfileTest {
 
   @Autowired private ApplicationContext context;
 
+  @Autowired private OtlpTracingProperties otlpTracingProperties;
+
   @Test
   void otlpTracingAutoConfigurationActiveAndZipkinExcluded() {
     assertThat(context.containsBean(OTLP_TRACING_AUTOCONFIG))
@@ -46,5 +51,11 @@ class TracingOtlpExporterProfileTest {
         .withFailMessage(
             "Zipkin tracing auto-configuration must be excluded under the 'otlp' profile")
         .isFalse();
+  }
+
+  @Test
+  void otlpEndpointUsesTracingUrl() {
+    assertThat(otlpTracingProperties.getEndpoint())
+        .isEqualTo("http://collector.example:4318/v1/traces");
   }
 }
