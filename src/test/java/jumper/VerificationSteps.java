@@ -146,6 +146,13 @@ public class VerificationSteps {
           .value(HttpHeaders.AUTHORIZATION, this::checkMeshToken)
           .expectHeader()
           .doesNotExist(Constants.HEADER_CONSUMER_TOKEN);
+    } else if (tokenType.equalsIgnoreCase("MeshTokenWithNonDefaultRealm")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkMeshTokenWithNonDefaultRealm)
+          .expectHeader()
+          .doesNotExist(Constants.HEADER_CONSUMER_TOKEN);
     } else if (tokenType.equalsIgnoreCase("ExternalConfigured")) {
       this.baseSteps
           .getRequestExchange()
@@ -263,6 +270,14 @@ public class VerificationSteps {
   }
 
   private void checkMeshToken(String meshLmsToken) {
+    checkMeshToken(meshLmsToken, Constants.DEFAULT_REALM);
+  }
+
+  private void checkMeshTokenWithNonDefaultRealm(String meshLmsToken) {
+    checkMeshToken(meshLmsToken, NON_DEFAULT_REALM);
+  }
+
+  private void checkMeshToken(String meshLmsToken, String expectedRealm) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(meshLmsToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
@@ -279,8 +294,7 @@ public class VerificationSteps {
     assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
     assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
     // iss is the local StarGate issuer URL — the provider zone validates against its JWKS
-    assertEquals(
-        localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().getIssuer());
+    assertEquals(localIssuerUrl + "/" + expectedRealm, claimsFromToken.getBody().getIssuer());
     assertNotNull(claimsFromToken.getBody().getExpiration());
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }

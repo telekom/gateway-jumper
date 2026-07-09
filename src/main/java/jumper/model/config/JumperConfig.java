@@ -132,10 +132,7 @@ public class JumperConfig {
               HeaderUtil.getLastValueFromHeaderField(
                   request, Constants.HEADER_ACCESS_TOKEN_FORWARDING)));
     }
-    setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
-    if (StringUtils.isBlank(getRealmName())) {
-      setRealmName(Constants.DEFAULT_REALM);
-    }
+    setRealmName(determineRealm(request));
     setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
 
     // external oauth
@@ -185,6 +182,7 @@ public class JumperConfig {
             HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
     this.setRouteListener(jc.getRouteListener());
     this.setGatewayClient(jc.getGatewayClient());
+    setRealmName(determineRealm(request));
 
     // check loadBalancing
     if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
@@ -221,6 +219,25 @@ public class JumperConfig {
   public boolean isListenerMatched() {
     return Objects.nonNull(getRouteListener())
         && Objects.nonNull(getRouteListener().get(getConsumer()));
+  }
+
+  String determineRealm(ServerHttpRequest request) {
+    if (StringUtils.isNotBlank(getRealmName())) {
+      return getRealmName();
+    }
+
+    // TODO: remove legacy realm header and issuer fallbacks after Mesh LMS phase 2 completes.
+    String legacyRealmHeader =
+        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM);
+    if (StringUtils.isNotBlank(legacyRealmHeader)) {
+      return legacyRealmHeader;
+    }
+
+    if (StringUtils.isNotBlank(getInternalTokenEndpoint())) {
+      return getInternalTokenEndpoint().replaceFirst(".*realms/", "");
+    }
+
+    return Constants.DEFAULT_REALM;
   }
 
   /**
