@@ -14,6 +14,14 @@ Feature: request correctly routed to loadbalancing upstream
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization OneToken
 
+  Scenario: Consumer calls proxy route with Loadbalancing structure and conflicting legacy remoteApiUrl
+    Given RealRoute headers with conflicting remoteApiUrl are set
+    And jumperConfig conflicting loadbalancing set
+    And API provider set to respond on provider path
+    When consumer calls the proxy route without base path
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneTokenSimple
+
   Scenario: Consumer calls proxy route with secondary config and skip header, provider called
     Given Secondary routing_config with loadbalancing header set
     And skip zone header set
@@ -30,4 +38,3 @@ Feature: request correctly routed to loadbalancing upstream
     When consumer calls the proxy route
     Then API consumer receives a 500 status code
     And error response contains msg "missing routing information remote_api_url / jc.loadBalancing" error "Internal Server Error" status 500
-

@@ -162,6 +162,19 @@ public class TokenUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getRealRouteHeadersWithConflictingRemoteApiUrl(
+      String authorization) {
+    return httpHeaders -> {
+      if (authorization != null) httpHeaders.setBearerAuth(authorization);
+      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, REMOTE_HOST + REMOTE_CONFLICTING_BASE_PATH);
+      httpHeaders.set(Constants.HEADER_API_BASE_PATH, BASE_PATH);
+      httpHeaders.set(Constants.HEADER_ENVIRONMENT, ENVIRONMENT);
+      httpHeaders.set(Constants.HEADER_REALM, REALM);
+      httpHeaders.set(Constants.HEADER_ACCESS_TOKEN_FORWARDING, "false");
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
+    };
+  }
+
   public static Consumer<HttpHeaders> getEmptyHeaders() {
     return httpHeaders -> {};
   }

@@ -104,6 +104,13 @@ public class HeaderSteps {
         TokenUtil.getRealRouteHeadersWithoutRemoteApiUrl(TokenUtil.getConsumerAccessToken()));
   }
 
+  @Given("RealRoute headers with conflicting remoteApiUrl are set")
+  public void realRouteHeadersWithConflictingRemoteApiUrlSet() {
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getRealRouteHeadersWithConflictingRemoteApiUrl(
+            TokenUtil.getConsumerAccessToken()));
+  }
+
   @Given("Secondary routing_config header set")
   public void secondaryRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
@@ -115,6 +122,13 @@ public class HeaderSteps {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(
         RoutingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
+  }
+
+  @Given("Secondary routing_config header set with conflicting remoteApiUrl")
+  public void secondaryRoutingConfigHeaderSetWithConflictingRemoteApiUrl() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getSecondaryRouteHeadersWithConflictingRemoteApiUrl(baseSteps));
   }
 
   @Given("Proxy routing_config header set")

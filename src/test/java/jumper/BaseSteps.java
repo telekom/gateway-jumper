@@ -5,6 +5,7 @@
 package jumper;
 
 import static jumper.config.Config.REMOTE_BASE_PATH;
+import static jumper.config.Config.REMOTE_CONFLICTING_BASE_PATH;
 import static jumper.config.Config.REMOTE_FAILOVER_BASE_PATH;
 import static jumper.config.Config.REMOTE_PROVIDER_BASE_PATH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,6 +77,7 @@ public class BaseSteps {
       case "real" -> mockUpstreamServer.failoverRequest(REMOTE_BASE_PATH);
       case "failover" -> mockUpstreamServer.failoverRequest(REMOTE_FAILOVER_BASE_PATH);
       case "provider" -> mockUpstreamServer.failoverRequest(REMOTE_PROVIDER_BASE_PATH);
+      case "conflicting" -> mockUpstreamServer.failoverRequest(REMOTE_CONFLICTING_BASE_PATH);
     }
   }
 

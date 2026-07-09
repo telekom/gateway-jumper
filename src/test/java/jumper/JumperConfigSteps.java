@@ -174,6 +174,10 @@ public class JumperConfigSteps {
                 case "valid":
                   httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancing());
                   break;
+                case "conflicting":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getJcLoadBalancingWithConflictingPath());
+                  break;
                 case "empty":
                   httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getEmptyJcLoadBalancing());
                   break;

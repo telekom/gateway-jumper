@@ -98,6 +98,15 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  public static String getJcLoadBalancingWithConflictingPath() {
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(List.of(new Server(REMOTE_HOST + REMOTE_PROVIDER_BASE_PATH, 100.0)));
+
+    JumperConfig jc = new JumperConfig();
+    jc.setLoadBalancing(loadBalancing);
+    return toJsonBase64(jc);
+  }
+
   public static String getEmptyJcLoadBalancing() {
     LoadBalancing loadBalancing = new LoadBalancing();
     loadBalancing.setServers(List.of());

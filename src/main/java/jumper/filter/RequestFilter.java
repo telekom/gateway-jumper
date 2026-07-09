@@ -43,7 +43,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
   private final Tracer tracer;
   private final TokenGeneratorService tokenGeneratorService;
-  private final JumperConfigService jumperConfigService;
+  private final JumperConfigResolver jumperConfigResolver;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -60,11 +60,11 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   public RequestFilter(
       Tracer tracer,
       TokenGeneratorService tokenGeneratorService,
-      JumperConfigService jumperConfigService) {
+      JumperConfigResolver jumperConfigResolver) {
     super(Config.class);
     this.tracer = tracer;
     this.tokenGeneratorService = tokenGeneratorService;
-    this.jumperConfigService = jumperConfigService;
+    this.jumperConfigResolver = jumperConfigResolver;
   }
 
   @Override
@@ -78,7 +78,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           enrichTracingWithDataFrom(readOnlyRequest);
 
-          JumperConfig jumperConfig = jumperConfigService.resolveJumperConfig(readOnlyRequest);
+          JumperConfig jumperConfig = jumperConfigResolver.resolve(readOnlyRequest);
           ExchangeStateManager.setMeshRoute(exchange, jumperConfig.isMeshRoute());
 
           // calculate routing stuff and add it to exchange and JumperConfig

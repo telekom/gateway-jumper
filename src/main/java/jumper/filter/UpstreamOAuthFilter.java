@@ -10,7 +10,7 @@ import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
-import jumper.service.JumperConfigService;
+import jumper.service.JumperConfigResolver;
 import jumper.service.TokenCacheService;
 import jumper.service.TokenFetchService;
 import jumper.service.TokenGeneratorService;
@@ -40,7 +40,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   private final TokenFetchService tokenFetchService;
   private final TokenGeneratorService tokenGeneratorService;
-  private final JumperConfigService jumperConfigService;
+  private final JumperConfigResolver jumperConfigResolver;
   private final TokenCacheService tokenCacheService;
 
   @Value("${jumper.issuer.url}")
@@ -49,12 +49,12 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   public UpstreamOAuthFilter(
       TokenFetchService tokenFetchService,
       TokenGeneratorService tokenGeneratorService,
-      JumperConfigService jumperConfigService,
+      JumperConfigResolver jumperConfigResolver,
       TokenCacheService tokenCacheService) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
     this.tokenGeneratorService = tokenGeneratorService;
-    this.jumperConfigService = jumperConfigService;
+    this.jumperConfigResolver = jumperConfigResolver;
     this.tokenCacheService = tokenCacheService;
   }
 
@@ -71,8 +71,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           }
 
           log.debug("continue with UpstreamOAuthFilter");
-          JumperConfig jumperConfig =
-              jumperConfigService.resolveJumperConfig(exchange.getRequest());
+          JumperConfig jumperConfig = jumperConfigResolver.resolve(exchange.getRequest());
           log.debug("JumperConfig: {}", jumperConfig);
 
           ServerHttpRequest.Builder requestBuilder = readOnlyRequest.mutate();

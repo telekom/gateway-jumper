@@ -32,6 +32,7 @@ public class Config {
   public static final String REMOTE_BASE_PATH = "/real";
   public static final String REMOTE_FAILOVER_BASE_PATH = "/failover";
   public static final String REMOTE_PROVIDER_BASE_PATH = "/provider";
+  public static final String REMOTE_CONFLICTING_BASE_PATH = "/conflicting";
   public static final String REMOTE_HOST = "http://localhost:" + REMOTE_HOST_PORT;
   public static final String REMOTE_ZONE_NAME = "realZone";
   public static final String REMOTE_FAILOVER_ZONE_NAME = "failoverZone";

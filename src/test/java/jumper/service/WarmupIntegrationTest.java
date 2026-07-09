@@ -75,7 +75,7 @@ class WarmupIntegrationTest {
     String consumerToken = jumper.util.TokenUtil.getConsumerAccessToken();
 
     // Send the warmup-style request through Jumper's filter chain
-    // Includes remote_api_url legacy header required by fillWithLegacyHeaders
+    // Includes legacy routing headers that remain valid as fallback input.
     webTestClient
         .get()
         .uri(Constants.PROXY_ROOT_PATH_PREFIX + "/warmup")

@@ -33,6 +33,16 @@ public class RoutingConfigUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithConflictingRemoteApiUrl(
+      BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, REMOTE_HOST + REMOTE_CONFLICTING_BASE_PATH);
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondary());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
+    };
+  }
+
   public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
