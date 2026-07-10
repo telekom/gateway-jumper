@@ -38,6 +38,11 @@ import reactor.core.publisher.Mono;
     matchIfMissing = false)
 public class WarmupService {
 
+  private static final String CLAIM_CLIENT_ID = "clientId";
+  private static final String CLAIM_ORIGIN_GATEWAY = "originStargate";
+  private static final String CLAIM_ORIGIN_ZONE = "originZone";
+  private static final String CLAIM_TYPE = "typ";
+
   private final WarmupProperties warmupProperties;
   private final WarmupHealthIndicator warmupHealthIndicator;
   private final KeyPair warmupKeyPair;
@@ -159,21 +164,21 @@ public class WarmupService {
     jc.setRealmName(Constants.DEFAULT_REALM);
     jc.setEnvName("warmup");
     // No internalTokenEndpoint, no externalTokenEndpoint → triggers LMS token path
-    return JumperConfig.toJsonBase64(jc);
+    return RequestHeaderParser.toJsonBase64(jc);
   }
 
   private String buildSyntheticConsumerToken() {
     HashMap<String, Object> claims = new HashMap<>();
-    claims.put(Constants.TOKEN_CLAIM_CLIENT_ID, "warmup");
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, "warmup");
-    claims.put(Constants.TOKEN_CLAIM_ORIGIN_ZONE, "warmup");
-    claims.put(Constants.TOKEN_CLAIM_SUB, "warmup");
-    claims.put(Constants.TOKEN_CLAIM_TYP, "Bearer");
+    claims.put(CLAIM_CLIENT_ID, "warmup");
+    claims.put(CLAIM_ORIGIN_GATEWAY, "warmup");
+    claims.put(CLAIM_ORIGIN_ZONE, "warmup");
+    claims.put(CLAIM_TYPE, "Bearer");
 
     String token =
         Jwts.builder()
             .setClaims(claims)
             .setIssuer("warmup")
+            .setSubject("warmup")
             .setIssuedAt(new Date())
             .setExpiration(new Date(System.currentTimeMillis() + 300_000))
             .signWith(warmupKeyPair.getPrivate(), SignatureAlgorithm.ES256)

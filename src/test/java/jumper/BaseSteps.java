@@ -345,7 +345,16 @@ public class BaseSteps {
   @When("consumer calls the listener route")
   public void consumerCallsTheListenerRoute() {
     mockUpstreamServer.callbackRequest();
+    callListenerRoute();
+  }
 
+  @When("consumer calls the listener route through the configured upstream")
+  public void consumerCallsTheListenerRouteThroughConfiguredUpstream() {
+    mockUpstreamServer.callbackRequestAtPath(REMOTE_BASE_PATH);
+    callListenerRoute();
+  }
+
+  private void callListenerRoute() {
     requestExchange =
         webTestClient
             .get()

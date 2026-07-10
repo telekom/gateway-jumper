@@ -6,6 +6,9 @@ package jumper.util;
 
 import java.util.Optional;
 import jumper.model.config.JumperConfig;
+import jumper.model.config.RouteListener;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -24,6 +27,10 @@ public class ExchangeStateManager {
   // Private constants - encapsulated implementation details
   private static final String ATTR_OAUTH_FILTER_NEEDED = "oauth_filter_needed";
   private static final String ATTR_JUMPER_CONFIG = "jumper_config";
+  private static final String ATTR_HEADER_CONFIG = "header_config";
+  private static final String ATTR_INCOMING_TOKEN_CLAIMS = "incoming_token_claims";
+  private static final String ATTR_REQUEST_PATH = "request_path";
+  private static final String ATTR_SELECTED_LISTENER = "selected_listener";
   private static final String ATTR_MESH_ROUTE = "meshRoute";
   private static final String ATTR_CACHED_REQUEST_BODY = "cachedRequestBodyObject";
   private static final String ATTR_CACHED_RESPONSE_BODY = "cachedResponseBodyObject";
@@ -74,26 +81,49 @@ public class ExchangeStateManager {
         .orElse(false);
   }
 
-  /**
-   * Stores JumperConfig in the exchange for downstream filters.
-   *
-   * @param exchange the server web exchange
-   * @param config the jumper configuration to store
-   */
   public static void setJumperConfig(ServerWebExchange exchange, JumperConfig config) {
-    log.debug("Setting JumperConfig for consumer: {}", config.getConsumer());
-    exchange.getAttributes().put(ATTR_JUMPER_CONFIG, JumperConfig.toJsonBase64(config));
+    exchange.getAttributes().put(ATTR_JUMPER_CONFIG, config);
   }
 
-  /**
-   * Retrieves JumperConfig from the exchange.
-   *
-   * @param exchange the server web exchange
-   * @return Optional containing the JumperConfig if present
-   */
   public static Optional<JumperConfig> getJumperConfig(ServerWebExchange exchange) {
-    return Optional.ofNullable(exchange.getAttributes().get(ATTR_JUMPER_CONFIG))
-        .map(attr -> JumperConfig.fromJsonBase64((String) attr));
+    return Optional.ofNullable((JumperConfig) exchange.getAttributes().get(ATTR_JUMPER_CONFIG));
+  }
+
+  public static void setHeaderConfig(ServerWebExchange exchange, HeaderConfig config) {
+    exchange.getAttributes().put(ATTR_HEADER_CONFIG, config);
+  }
+
+  public static Optional<HeaderConfig> getHeaderConfig(ServerWebExchange exchange) {
+    return Optional.ofNullable((HeaderConfig) exchange.getAttributes().get(ATTR_HEADER_CONFIG));
+  }
+
+  public static void setIncomingTokenClaims(
+      ServerWebExchange exchange, IncomingTokenClaims claims) {
+    exchange.getAttributes().put(ATTR_INCOMING_TOKEN_CLAIMS, claims);
+  }
+
+  public static Optional<IncomingTokenClaims> getIncomingTokenClaims(ServerWebExchange exchange) {
+    return Optional.ofNullable(
+        (IncomingTokenClaims) exchange.getAttributes().get(ATTR_INCOMING_TOKEN_CLAIMS));
+  }
+
+  public static void setRequestPath(ServerWebExchange exchange, String requestPath) {
+    exchange.getAttributes().put(ATTR_REQUEST_PATH, requestPath);
+  }
+
+  public static Optional<String> getRequestPath(ServerWebExchange exchange) {
+    return Optional.ofNullable((String) exchange.getAttributes().get(ATTR_REQUEST_PATH));
+  }
+
+  public static void setSelectedListener(ServerWebExchange exchange, RouteListener listener) {
+    if (listener != null) {
+      exchange.getAttributes().put(ATTR_SELECTED_LISTENER, listener);
+    }
+  }
+
+  public static Optional<RouteListener> getSelectedListener(ServerWebExchange exchange) {
+    return Optional.ofNullable(
+        (RouteListener) exchange.getAttributes().get(ATTR_SELECTED_LISTENER));
   }
 
   /**
@@ -146,19 +176,5 @@ public class ExchangeStateManager {
    */
   public static Optional<String> getCachedResponseBody(ServerWebExchange exchange) {
     return Optional.ofNullable((String) exchange.getAttributes().get(ATTR_CACHED_RESPONSE_BODY));
-  }
-
-  /**
-   * Clears all custom state from the exchange. Useful for testing.
-   *
-   * @param exchange the server web exchange
-   */
-  public static void clearCustomState(ServerWebExchange exchange) {
-    log.debug("Clearing all custom exchange state");
-    exchange.getAttributes().remove(ATTR_OAUTH_FILTER_NEEDED);
-    exchange.getAttributes().remove(ATTR_JUMPER_CONFIG);
-    exchange.getAttributes().remove(ATTR_MESH_ROUTE);
-    exchange.getAttributes().remove(ATTR_CACHED_REQUEST_BODY);
-    exchange.getAttributes().remove(ATTR_CACHED_RESPONSE_BODY);
   }
 }

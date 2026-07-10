@@ -7,6 +7,8 @@ package jumper.filter;
 import java.util.Objects;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
 import jumper.service.SpectreService;
 import jumper.util.ExchangeStateManager;
 import lombok.extern.slf4j.Slf4j;
@@ -57,16 +59,22 @@ public class SpectreResponseFilter
                               responseBody);
 
                           // use jumperConfig passed with exchange
-                          JumperConfig jumperConfig =
-                              ExchangeStateManager.getJumperConfig(exchange).orElse(null);
-                          if (jumperConfig.isListenerMatched()) {
-                            RouteListener listener =
-                                jumperConfig.getRouteListener().get(jumperConfig.getConsumer());
+                          RouteListener listener =
+                              ExchangeStateManager.getSelectedListener(exchange).orElse(null);
+                          if (listener != null) {
+                            IncomingTokenClaims incomingTokenClaims =
+                                ExchangeStateManager.getIncomingTokenClaims(exchange).orElseThrow();
+                            JumperConfig jumperConfig =
+                                ExchangeStateManager.getJumperConfig(exchange).orElseThrow();
+                            HeaderConfig headerConfig =
+                                ExchangeStateManager.getHeaderConfig(exchange).orElseThrow();
                             // Fire-and-forget: publish event asynchronously without blocking the
                             // response flow
                             spectreService
                                 .handleEvent(
+                                    incomingTokenClaims,
                                     jumperConfig,
+                                    headerConfig,
                                     exchange,
                                     exchange.getResponse(),
                                     listener,

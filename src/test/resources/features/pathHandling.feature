@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 @upstream
-Feature: proper routingPath and token requestPath is used for provider call
+Feature: proper forwarded path and token requestPath is used for provider call
 
   Scenario: Consumer calls proxy route with remoteNo PathNo TrailingNo, upstream path /
     Given RealRoute headers are set

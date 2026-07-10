@@ -84,6 +84,23 @@ Feature: proper authorization token reaches provider endpoint
     And API consumer receives a 200 status code
     And API Provider receives header x-tardis-traceid that matches regex dummy
 
+  Scenario: Consumer token from an internet-facing zone is forwarded unchanged
+    Given ProxyRoute headers are set
+    And authorization token originates from internet-facing zone "space"
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives the original consumer token as X-Spacegate-Token
+    And API Provider receives authorization MeshToken
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer token from an internal zone is not forwarded
+    Given ProxyRoute headers are set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives no X-Spacegate-Token
+    And API Provider receives authorization MeshToken
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route with legacy issuer fallback, mesh LMS token sent
     Given ProxyRoute headers are set with legacy issuer
     And API provider set to respond with a 200 status code

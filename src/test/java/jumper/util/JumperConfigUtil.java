@@ -6,7 +6,7 @@ package jumper.util;
 
 import static jumper.config.Config.*;
 import static jumper.config.Config.CONSUMER;
-import static jumper.model.config.JumperConfig.toJsonBase64;
+import static jumper.service.RequestHeaderParser.toJsonBase64;
 
 import java.util.HashMap;
 import java.util.List;

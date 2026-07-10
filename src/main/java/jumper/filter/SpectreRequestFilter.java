@@ -6,6 +6,8 @@ package jumper.filter;
 
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
 import jumper.service.SpectreService;
 import jumper.util.ExchangeStateManager;
 import lombok.extern.slf4j.Slf4j;
@@ -42,16 +44,25 @@ public class SpectreRequestFilter
               request.getHeaders().toSingleValueMap(),
               requestBody);
 
-          JumperConfig jc = ExchangeStateManager.getJumperConfig(exchange).orElse(null);
-          if (!jc.isListenerMatched()) {
+          RouteListener listener = ExchangeStateManager.getSelectedListener(exchange).orElse(null);
+          if (listener == null) {
             return chain.filter(exchange.mutate().request(request).build());
           }
-
-          RouteListener listener = jc.getRouteListener().get(jc.getConsumer());
+          IncomingTokenClaims incomingTokenClaims =
+              ExchangeStateManager.getIncomingTokenClaims(exchange).orElseThrow();
+          JumperConfig jumperConfig = ExchangeStateManager.getJumperConfig(exchange).orElseThrow();
+          HeaderConfig headerConfig = ExchangeStateManager.getHeaderConfig(exchange).orElseThrow();
 
           // Fire-and-forget: publish event asynchronously without blocking the request flow
           spectreService
-              .handleEvent(jc, exchange, exchange.getRequest(), listener, requestBody)
+              .handleEvent(
+                  incomingTokenClaims,
+                  jumperConfig,
+                  headerConfig,
+                  exchange,
+                  exchange.getRequest(),
+                  listener,
+                  requestBody)
               .subscribe();
           return chain.filter(exchange);
         },

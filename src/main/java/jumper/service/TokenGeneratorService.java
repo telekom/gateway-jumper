@@ -8,10 +8,8 @@ import io.jsonwebtoken.*;
 import java.security.Key;
 import java.security.interfaces.RSAKey;
 import java.util.*;
-import jumper.Constants;
-import jumper.model.config.JumperConfig;
 import jumper.model.config.KeyInfo;
-import jumper.util.OauthTokenUtil;
+import jumper.model.request.IncomingTokenClaims;
 import jumper.util.RsaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +21,18 @@ import org.springframework.web.server.ResponseStatusException;
 @Slf4j
 @RequiredArgsConstructor
 public class TokenGeneratorService {
+
+  private static final String CLAIM_TYPE = "typ";
+  private static final String CLAIM_AUTHORIZED_PARTY = "azp";
+  private static final String CLAIM_OPERATION = "operation";
+  private static final String CLAIM_CLIENT_ID = "clientId";
+  private static final String CLAIM_ORIGIN_ZONE = "originZone";
+  private static final String CLAIM_ORIGIN_GATEWAY = "originStargate";
+  private static final String CLAIM_REQUEST_PATH = "requestPath";
+  private static final String CLAIM_ENVIRONMENT = "env";
+  private static final String CLAIM_SCOPE = "scope";
+  private static final String CLAIM_PUBLISHER_ID = "publisherId";
+  private static final String CLAIM_SUBSCRIBER_ID = "subscriberId";
 
   private final KeyInfoService keyInfoService;
 
@@ -94,68 +104,63 @@ public class TokenGeneratorService {
    * </ul>
    */
   private String generateLmsToken(
-      JumperConfig jc,
+      IncomingTokenClaims incomingToken,
+      String securityScopes,
+      String requestPath,
+      String environment,
       String azp,
       String operation,
       String issuer,
       String publisherId,
       String subscriberId) {
 
-    Jwt<?, Claims> authorizationTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
-
-    Date issuedAt = authorizationTokenClaims.getPayload().getIssuedAt();
-    Date expiration = authorizationTokenClaims.getPayload().getExpiration();
-    String sub = authorizationTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    Set<String> audiences = authorizationTokenClaims.getPayload().getAudience();
-
     ClaimsBuilder claims =
         Jwts.claims()
-            .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
-            .add(Constants.TOKEN_CLAIM_AZP, azp)
-            .subject(sub)
-            .add(Constants.TOKEN_CLAIM_OPERATION, operation)
-            .add(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer())
-            .add(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone())
-            .add(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
+            .add(CLAIM_TYPE, "Bearer")
+            .add(CLAIM_AUTHORIZED_PARTY, azp)
+            .subject(incomingToken.subject())
+            .add(CLAIM_OPERATION, operation)
+            .add(CLAIM_CLIENT_ID, incomingToken.clientId())
+            .add(CLAIM_ORIGIN_ZONE, incomingToken.originZone())
+            .add(CLAIM_ORIGIN_GATEWAY, incomingToken.originGateway());
 
     // requestPath is not strictly required for mesh LMS validation.
-    if (Objects.nonNull(jc.getRequestPath())) {
-      claims.add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
+    if (Objects.nonNull(requestPath)) {
+      claims.add(CLAIM_REQUEST_PATH, requestPath);
     }
 
     // env is only set on provider LMS tokens, not on mesh LMS tokens, because
     // consumer-side proxy routes do not inject the `environment` header.
-    if (Objects.nonNull(jc.getEnvName())) {
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
+    if (Objects.nonNull(environment)) {
+      claims.add(CLAIM_ENVIRONMENT, environment);
     }
 
-    if (Objects.nonNull(jc.getSecurityScopes())) {
-      claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
+    if (Objects.nonNull(securityScopes)) {
+      claims.add(CLAIM_SCOPE, securityScopes);
     }
 
     if (Objects.nonNull(publisherId)) {
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+      claims.add(CLAIM_PUBLISHER_ID, publisherId);
     }
 
     if (Objects.nonNull(subscriberId)) {
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
+      claims.add(CLAIM_SUBSCRIBER_ID, subscriberId);
     }
 
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
     // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
     // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
-      if (audiences.size() == 1) {
-        claims.audience().single(audiences.iterator().next());
+    if (Objects.nonNull(incomingToken.audiences()) && !incomingToken.audiences().isEmpty()) {
+      if (incomingToken.audiences().size() == 1) {
+        claims.audience().single(incomingToken.audiences().iterator().next());
       } else {
-        claims.audience().add(audiences).and();
+        claims.audience().add(incomingToken.audiences()).and();
       }
     } else if (Objects.nonNull(subscriberId)) {
       claims.audience().single(subscriberId);
     }
 
-    return fromRealm(claims.build(), issuer, expiration, issuedAt);
+    return fromRealm(claims.build(), issuer, incomingToken.expiration(), incomingToken.issuedAt());
   }
 
   /**
@@ -165,8 +170,24 @@ public class TokenGeneratorService {
    * API.
    */
   public String generateProviderLmsToken(
-      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
-    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
+      IncomingTokenClaims incomingToken,
+      String securityScopes,
+      String requestPath,
+      String environment,
+      String operation,
+      String issuer,
+      String publisherId,
+      String subscriberId) {
+    return generateLmsToken(
+        incomingToken,
+        securityScopes,
+        requestPath,
+        environment,
+        "stargate",
+        operation,
+        issuer,
+        publisherId,
+        subscriberId);
   }
 
   /**
@@ -175,16 +196,31 @@ public class TokenGeneratorService {
    * <p>Used on proxy routes for cross-zone gateway-to-gateway authentication. The provider zone
    * validates this token against the consumer zone's StarGate JWKS.
    */
-  public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
-    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
+  public String generateMeshLmsToken(
+      IncomingTokenClaims incomingToken,
+      String securityScopes,
+      String requestPath,
+      String environment,
+      String operation,
+      String issuer) {
+    return generateLmsToken(
+        incomingToken,
+        securityScopes,
+        requestPath,
+        environment,
+        "gateway",
+        operation,
+        issuer,
+        null,
+        null);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {
     Claims claims =
         Jwts.claims()
-            .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
-            .add(Constants.TOKEN_CLAIM_AZP, "stargate")
-            .add(Constants.TOKEN_CLAIM_CLIENT_ID, "gateway")
+            .add(CLAIM_TYPE, "Bearer")
+            .add(CLAIM_AUTHORIZED_PARTY, "stargate")
+            .add(CLAIM_CLIENT_ID, "gateway")
             .build();
 
     return fromRealm(

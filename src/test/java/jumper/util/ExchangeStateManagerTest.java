@@ -5,15 +5,16 @@
 package jumper.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.net.URI;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import jumper.model.config.JumperConfig;
+import jumper.model.config.RouteListener;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,8 +39,6 @@ class ExchangeStateManagerTest {
     exchange = mock(ServerWebExchange.class);
     attributes = new ConcurrentHashMap<>();
     when(exchange.getAttributes()).thenReturn(attributes);
-    when(exchange.getAttribute(anyString()))
-        .thenAnswer(invocation -> attributes.get(invocation.getArgument(0)));
   }
 
   // arrange
@@ -84,30 +83,37 @@ class ExchangeStateManagerTest {
 
   // arrange
   @Test
-  void shouldSetAndGetJumperConfig() {
+  void shouldSetAndGetRequestConfiguration() {
     // arrange
     JumperConfig config = new JumperConfig();
-    config.setConsumer("test-consumer");
-    config.setRealmName("test-realm");
+    HeaderConfig headers = headerConfig();
+    IncomingTokenClaims claims = incomingTokenClaims();
+    RouteListener listener = new RouteListener();
 
     // act
     ExchangeStateManager.setJumperConfig(exchange, config);
-    Optional<JumperConfig> result = ExchangeStateManager.getJumperConfig(exchange);
+    ExchangeStateManager.setHeaderConfig(exchange, headers);
+    ExchangeStateManager.setIncomingTokenClaims(exchange, claims);
+    ExchangeStateManager.setRequestPath(exchange, "/request/path");
+    ExchangeStateManager.setSelectedListener(exchange, listener);
 
     // assert
-    assertThat(result).isPresent();
-    assertThat(result.get().getConsumer()).isEqualTo("test-consumer");
-    assertThat(result.get().getRealmName()).isEqualTo("test-realm");
+    assertThat(ExchangeStateManager.getJumperConfig(exchange)).containsSame(config);
+    assertThat(ExchangeStateManager.getHeaderConfig(exchange)).containsSame(headers);
+    assertThat(ExchangeStateManager.getIncomingTokenClaims(exchange)).containsSame(claims);
+    assertThat(ExchangeStateManager.getRequestPath(exchange)).contains("/request/path");
+    assertThat(ExchangeStateManager.getSelectedListener(exchange)).containsSame(listener);
   }
 
   // arrange
   @Test
-  void shouldReturnEmptyOptionalWhenJumperConfigNotSet() {
-    // act
-    Optional<JumperConfig> result = ExchangeStateManager.getJumperConfig(exchange);
-
-    // assert
-    assertThat(result).isEmpty();
+  void shouldReturnEmptyOptionalWhenRequestConfigurationNotSet() {
+    // act & assert
+    assertThat(ExchangeStateManager.getJumperConfig(exchange)).isEmpty();
+    assertThat(ExchangeStateManager.getHeaderConfig(exchange)).isEmpty();
+    assertThat(ExchangeStateManager.getIncomingTokenClaims(exchange)).isEmpty();
+    assertThat(ExchangeStateManager.getRequestPath(exchange)).isEmpty();
+    assertThat(ExchangeStateManager.getSelectedListener(exchange)).isEmpty();
   }
 
   // arrange
@@ -160,44 +166,14 @@ class ExchangeStateManagerTest {
     assertThat(result).isEmpty();
   }
 
-  // arrange
-  @Test
-  void shouldClearAllCustomState() {
-    // arrange
-    ExchangeStateManager.setOAuthFilterRequired(exchange, true);
-    ExchangeStateManager.setMeshRoute(exchange, true);
-    JumperConfig config = new JumperConfig();
-    config.setConsumer("test-consumer");
-    ExchangeStateManager.setJumperConfig(exchange, config);
-    ExchangeStateManager.setCachedRequestBody(exchange, "request");
-    ExchangeStateManager.setCachedResponseBody(exchange, "response");
+  private static HeaderConfig headerConfig() {
+    return new HeaderConfig(
+        false, null, null, null, null, null, null, null, null, null, null, null, null);
+  }
 
-    // Set a framework attribute to ensure it's not cleared
-    URI frameworkUri = URI.create("http://framework.test");
-    exchange
-        .getAttributes()
-        .put(
-            org.springframework.cloud.gateway.support.ServerWebExchangeUtils
-                .GATEWAY_REQUEST_URL_ATTR,
-            frameworkUri);
-
-    // act
-    ExchangeStateManager.clearCustomState(exchange);
-
-    // assert
-    assertThat(ExchangeStateManager.isOAuthFilterRequired(exchange)).isFalse();
-    assertThat(ExchangeStateManager.isMeshRoute(exchange)).isFalse();
-    assertThat(ExchangeStateManager.getJumperConfig(exchange)).isEmpty();
-    assertThat(ExchangeStateManager.getCachedRequestBody(exchange)).isEmpty();
-    assertThat(ExchangeStateManager.getCachedResponseBody(exchange)).isEmpty();
-
-    // Verify framework attribute was not cleared
-    assertThat(
-            (Object)
-                exchange.getAttribute(
-                    org.springframework.cloud.gateway.support.ServerWebExchangeUtils
-                        .GATEWAY_REQUEST_URL_ATTR))
-        .isEqualTo(frameworkUri);
+  private static IncomingTokenClaims incomingTokenClaims() {
+    return new IncomingTokenClaims(
+        "test-consumer", "subject", "issuer", null, null, null, null, null);
   }
 
   // arrange

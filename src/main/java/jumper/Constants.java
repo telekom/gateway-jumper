@@ -86,24 +86,6 @@ public class Constants {
   // client_secret_post
   public static final String TOKEN_REQUEST_METHOD_POST = "body";
 
-  public static final String TOKEN_CLAIM_CLIENT_ID = "clientId";
-  public static final String TOKEN_CLAIM_ORIGIN_STARGATE = "originStargate";
-  public static final String TOKEN_CLAIM_ORIGIN_ZONE = "originZone";
-  public static final String TOKEN_CLAIM_SCOPE = "scope";
-  public static final String TOKEN_CLAIM_SUB = "sub";
-  public static final String TOKEN_CLAIM_ISS = "iss";
-  public static final String TOKEN_CLAIM_JTI = "jti";
-  public static final String TOKEN_CLAIM_AUD = "aud";
-  public static final String TOKEN_CLAIM_TYP = "typ";
-  public static final String TOKEN_CLAIM_AZP = "azp";
-  public static final String TOKEN_CLAIM_EXP = "exp";
-  public static final String TOKEN_CLAIM_IAT = "iat";
-  public static final String TOKEN_CLAIM_OPERATION = "operation";
-  public static final String TOKEN_CLAIM_REQUEST_PATH = "requestPath";
-  public static final String TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT = "env";
-  public static final String TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID = "publisherId";
-  public static final String TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID = "subscriberId";
-
   public static final String BASIC_AUTH_PROVIDER_KEY = "default";
   public static final String OAUTH_PROVIDER_KEY = "default";
 

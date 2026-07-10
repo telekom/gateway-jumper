@@ -60,6 +60,16 @@ public class TokenUtil {
     return consumerAccessToken.getConsumerAccessToken();
   }
 
+  public static String getConsumerAccessTokenFromZone(String zone) {
+    return AccessToken.builder()
+        .env("local")
+        .clientId("eni--local-team--local-app")
+        .originZone(zone)
+        .originStargate("https://zone.local.de")
+        .build()
+        .getConsumerAccessToken();
+  }
+
   public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
