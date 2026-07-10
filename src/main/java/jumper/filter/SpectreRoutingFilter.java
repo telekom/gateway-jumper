@@ -7,8 +7,8 @@ package jumper.filter;
 import java.net.URI;
 import java.util.Objects;
 import jumper.Constants;
+import jumper.service.IncomingTokenClaimsParser;
 import jumper.service.TokenGeneratorService;
-import jumper.util.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
 
   private final TokenGeneratorService tokenGeneratorService;
+  private final IncomingTokenClaimsParser incomingTokenClaimsParser;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -39,7 +40,7 @@ public class SpectreRoutingFilter extends SetRequestHeaderGatewayFilterFactory {
       String envName = Constants.DEFAULT_REALM;
       if (Objects.nonNull(consumerToken)) {
         envName =
-            OauthTokenUtil.getClaimFromToken(consumerToken, "iss").replaceFirst(".*realms/", "");
+            incomingTokenClaimsParser.parse(readOnlyRequest).issuer().replaceFirst(".*realms/", "");
       }
 
       // minimalistic token with correct issuer

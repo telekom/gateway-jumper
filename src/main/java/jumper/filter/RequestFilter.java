@@ -16,8 +16,9 @@ import java.util.Optional;
 import jumper.Constants;
 import jumper.model.config.BasicAuthCredentials;
 import jumper.model.config.JumperConfig;
-import jumper.model.request.IncomingRequest;
-import jumper.model.request.JumperInfoRequest;
+import jumper.model.config.RouteListener;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
 import jumper.service.*;
 import jumper.util.BasicAuthUtil;
 import jumper.util.ExchangeStateManager;
@@ -26,6 +27,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
@@ -43,10 +45,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
   private final Tracer tracer;
   private final TokenGeneratorService tokenGeneratorService;
-  private final JumperConfigService jumperConfigService;
+  private final JumperConfigResolver jumperConfigResolver;
+  private final EffectiveRequestConfigResolver effectiveRequestConfigResolver;
+  private final RequestHeaderParser requestHeaderParser;
+  private final IncomingTokenClaimsParser incomingTokenClaimsParser;
 
   @Value("${jumper.issuer.url}")
-  private String localIssuerUrl;
+  private String localIssuerBaseUrl;
 
   @Value("${jumper.zone.name}")
   private String currentZone;
@@ -60,85 +65,124 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   public RequestFilter(
       Tracer tracer,
       TokenGeneratorService tokenGeneratorService,
-      JumperConfigService jumperConfigService) {
+      JumperConfigResolver jumperConfigResolver,
+      EffectiveRequestConfigResolver effectiveRequestConfigResolver,
+      RequestHeaderParser requestHeaderParser,
+      IncomingTokenClaimsParser incomingTokenClaimsParser) {
     super(Config.class);
     this.tracer = tracer;
     this.tokenGeneratorService = tokenGeneratorService;
-    this.jumperConfigService = jumperConfigService;
+    this.jumperConfigResolver = jumperConfigResolver;
+    this.effectiveRequestConfigResolver = effectiveRequestConfigResolver;
+    this.requestHeaderParser = requestHeaderParser;
+    this.incomingTokenClaimsParser = incomingTokenClaimsParser;
   }
 
   @Override
   public GatewayFilter apply(Config config) {
     return new OrderedGatewayFilter(
         (exchange, chain) -> {
-          ServerHttpRequest readOnlyRequest = exchange.getRequest();
-          addOriginalRequestUrl(exchange, readOnlyRequest.getURI());
+          ServerHttpRequest incomingRequest = exchange.getRequest();
+          addOriginalRequestUrl(exchange, incomingRequest.getURI());
 
-          ServerHttpRequest.Builder requestMutationBuilder = readOnlyRequest.mutate();
+          ServerHttpRequest.Builder requestMutationBuilder = incomingRequest.mutate();
 
-          enrichTracingWithDataFrom(readOnlyRequest);
+          enrichCurrentSpanFromRequest(incomingRequest);
 
-          JumperConfig jumperConfig = jumperConfigService.resolveJumperConfig(readOnlyRequest);
-          ExchangeStateManager.setMeshRoute(exchange, jumperConfig.isMeshRoute());
+          HeaderConfig headerConfig = requestHeaderParser.readHeaderConfig(incomingRequest);
+          JumperConfig jumperConfig = jumperConfigResolver.resolve(incomingRequest, headerConfig);
 
-          // calculate routing stuff and add it to exchange and JumperConfig
-          URI finalApiUri =
-              calculateFinalApiUri(readOnlyRequest, config.getRoutePathPrefix(), jumperConfig);
+          // Preserve the established error order: reject missing routing before parsing the token.
+          String upstreamUrl =
+              effectiveRequestConfigResolver.resolveUpstreamUrl(jumperConfig, headerConfig);
 
-          // ListenerRoute was called, jumperConfig is stored in exchange for usage with Spectre
-          if (config.getRoutePathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
-            ExchangeStateManager.setJumperConfig(exchange, jumperConfig);
+          IncomingTokenClaims incomingTokenClaims =
+              incomingTokenClaimsParser.parse(incomingRequest);
+
+          ExchangeStateManager.setMeshRoute(exchange, isMeshRoute(jumperConfig, headerConfig));
+          ExchangeStateManager.setJumperConfig(exchange, jumperConfig);
+          ExchangeStateManager.setHeaderConfig(exchange, headerConfig);
+          ExchangeStateManager.setIncomingTokenClaims(exchange, incomingTokenClaims);
+
+          String apiBasePath =
+              effectiveRequestConfigResolver.resolveApiBasePath(jumperConfig, headerConfig);
+          String realmName =
+              effectiveRequestConfigResolver.resolveRealmName(jumperConfig, headerConfig);
+          String environment =
+              effectiveRequestConfigResolver.resolveEnvironment(jumperConfig, headerConfig);
+
+          // Incoming request path after removing Jumper's /proxy or /listener prefix.
+          String forwardedPath =
+              stripJumperPathPrefix(incomingRequest, config.getJumperPathPrefix());
+
+          // Complete provider destination, including the configured upstreamUrl, forwarded path,
+          // query, and fragment.
+          URI finalUpstreamUri =
+              buildFinalUpstreamUri(incomingRequest.getURI(), forwardedPath, upstreamUrl);
+
+          // Full API path called by the consumer, to be recorded in the LMS token, without query or
+          // fragment.
+          String consumerRequestPath = apiBasePath + forwardedPath;
+          ExchangeStateManager.setRequestPath(exchange, consumerRequestPath);
+
+          if (config.getJumperPathPrefix().equals(Constants.LISTENER_ROOT_PATH_PREFIX)) {
+            ExchangeStateManager.setSelectedListener(
+                exchange,
+                findListenerForConsumer(
+                    resolveListenerConfig(incomingRequest, headerConfig, jumperConfig),
+                    incomingTokenClaims.clientId()));
           }
 
-          if (jumperConfig.getSecondaryFailover()) {
+          boolean isSecondaryFailoverRoute =
+              headerConfig.hasRoutingConfigHeader()
+                  && StringUtils.isEmpty(jumperConfig.getTargetZoneName());
+          if (isSecondaryFailoverRoute) {
             // write audit log if needed
-            AuditLogService.writeFailoverAuditLog(jumperConfig);
+            AuditLogService.writeFailoverAuditLog(
+                finalUpstreamUri.toString(), apiBasePath, incomingTokenClaims);
 
             // pass headers from config to provider
-            HeaderUtil.addHeader(
-                requestMutationBuilder, Constants.HEADER_REALM, jumperConfig.getRealmName());
-            HeaderUtil.addHeader(
-                requestMutationBuilder, Constants.HEADER_ENVIRONMENT, jumperConfig.getEnvName());
+            HeaderUtil.addHeader(requestMutationBuilder, Constants.HEADER_REALM, realmName);
+            HeaderUtil.addHeader(requestMutationBuilder, Constants.HEADER_ENVIRONMENT, environment);
           }
 
-          // handle request
-          Optional<JumperInfoRequest> jumperInfoRequest = initializeJumperInfoRequest();
+          String debugRequestScenario = "none";
 
-          if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
+          if (!upstreamUrl.startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
 
-            if (jumperConfig.isMeshRoute()) {
+            if (ExchangeStateManager.isMeshRoute(exchange)) {
               // GW-2-GW MESH TOKEN GENERATION
               log.debug("----------------GATEWAY MESH-------------");
-              jumperInfoRequest.ifPresent(
-                  i -> i.setInfoScenario(false, false, true, false, false, false));
+              debugRequestScenario = "gateway-mesh";
 
-              checkForInternetFacingZone(
-                  requestMutationBuilder,
-                  jumperConfig.getConsumerOriginZone(),
-                  jumperConfig.getAuthorizationToken());
+              if (isInternetFacingZone(incomingTokenClaims.originZone())) {
+                // Forward the exact incoming Authorization value; do not reconstruct the token.
+                setXSpaceGateTokenHeader(
+                    requestMutationBuilder,
+                    HeaderUtil.getLastValueFromHeaderField(
+                        incomingRequest, Constants.HEADER_AUTHORIZATION));
+              }
 
               ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
             } else {
               // ALL NON MESH SCENARIOS
 
-              if (readOnlyRequest.getHeaders().containsHeader(Constants.HEADER_X_TOKEN_EXCHANGE)
+              if (incomingRequest.getHeaders().containsHeader(Constants.HEADER_X_TOKEN_EXCHANGE)
                   && isInternetFacingZone(currentZone)) {
 
                 log.debug("----------------X-TOKEN-EXCHANGE HEADER-------------");
-                jumperInfoRequest.ifPresent(
-                    i -> i.setInfoScenario(false, false, false, false, false, true));
+                debugRequestScenario = "x-token-exchange";
 
-                addXtokenExchange(requestMutationBuilder, readOnlyRequest);
+                forwardXTokenExchangeAsAuthorization(requestMutationBuilder, incomingRequest);
 
               } else {
                 Optional<BasicAuthCredentials> basicAuthCredentials =
-                    jumperConfig.getBasicAuthCredentials();
+                    resolveBasicAuthCredentials(jumperConfig, incomingTokenClaims.clientId());
                 if (basicAuthCredentials.isPresent()) {
                   // External Authorization with BasicAuth
                   log.debug("----------------BASIC AUTH HEADER-------------");
-                  jumperInfoRequest.ifPresent(
-                      i -> i.setInfoScenario(false, false, false, false, true, false));
+                  debugRequestScenario = "basic-auth";
 
                   String encodedBasicAuth =
                       BasicAuthUtil.encodeBasicAuth(
@@ -152,31 +196,36 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
                 } else {
 
-                  if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
+                  if (Objects.nonNull(
+                      effectiveRequestConfigResolver.resolveExternalTokenEndpoint(
+                          jumperConfig, headerConfig))) {
 
                     ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
                   } else {
                     // Enhanced Last Mile Security Token scenario
                     log.debug("----------------LAST MILE SECURITY (ONE TOKEN)-------------");
-                    jumperInfoRequest.ifPresent(
-                        i -> i.setInfoScenario(true, true, false, false, false, false));
+                    debugRequestScenario = "last-mile-security";
 
-                    String enhancedLastmileSecurityToken =
+                    String providerLmsToken =
                         tokenGeneratorService.generateProviderLmsToken(
-                            jumperConfig,
-                            String.valueOf(readOnlyRequest.getMethod()),
-                            localIssuerUrl + "/" + jumperConfig.getRealmName(),
+                            incomingTokenClaims,
+                            effectiveRequestConfigResolver.resolveLmsSecurityScopes(
+                                jumperConfig, incomingTokenClaims.clientId()),
+                            consumerRequestPath,
+                            environment,
+                            String.valueOf(incomingRequest.getMethod()),
+                            localIssuerBaseUrl + "/" + realmName,
                             HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
+                                incomingRequest, Constants.HEADER_X_PUBSUB_PUBLISHER_ID),
                             HeaderUtil.getLastValueFromHeaderField(
-                                readOnlyRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID));
+                                incomingRequest, Constants.HEADER_X_PUBSUB_SUBSCRIBER_ID));
 
                     HeaderUtil.addHeader(
                         requestMutationBuilder,
                         Constants.HEADER_AUTHORIZATION,
-                        Constants.BEARER + " " + enhancedLastmileSecurityToken);
-                    log.debug("lastMileSecurityToken: " + enhancedLastmileSecurityToken);
+                        Constants.BEARER + " " + providerLmsToken);
+                    log.debug("lastMileSecurityToken: " + providerLmsToken);
                   }
                 }
               }
@@ -186,33 +235,36 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           HeaderUtil.addHeader(
               requestMutationBuilder,
               Constants.HEADER_X_ORIGIN_STARGATE,
-              jumperConfig.getConsumerOriginStargate());
+              incomingTokenClaims.originGateway());
           HeaderUtil.addHeader(
               requestMutationBuilder,
               Constants.HEADER_X_ORIGIN_ZONE,
-              jumperConfig.getConsumerOriginZone());
-          HeaderUtil.rewriteXForwardedHeader(requestMutationBuilder, jumperConfig);
+              incomingTokenClaims.originZone());
+          HeaderUtil.rewriteXForwardedHeader(
+              requestMutationBuilder, incomingTokenClaims.originGateway());
 
-          jumperInfoRequest.ifPresent(
-              infoRequest -> {
-                IncomingRequest incReq = createIncomingRequest(jumperConfig, readOnlyRequest);
-                infoRequest.setIncomingRequest(incReq);
-                log.atInfo()
-                    .setMessage("logging request:")
-                    .addKeyValue("jumperInfo", infoRequest)
-                    .log();
-              });
+          if (log.isDebugEnabled()) {
+            log.atDebug()
+                .setMessage("Logging request")
+                .addKeyValue("scenario", debugRequestScenario)
+                .addKeyValue("method", incomingRequest.getMethod())
+                .addKeyValue("consumer", incomingTokenClaims.clientId())
+                .addKeyValue("basePath", apiBasePath)
+                .addKeyValue("requestPath", consumerRequestPath)
+                .addKeyValue("upstreamUri", finalUpstreamUri)
+                .log();
+          }
 
           HeaderUtil.removeHeaders(requestMutationBuilder, jumperConfig.getRemoveHeaders());
           tracer.currentSpan().event("jrqf");
 
           // store final destination url to exchange
-          log.debug("Routing set to: " + finalApiUri);
-          requestMutationBuilder.uri(finalApiUri);
+          log.debug("Routing set to: " + finalUpstreamUri);
+          requestMutationBuilder.uri(finalUpstreamUri);
           ServerHttpRequest finalRequest = requestMutationBuilder.build();
           exchange
               .getAttributes()
-              .put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, finalApiUri);
+              .put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, finalUpstreamUri);
 
           ServerWebExchange finalExchange = exchange.mutate().request(finalRequest).build();
           log.debug("final RequestFilter uri: {}", finalExchange.getRequest().getURI());
@@ -226,78 +278,86 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
         RouteToRequestUrlFilter.ROUTE_TO_URL_FILTER_ORDER + 1);
   }
 
-  private Optional<JumperInfoRequest> initializeJumperInfoRequest() {
-
-    if (log.isDebugEnabled()) {
-      JumperInfoRequest jumperInfoRequest = new JumperInfoRequest();
-      return Optional.of(jumperInfoRequest);
-    }
-
-    return Optional.empty();
-  }
-
-  private IncomingRequest createIncomingRequest(
-      JumperConfig jumperConfig, ServerHttpRequest request) {
-    IncomingRequest incReq = new IncomingRequest();
-    incReq.setConsumer(jumperConfig.getConsumer());
-    incReq.setBasePath(jumperConfig.getApiBasePath());
-    incReq.setFinalApiUrl(jumperConfig.getFinalApiUrl());
-    incReq.setMethod(request.getMethod().name());
-    incReq.setRequestPath(jumperConfig.getRequestPath());
-
-    return incReq;
-  }
-
-  private URI calculateFinalApiUri(
-      ServerHttpRequest request, String routePathPrefix, JumperConfig jumperConfig) {
+  private URI buildFinalUpstreamUri(URI requestUri, String forwardedPath, String upstreamBaseUrl) {
 
     try {
-      URI uri = request.getURI();
-
-      String rawPath = uri.getRawPath();
-      String routingPath =
-          rawPath.startsWith(routePathPrefix)
-              ? rawPath.substring(routePathPrefix.length())
-              : rawPath;
-
-      String requestPath = jumperConfig.getApiBasePath() + routingPath;
-
-      if (Objects.nonNull(uri.getRawQuery())) {
-        routingPath += "?" + uri.getRawQuery();
+      if (Objects.nonNull(requestUri.getRawQuery())) {
+        forwardedPath += "?" + requestUri.getRawQuery();
       }
 
-      if (Objects.nonNull(uri.getFragment())) {
-        routingPath += "#" + uri.getFragment();
+      if (Objects.nonNull(requestUri.getFragment())) {
+        forwardedPath += "#" + requestUri.getFragment();
       }
 
-      String normalizedRemoteApiUrl =
-          jumperConfig.getRemoteApiUrl().endsWith("/")
-              ? jumperConfig
-                  .getRemoteApiUrl()
-                  .substring(0, jumperConfig.getRemoteApiUrl().length() - 1)
-              : jumperConfig.getRemoteApiUrl();
-      String finalApiUrl = normalizedRemoteApiUrl + routingPath;
+      String normalizedUpstreamBaseUrl =
+          upstreamBaseUrl.endsWith("/")
+              ? upstreamBaseUrl.substring(0, upstreamBaseUrl.length() - 1)
+              : upstreamBaseUrl;
+      String finalUpstreamUrl = normalizedUpstreamBaseUrl + forwardedPath;
 
-      // add calculated stuff to jumperConfig
-      jumperConfig.setRequestPath(requestPath);
-      jumperConfig.setRoutingPath(routingPath);
-      jumperConfig.setFinalApiUrl(finalApiUrl);
-
-      return new URI(finalApiUrl);
+      return new URI(finalUpstreamUrl);
 
     } catch (URISyntaxException e) {
-      throw new RuntimeException("can not construct URL from " + request.getURI(), e);
+      throw new RuntimeException("can not construct URL from " + requestUri, e);
     }
   }
 
-  private void checkForInternetFacingZone(
-      ServerHttpRequest.Builder builder, String zone, String token) {
-    if (isInternetFacingZone(zone)) {
-      HeaderUtil.addHeader(builder, Constants.HEADER_X_SPACEGATE_TOKEN, token);
-    }
+  /**
+   * Whether this route is a cross-zone mesh route and should generate a mesh LMS token instead of a
+   * provider LMS token.
+   *
+   * <p>{@code mesh} is the canonical signal set by the control plane in the {@code jumper_config}
+   * or {@code routing_config} object. The resolved internal token endpoint is a transitional
+   * fallback for pre-migration proxy routes that still carry {@code issuer} but no {@code mesh}.
+   *
+   * <p>TODO: drop the internal-token-endpoint fallback once the control-plane migration for Mesh
+   * LMS phase 2 is complete.
+   */
+  private boolean isMeshRoute(JumperConfig config, HeaderConfig headers) {
+    return Boolean.TRUE.equals(config.getMesh())
+        || Objects.nonNull(
+            effectiveRequestConfigResolver.resolveInternalTokenEndpoint(config, headers));
   }
 
-  private void addXtokenExchange(ServerHttpRequest.Builder builder, ServerHttpRequest request) {
+  private static String stripJumperPathPrefix(ServerHttpRequest request, String jumperPathPrefix) {
+    String rawPath = request.getURI().getRawPath();
+    return rawPath.startsWith(jumperPathPrefix)
+        ? rawPath.substring(jumperPathPrefix.length())
+        : rawPath;
+  }
+
+  private static RouteListener findListenerForConsumer(JumperConfig config, String clientId) {
+    return Objects.isNull(config.getRouteListener())
+        ? null
+        : config.getRouteListener().get(clientId);
+  }
+
+  private JumperConfig resolveListenerConfig(
+      ServerHttpRequest request, HeaderConfig headers, JumperConfig selectedConfig) {
+    // Listener configuration remains on the top-level jumper_config when a routing_config selects
+    // the upstream target.
+    return headers.hasRoutingConfigHeader()
+        ? requestHeaderParser.readJumperConfig(request)
+        : selectedConfig;
+  }
+
+  private static Optional<BasicAuthCredentials> resolveBasicAuthCredentials(
+      JumperConfig config, String clientId) {
+    if (Objects.isNull(config.getBasicAuth())) {
+      return Optional.empty();
+    }
+    if (config.getBasicAuth().containsKey(clientId)) {
+      return Optional.of(config.getBasicAuth().get(clientId));
+    }
+    return Optional.ofNullable(config.getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY));
+  }
+
+  private static void setXSpaceGateTokenHeader(ServerHttpRequest.Builder builder, String token) {
+    HeaderUtil.addHeader(builder, Constants.HEADER_X_SPACEGATE_TOKEN, token);
+  }
+
+  private void forwardXTokenExchangeAsAuthorization(
+      ServerHttpRequest.Builder builder, ServerHttpRequest request) {
 
     HeaderUtil.addHeader(
         builder,
@@ -314,7 +374,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     return zone != null && internetFacingZones.contains(zone);
   }
 
-  private void enrichTracingWithDataFrom(ServerHttpRequest request) {
+  private void enrichCurrentSpanFromRequest(ServerHttpRequest request) {
     Span span = this.tracer.currentSpan();
 
     String xTardisTraceId =
@@ -330,6 +390,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   @AllArgsConstructor
   @Getter
   public static class Config extends AbstractGatewayFilterFactory.NameConfig {
-    private String routePathPrefix;
+    // Jumper-owned route prefix removed before forwarding, either /proxy or /listener.
+    private String jumperPathPrefix;
   }
 }

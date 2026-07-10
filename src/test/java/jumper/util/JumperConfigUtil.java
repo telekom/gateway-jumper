@@ -6,7 +6,7 @@ package jumper.util;
 
 import static jumper.config.Config.*;
 import static jumper.config.Config.CONSUMER;
-import static jumper.model.config.JumperConfig.toJsonBase64;
+import static jumper.service.RequestHeaderParser.toJsonBase64;
 
 import java.util.HashMap;
 import java.util.List;
@@ -92,6 +92,15 @@ public class JumperConfigUtil {
     loadBalancing.setServers(
         List.of(
             new Server("http://localhost:1080", 50.0), new Server("http://localhost:1080", 50.0)));
+
+    JumperConfig jc = new JumperConfig();
+    jc.setLoadBalancing(loadBalancing);
+    return toJsonBase64(jc);
+  }
+
+  public static String getJcLoadBalancingWithConflictingPath() {
+    LoadBalancing loadBalancing = new LoadBalancing();
+    loadBalancing.setServers(List.of(new Server(REMOTE_HOST + REMOTE_PROVIDER_BASE_PATH, 100.0)));
 
     JumperConfig jc = new JumperConfig();
     jc.setLoadBalancing(loadBalancing);

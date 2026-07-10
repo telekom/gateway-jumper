@@ -99,6 +99,22 @@ public class VerificationSteps {
     this.baseSteps.getRequestExchange().expectHeader().doesNotExist("Authorization");
   }
 
+  @Then("API Provider receives the original consumer token as X-Spacegate-Token")
+  public void apiProviderReceivesOriginalConsumerToken() {
+    this.baseSteps
+        .getRequestExchange()
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_SPACEGATE_TOKEN, "Bearer " + baseSteps.authHeader);
+  }
+
+  @Then("API Provider receives no X-Spacegate-Token")
+  public void apiProviderReceivesNoSpacegateToken() {
+    this.baseSteps
+        .getRequestExchange()
+        .expectHeader()
+        .doesNotExist(Constants.HEADER_X_SPACEGATE_TOKEN);
+  }
+
   @Then("API Provider receives authorization {word}")
   public void apiProviderReceivesToken(String tokenType) {
     if (tokenType.equalsIgnoreCase("OneToken")) {
@@ -106,11 +122,11 @@ public class VerificationSteps {
           .getRequestExchange()
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkOneToken);
-    } else if (tokenType.equalsIgnoreCase("OneTokenSimple")) {
+    } else if (tokenType.equalsIgnoreCase("OneTokenWithoutRequestPathAssertion")) {
       this.baseSteps
           .getRequestExchange()
           .expectHeader()
-          .value(HttpHeaders.AUTHORIZATION, this::checkOneTokenSimple);
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneTokenWithoutRequestPath);
     } else if (tokenType.equalsIgnoreCase("OneTokenWithPubSub")) {
       this.baseSteps
           .getRequestExchange()
@@ -210,25 +226,15 @@ public class VerificationSteps {
   }
 
   private void checkOneToken(String providerLmsToken) {
+    checkOneTokenWithoutRequestPath(providerLmsToken);
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
-
-    assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
-    assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
-    assertEquals("stargate", claimsFromToken.getBody().get("azp", String.class));
-    assertEquals(ENVIRONMENT, claimsFromToken.getBody().get("env", String.class));
-    assertEquals("GET", claimsFromToken.getBody().get("operation", String.class));
     assertEquals(
         BASE_PATH + CALLBACK_SUFFIX, claimsFromToken.getBody().get("requestPath", String.class));
-    assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
-    assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
-    assertEquals(
-        localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().getIssuer());
-    assertNotNull(claimsFromToken.getBody().getExpiration());
-    assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }
 
-  private void checkOneTokenSimple(String providerLmsToken) {
+  private void checkOneTokenWithoutRequestPath(String providerLmsToken) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
+    assertIncomingLifecycleClaimsPreserved(providerLmsToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
@@ -239,8 +245,6 @@ public class VerificationSteps {
     assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
     assertEquals(
         localIssuerUrl + "/" + Constants.DEFAULT_REALM, claimsFromToken.getBody().getIssuer());
-    assertNotNull(claimsFromToken.getBody().getExpiration());
-    assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }
 
   private void checkPubSub(String providerLmsToken) {
@@ -279,6 +283,9 @@ public class VerificationSteps {
 
   private void checkMeshToken(String meshLmsToken, String expectedRealm) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(meshLmsToken);
+    assertIncomingLifecycleClaimsPreserved(meshLmsToken);
+    Jwt<?, Claims> incomingToken =
+        OauthTokenUtil.getAllClaimsFromToken("Bearer " + baseSteps.authHeader);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     // Mesh LMS token carries the real consumer identity, not the "gateway" client
@@ -291,12 +298,25 @@ public class VerificationSteps {
     assertNull(claimsFromToken.getBody().get("env", String.class));
     assertEquals("GET", claimsFromToken.getBody().get("operation", String.class));
     // originZone and originStargate come from the consumer token, not the remote zone
-    assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
-    assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
+    assertEquals(
+        incomingToken.getBody().get("originZone", String.class),
+        claimsFromToken.getBody().get("originZone", String.class));
+    assertEquals(
+        incomingToken.getBody().get("originStargate", String.class),
+        claimsFromToken.getBody().get("originStargate", String.class));
     // iss is the local StarGate issuer URL — the provider zone validates against its JWKS
     assertEquals(localIssuerUrl + "/" + expectedRealm, claimsFromToken.getBody().getIssuer());
     assertNotNull(claimsFromToken.getBody().getExpiration());
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
+  }
+
+  private void assertIncomingLifecycleClaimsPreserved(String generatedTokenValue) {
+    Jwt<?, Claims> generatedToken = OauthTokenUtil.getAllClaimsFromToken(generatedTokenValue);
+    Jwt<?, Claims> incomingToken =
+        OauthTokenUtil.getAllClaimsFromToken("Bearer " + baseSteps.authHeader);
+    assertEquals(incomingToken.getBody().getSubject(), generatedToken.getBody().getSubject());
+    assertEquals(incomingToken.getBody().getIssuedAt(), generatedToken.getBody().getIssuedAt());
+    assertEquals(incomingToken.getBody().getExpiration(), generatedToken.getBody().getExpiration());
   }
 
   private void checkExternalConfigured(String token) {

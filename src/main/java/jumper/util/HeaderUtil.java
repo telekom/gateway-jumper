@@ -9,7 +9,6 @@ import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Objects;
 import jumper.Constants;
-import jumper.model.config.JumperConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 
@@ -45,11 +44,11 @@ public class HeaderUtil {
   }
 
   public static void rewriteXForwardedHeader(
-      ServerHttpRequest.Builder builder, JumperConfig jumperConfig) {
+      ServerHttpRequest.Builder builder, String consumerOriginGateway) {
 
-    if (Objects.nonNull(jumperConfig.getConsumerOriginStargate())) {
+    if (Objects.nonNull(consumerOriginGateway)) {
       try {
-        URI url = new URI(jumperConfig.getConsumerOriginStargate());
+        URI url = new URI(consumerOriginGateway);
         HeaderUtil.addHeader(builder, Constants.HEADER_X_FORWARDED_HOST, url.getHost());
       } catch (URISyntaxException e) {
         log.error(e.getMessage(), e);

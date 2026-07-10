@@ -15,8 +15,8 @@ import io.jsonwebtoken.Jwts;
 import java.nio.file.Path;
 import java.util.Base64;
 import java.util.List;
-import jumper.model.config.JumperConfig;
 import jumper.model.config.KeyInfo;
+import jumper.model.request.IncomingTokenClaims;
 import jumper.util.AccessToken;
 import jumper.util.OauthTokenUtil;
 import jumper.util.ObjectMapperUtil;
@@ -83,12 +83,19 @@ class TokenGeneratorServiceTest {
   void singleConsumerAudience_overridesSubscriberId() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
-    JumperConfig jc = jumperConfig(consumerToken);
+    IncomingTokenClaims incomingTokenClaims = incomingTokenClaims(consumerToken);
 
     // act
     String providerLmsToken =
         tokenGeneratorService.generateProviderLmsToken(
-            jc, "GET", ISSUER, "publisher-1", "subscriber-1");
+            incomingTokenClaims,
+            null,
+            "/base/path",
+            "localEnv",
+            "GET",
+            ISSUER,
+            "publisher-1",
+            "subscriber-1");
     Claims claims = parse(providerLmsToken);
 
     // assert: consumer aud wins, subscriberId still present in its own claim
@@ -102,11 +109,19 @@ class TokenGeneratorServiceTest {
   void noConsumerAudience_fallsBackToSubscriberId() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of());
-    JumperConfig jc = jumperConfig(consumerToken);
+    IncomingTokenClaims incomingTokenClaims = incomingTokenClaims(consumerToken);
 
     // act
     String providerLmsToken =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
+        tokenGeneratorService.generateProviderLmsToken(
+            incomingTokenClaims,
+            null,
+            "/base/path",
+            "localEnv",
+            "GET",
+            ISSUER,
+            null,
+            "subscriber-1");
     Claims claims = parse(providerLmsToken);
 
     // assert
@@ -118,11 +133,12 @@ class TokenGeneratorServiceTest {
   void multipleConsumerAudiences_allPreserved() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("aud1", "aud2", "aud3"));
-    JumperConfig jc = jumperConfig(consumerToken);
+    IncomingTokenClaims incomingTokenClaims = incomingTokenClaims(consumerToken);
 
     // act
     String providerLmsToken =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+        tokenGeneratorService.generateProviderLmsToken(
+            incomingTokenClaims, null, "/base/path", "localEnv", "GET", ISSUER, null, null);
     Claims claims = parse(providerLmsToken);
 
     // assert
@@ -135,11 +151,12 @@ class TokenGeneratorServiceTest {
   void singleConsumerAudience_emitsPlainStringOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
-    JumperConfig jc = jumperConfig(consumerToken);
+    IncomingTokenClaims incomingTokenClaims = incomingTokenClaims(consumerToken);
 
     // act
     String providerLmsToken =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+        tokenGeneratorService.generateProviderLmsToken(
+            incomingTokenClaims, null, "/base/path", "localEnv", "GET", ISSUER, null, null);
 
     // assert: inspect the raw JWT payload JSON directly. Claims#getAudience() normalizes both
     // wire forms (string or array) into a Set on read, so it cannot catch a regression here -
@@ -155,11 +172,19 @@ class TokenGeneratorServiceTest {
   void subscriberIdFallback_emitsPlainStringOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of());
-    JumperConfig jc = jumperConfig(consumerToken);
+    IncomingTokenClaims incomingTokenClaims = incomingTokenClaims(consumerToken);
 
     // act
     String providerLmsToken =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
+        tokenGeneratorService.generateProviderLmsToken(
+            incomingTokenClaims,
+            null,
+            "/base/path",
+            "localEnv",
+            "GET",
+            ISSUER,
+            null,
+            "subscriber-1");
 
     // assert
     JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
@@ -172,11 +197,12 @@ class TokenGeneratorServiceTest {
   void multipleConsumerAudiences_emitJsonArrayOnTheWire() {
     // arrange
     String consumerToken = consumerTokenWithAudiences(List.of("aud1", "aud2"));
-    JumperConfig jc = jumperConfig(consumerToken);
+    IncomingTokenClaims incomingTokenClaims = incomingTokenClaims(consumerToken);
 
     // act
     String providerLmsToken =
-        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+        tokenGeneratorService.generateProviderLmsToken(
+            incomingTokenClaims, null, "/base/path", "localEnv", "GET", ISSUER, null, null);
 
     // assert
     JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
@@ -224,16 +250,17 @@ class TokenGeneratorServiceTest {
         .getConsumerAccessToken();
   }
 
-  private static JumperConfig jumperConfig(String authorizationToken) {
-    JumperConfig jc = new JumperConfig();
-    // production stores the raw Authorization header value, i.e. with the "Bearer " prefix
-    jc.setAuthorizationToken("Bearer " + authorizationToken);
-    jc.setRequestPath("/base/path");
-    jc.setConsumer("eni--local-team--local-app");
-    jc.setConsumerOriginZone("localZone");
-    jc.setConsumerOriginStargate("https://zone.local.de");
-    jc.setEnvName("localEnv");
-    return jc;
+  private static IncomingTokenClaims incomingTokenClaims(String authorizationToken) {
+    Claims claims = OauthTokenUtil.getAllClaimsFromToken("Bearer " + authorizationToken).getBody();
+    return new IncomingTokenClaims(
+        "eni--local-team--local-app",
+        claims.getSubject(),
+        claims.getIssuer(),
+        "https://zone.local.de",
+        "localZone",
+        claims.getAudience(),
+        claims.getIssuedAt(),
+        claims.getExpiration());
   }
 
   private static Claims parse(String token) {

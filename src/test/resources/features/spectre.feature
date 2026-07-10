@@ -18,6 +18,15 @@ Feature: spectre events created
     And verify 2 horizon events received
     And verify received horizon events structure for method GET
 
+  Scenario: Consumer calls listener route with routing_config and a matching top-level route listener, 2 spectre events created
+    Given Proxy routing_config header set with consumer route listener
+    And API provider set to respond with a 200 status code
+    And API provider set to respond on real path
+    And horizon set to receive events
+    When consumer calls the listener route through the configured upstream
+    And API consumer receives a 200 status code
+    And verify 2 horizon events received
+
   Scenario Outline: Consumer calls listener route with real route headers and specific json contenttype, jc with matching route listener configured, 2 spectre events created
     Given RealRoute headers are set
     And jumperConfig with consumer route listener set

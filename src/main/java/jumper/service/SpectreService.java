@@ -17,6 +17,8 @@ import jumper.model.config.RouteListener;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreData;
 import jumper.model.config.SpectreKind;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +47,7 @@ public class SpectreService {
   private final TokenGeneratorService tokenGeneratorService;
   private final Tracer tracer;
   private final ObjectMapper objectMapper;
+  private final EffectiveRequestConfigResolver effectiveRequestConfigResolver;
 
   @Qualifier("spectreServiceWebClient")
   private final WebClient spectreServiceWebClient;
@@ -61,16 +64,20 @@ public class SpectreService {
   @Autowired private SpectreConfiguration spectreConfiguration;
 
   public Mono<Void> handleEvent(
-      JumperConfig jc,
+      IncomingTokenClaims incomingTokenClaims,
+      JumperConfig jumperConfig,
+      HeaderConfig headerConfig,
       ServerWebExchange exchange,
       Object http,
       RouteListener listener,
       String payload) {
-    return publishEvent(createEvent(jc, exchange, http, listener, payload), jc);
+    return publishEvent(
+        createEvent(incomingTokenClaims, exchange, http, listener, payload),
+        effectiveRequestConfigResolver.resolveRealmName(jumperConfig, headerConfig));
   }
 
   private Spectre createEvent(
-      JumperConfig jc,
+      IncomingTokenClaims incomingTokenClaims,
       ServerWebExchange exchange,
       Object http,
       RouteListener listener,
@@ -104,7 +111,7 @@ public class SpectreService {
       data.setStatus(Objects.requireNonNull(rs.getStatusCode()).value());
     }
 
-    data.setConsumer(jc.getConsumer());
+    data.setConsumer(incomingTokenClaims.clientId());
     data.setIssue(listener.getIssue());
     data.setProvider(listener.getServiceOwner());
     data.setMethod(Objects.requireNonNull(rq.getMethod()).toString());
@@ -125,21 +132,18 @@ public class SpectreService {
 
     newSpan.tag("spectre.issue", listener.getIssue());
     newSpan.tag("spectre.provider", listener.getServiceOwner());
-    newSpan.tag("spectre.consumer", jc.getConsumer());
+    newSpan.tag("spectre.consumer", incomingTokenClaims.clientId());
     // newSpan.tag("span.kind", "client");
     newSpan.end();
 
     return event;
   }
 
-  private Mono<Void> publishEvent(Spectre event, JumperConfig jc) {
-
-    String envName = jc.getRealmName();
-
+  private Mono<Void> publishEvent(Spectre event, String realmName) {
     return publishEventMono(
-            publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
+            publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, realmName),
             tokenGeneratorService.generateGatewayTokenForPublisher(
-                localIssuerUrl + "/" + envName, envName),
+                localIssuerUrl + "/" + realmName, realmName),
             event)
         .onErrorResume(
             throwable -> {

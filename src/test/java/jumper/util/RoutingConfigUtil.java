@@ -5,7 +5,7 @@
 package jumper.util;
 
 import static jumper.config.Config.*;
-import static jumper.model.config.JumperConfig.toJsonBase64;
+import static jumper.service.RequestHeaderParser.toJsonBase64;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -33,11 +33,32 @@ public class RoutingConfigUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithConflictingRemoteApiUrl(
+      BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, REMOTE_HOST + REMOTE_CONFLICTING_BASE_PATH);
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondary());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
+    };
+  }
+
   public static Consumer<HttpHeaders> getProxyRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxy());
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
+    };
+  }
+
+  public static Consumer<HttpHeaders> getProxyRouteHeadersWithConsumerRouteListener(
+      BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      // Legacy control plane puts proxy failover target and gateway credentials in routing_config.
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxyLegacyIssuer(baseSteps.getId()));
+      httpHeaders.set(
+          Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcRouteListener(CONSUMER));
     };
   }
 

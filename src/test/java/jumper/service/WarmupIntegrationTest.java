@@ -69,13 +69,13 @@ class WarmupIntegrationTest {
     jc.setApiBasePath("/");
     jc.setRealmName(Constants.DEFAULT_REALM);
     jc.setEnvName("warmup");
-    String jumperConfigBase64 = JumperConfig.toJsonBase64(jc);
+    String jumperConfigBase64 = RequestHeaderParser.toJsonBase64(jc);
 
     // Build a synthetic consumer token (same as WarmupService does)
     String consumerToken = jumper.util.TokenUtil.getConsumerAccessToken();
 
     // Send the warmup-style request through Jumper's filter chain
-    // Includes remote_api_url legacy header required by fillWithLegacyHeaders
+    // Includes legacy routing headers that remain valid as fallback input.
     webTestClient
         .get()
         .uri(Constants.PROXY_ROOT_PATH_PREFIX + "/warmup")

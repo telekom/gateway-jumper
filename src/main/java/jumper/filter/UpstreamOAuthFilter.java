@@ -10,7 +10,9 @@ import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
-import jumper.service.JumperConfigService;
+import jumper.model.request.HeaderConfig;
+import jumper.model.request.IncomingTokenClaims;
+import jumper.service.EffectiveRequestConfigResolver;
 import jumper.service.TokenCacheService;
 import jumper.service.TokenFetchService;
 import jumper.service.TokenGeneratorService;
@@ -40,8 +42,8 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   private final TokenFetchService tokenFetchService;
   private final TokenGeneratorService tokenGeneratorService;
-  private final JumperConfigService jumperConfigService;
   private final TokenCacheService tokenCacheService;
+  private final EffectiveRequestConfigResolver effectiveRequestConfigResolver;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -49,13 +51,13 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   public UpstreamOAuthFilter(
       TokenFetchService tokenFetchService,
       TokenGeneratorService tokenGeneratorService,
-      JumperConfigService jumperConfigService,
-      TokenCacheService tokenCacheService) {
+      TokenCacheService tokenCacheService,
+      EffectiveRequestConfigResolver effectiveRequestConfigResolver) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
     this.tokenGeneratorService = tokenGeneratorService;
-    this.jumperConfigService = jumperConfigService;
     this.tokenCacheService = tokenCacheService;
+    this.effectiveRequestConfigResolver = effectiveRequestConfigResolver;
   }
 
   @Override
@@ -71,15 +73,23 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           }
 
           log.debug("continue with UpstreamOAuthFilter");
-          JumperConfig jumperConfig =
-              jumperConfigService.resolveJumperConfig(exchange.getRequest());
+          JumperConfig jumperConfig = ExchangeStateManager.getJumperConfig(exchange).orElseThrow();
+          HeaderConfig headerConfig = ExchangeStateManager.getHeaderConfig(exchange).orElseThrow();
+          IncomingTokenClaims incomingTokenClaims =
+              ExchangeStateManager.getIncomingTokenClaims(exchange).orElseThrow();
           log.debug("JumperConfig: {}", jumperConfig);
 
           ServerHttpRequest.Builder requestBuilder = readOnlyRequest.mutate();
 
           // Reactive chain: resolve token source (mesh/external/legacy) -> set Bearer token ->
           // build request -> continue filter chain
-          return resolveTokenSource(exchange, jumperConfig, requestBuilder, readOnlyRequest)
+          return resolveTokenSource(
+                  exchange,
+                  jumperConfig,
+                  headerConfig,
+                  incomingTokenClaims,
+                  requestBuilder,
+                  readOnlyRequest)
               .map(tokenInfo -> setBearerToken(requestBuilder, tokenInfo))
               .map(ServerHttpRequest.Builder::build)
               .flatMap(
@@ -110,20 +120,29 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   private Mono<TokenInfo> resolveTokenSource(
       ServerWebExchange exchange,
       JumperConfig jumperConfig,
+      HeaderConfig headerConfig,
+      IncomingTokenClaims incomingTokenClaims,
       ServerHttpRequest.Builder builder,
       ServerHttpRequest request) {
-    if (jumperConfig.isMeshRoute()) {
+    if (ExchangeStateManager.isMeshRoute(exchange)) {
       // Gateway-to-Gateway mesh LMS token: self-signed JWT replacing the Iris gateway
       // client_credentials token. The provider zone validates it against the consumer zone's
       // StarGate JWKS endpoint.
       log.debug("----------------GATEWAY MESH LMS-------------");
       String realmName =
-          Objects.requireNonNullElse(jumperConfig.getRealmName(), Constants.DEFAULT_REALM);
+          effectiveRequestConfigResolver.resolveRealmName(jumperConfig, headerConfig);
       return Mono.fromCallable(
               () -> {
                 String meshLmsToken =
                     tokenGeneratorService.generateMeshLmsToken(
-                        jumperConfig, request.getMethod().name(), localIssuerUrl + "/" + realmName);
+                        incomingTokenClaims,
+                        effectiveRequestConfigResolver.resolveLmsSecurityScopes(
+                            jumperConfig, incomingTokenClaims.clientId()),
+                        ExchangeStateManager.getRequestPath(exchange).orElse(null),
+                        effectiveRequestConfigResolver.resolveEnvironment(
+                            jumperConfig, headerConfig),
+                        request.getMethod().name(),
+                        localIssuerUrl + "/" + realmName);
                 TokenInfo tokenInfo = new TokenInfo();
                 tokenInfo.setAccessToken(meshLmsToken);
                 return tokenInfo;
@@ -137,12 +156,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
                       HttpStatus.INTERNAL_SERVER_ERROR,
                       "Failed to generate mesh LMS token: " + e.getMessage()));
 
-    } else if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
+    } else if (Objects.nonNull(
+        effectiveRequestConfigResolver.resolveExternalTokenEndpoint(jumperConfig, headerConfig))) {
       // External OAuth token: Fetch from external identity provider using client credentials
       log.debug("----------------EXTERNAL AUTHORIZATION-------------");
-      log.debug("Remote TokenEndpoint is set to: {}", jumperConfig.getExternalTokenEndpoint());
+      String tokenEndpoint =
+          effectiveRequestConfigResolver.resolveExternalTokenEndpoint(jumperConfig, headerConfig);
+      log.debug("Remote TokenEndpoint is set to: {}", tokenEndpoint);
 
-      Optional<OauthCredentials> oauthCredentials = jumperConfig.getOauthCredentials();
+      Optional<OauthCredentials> oauthCredentials =
+          getOauthCredentials(jumperConfig, incomingTokenClaims.clientId());
       Mono<TokenInfo> tokenMono;
 
       if (oauthCredentials.isPresent()
@@ -151,16 +174,22 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
         log.debug("fetching token with OauthCredentials");
         // Store token cache key in exchange for 4xx-based eviction
         String tokenCacheKey =
-            tokenCacheService.generateTokenCacheKey(
-                jumperConfig.getExternalTokenEndpoint(), oauthCredentials.get());
+            tokenCacheService.generateTokenCacheKey(tokenEndpoint, oauthCredentials.get());
         exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY, tokenCacheKey);
         tokenMono =
             tokenFetchService.getAccessTokenWithOauthCredentialsObject(
-                jumperConfig.getExternalTokenEndpoint(), oauthCredentials.get());
+                tokenEndpoint, oauthCredentials.get());
       } else {
         // Fallback to legacy header-based credentials extraction
         log.debug("fetching token with legacy method");
-        tokenMono = getAccessTokenFromExternalIdpLegacy(exchange, builder, jumperConfig);
+        tokenMono =
+            getAccessTokenFromExternalIdpLegacy(
+                exchange,
+                builder,
+                jumperConfig,
+                headerConfig,
+                incomingTokenClaims,
+                oauthCredentials);
       }
 
       return tokenMono.onErrorResume(Mono::error);
@@ -176,16 +205,22 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private Mono<TokenInfo> getAccessTokenFromExternalIdpLegacy(
-      ServerWebExchange exchange, ServerHttpRequest.Builder builder, JumperConfig jc) {
+      ServerWebExchange exchange,
+      ServerHttpRequest.Builder builder,
+      JumperConfig jumperConfig,
+      HeaderConfig headerConfig,
+      IncomingTokenClaims incomingTokenClaims,
+      Optional<OauthCredentials> oauthCredentials) {
 
-    String consumer = jc.getConsumer();
-    String tokenEndpoint = jc.getExternalTokenEndpoint();
+    String consumer = incomingTokenClaims.clientId();
+    String tokenEndpoint =
+        effectiveRequestConfigResolver.resolveExternalTokenEndpoint(jumperConfig, headerConfig);
 
-    Optional<OauthCredentials> oauthCredentials = jc.getOauthCredentials();
-
-    String clientId = determineClientId(builder, jc, oauthCredentials);
-    String clientSecret = determineClientSecret(builder, jc, oauthCredentials);
-    String clientScope = determineClientScope(builder, jc, oauthCredentials);
+    String clientId = determineClientId(builder, jumperConfig, headerConfig, oauthCredentials);
+    String clientSecret =
+        determineClientSecret(builder, jumperConfig, headerConfig, oauthCredentials);
+    String clientScope =
+        determineClientScope(builder, jumperConfig, headerConfig, oauthCredentials);
 
     log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
     if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
@@ -205,13 +240,17 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     }
   }
 
+  // The following three resolvers prefer SpaceGate overrides, then client/provider OAuth
+  // credentials, then configured or legacy defaults. Consumed SpaceGate headers are removed.
   private static String determineClientScope(
       ServerHttpRequest.Builder builder,
-      JumperConfig jc,
+      JumperConfig jumperConfig,
+      HeaderConfig headerConfig,
       Optional<OauthCredentials> oauthCredentials) {
 
     String clientScope = "";
-    String xSpacegateScope = jc.getXSpacegateScope();
+    String xSpacegateScope =
+        headerConfig.hasRoutingConfigHeader() ? null : headerConfig.xSpacegateScope();
 
     if (Objects.nonNull(xSpacegateScope)) {
       log.debug("Using Scope from xSpacegateScope-Header");
@@ -224,8 +263,11 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
     } else {
       log.debug("Using default Provider scope");
-      if (StringUtils.isNotBlank(jc.getScopes())) {
-        clientScope = jc.getScopes();
+      if (StringUtils.isNotBlank(jumperConfig.getScopes())) {
+        clientScope = jumperConfig.getScopes();
+      } else if (!headerConfig.hasRoutingConfigHeader()
+          && StringUtils.isNotBlank(headerConfig.scopes())) {
+        clientScope = headerConfig.scopes();
       }
     }
     return clientScope;
@@ -233,11 +275,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   private static String determineClientSecret(
       ServerHttpRequest.Builder builder,
-      JumperConfig jc,
+      JumperConfig jumperConfig,
+      HeaderConfig headerConfig,
       Optional<OauthCredentials> oauthCredentials) {
 
-    String clientSecret = jc.getClientSecret();
-    String xSpacegateClientSecret = jc.getXSpacegateClientSecret();
+    String clientSecret = jumperConfig.getClientSecret();
+    if (!headerConfig.hasRoutingConfigHeader() && StringUtils.isBlank(clientSecret)) {
+      clientSecret = headerConfig.clientSecret();
+    }
+    String xSpacegateClientSecret =
+        headerConfig.hasRoutingConfigHeader() ? null : headerConfig.xSpacegateClientSecret();
 
     if (Objects.nonNull(xSpacegateClientSecret)) {
       log.debug("Using SubscriberClientSecret from xSpacegateClientSecret-Header");
@@ -257,11 +304,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   private static String determineClientId(
       ServerHttpRequest.Builder builder,
-      JumperConfig jc,
+      JumperConfig jumperConfig,
+      HeaderConfig headerConfig,
       Optional<OauthCredentials> oauthCredentials) {
 
-    String clientId = jc.getClientId();
-    String xSpacegateClientId = jc.getXSpacegateClientId();
+    String clientId = jumperConfig.getClientId();
+    if (!headerConfig.hasRoutingConfigHeader() && StringUtils.isBlank(clientId)) {
+      clientId = headerConfig.clientId();
+    }
+    String xSpacegateClientId =
+        headerConfig.hasRoutingConfigHeader() ? null : headerConfig.xSpacegateClientId();
 
     if (StringUtils.isNotBlank(xSpacegateClientId)) {
       log.debug("Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
@@ -279,5 +331,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       log.debug("Using default ProviderClientId {}", clientId);
     }
     return clientId;
+  }
+
+  private static Optional<OauthCredentials> getOauthCredentials(
+      JumperConfig config, String consumer) {
+    if (Objects.isNull(config.getOauth())) {
+      return Optional.empty();
+    }
+    if (config.getOauth().containsKey(consumer)) {
+      return Optional.of(config.getOauth().get(consumer));
+    }
+    return Optional.ofNullable(config.getOauth().get(Constants.OAUTH_PROVIDER_KEY));
   }
 }

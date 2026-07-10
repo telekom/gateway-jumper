@@ -73,14 +73,14 @@ public class HeaderSteps {
 
   @Given("RealRoute headers are set")
   public void realRouteHeadersSet() {
-    baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken(), false));
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getRealRouteHeaders(baseSteps.authHeader, false));
   }
 
   @Given("RealRoute headers are set with RemoteApiUrl over TLS {booleanValue}")
   public void realRouteHeadersSet(boolean tls) {
-    baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getRealRouteHeaders(TokenUtil.getConsumerAccessToken(), tls));
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getRealRouteHeaders(baseSteps.authHeader, tls));
   }
 
   @Given("request header {word} is set to {word}")
@@ -94,14 +94,23 @@ public class HeaderSteps {
 
   @Given("RealRoute headers are set with x-token-exchange")
   public void realRouteHeadersSetWithXtokenExchange() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getRealRouteHeadersWithXtokenExchange(TokenUtil.getConsumerAccessToken()));
+        TokenUtil.getRealRouteHeadersWithXtokenExchange(baseSteps.authHeader));
   }
 
   @Given("RealRoute headers without remoteApiUrl are set")
   public void realRouteHeadersWithoutRemoteApiUrlSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getRealRouteHeadersWithoutRemoteApiUrl(TokenUtil.getConsumerAccessToken()));
+        TokenUtil.getRealRouteHeadersWithoutRemoteApiUrl(baseSteps.authHeader));
+  }
+
+  @Given("RealRoute headers with conflicting remoteApiUrl are set")
+  public void realRouteHeadersWithConflictingRemoteApiUrlSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getRealRouteHeadersWithConflictingRemoteApiUrl(baseSteps.authHeader));
   }
 
   @Given("Secondary routing_config header set")
@@ -117,10 +126,30 @@ public class HeaderSteps {
         RoutingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
   }
 
+  @Given("Secondary routing_config header set with conflicting remoteApiUrl")
+  public void secondaryRoutingConfigHeaderSetWithConflictingRemoteApiUrl() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getSecondaryRouteHeadersWithConflictingRemoteApiUrl(baseSteps));
+  }
+
   @Given("Proxy routing_config header set")
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getProxyRouteHeaders(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set with consumer route listener")
+  public void proxyRoutingConfigHeaderSetWithConsumerRouteListener() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getProxyRouteHeadersWithConsumerRouteListener(baseSteps)
+            .andThen(
+                httpHeaders -> {
+                  httpHeaders.set(Constants.HEADER_X_B3_TRACE_ID, baseSteps.getId());
+                  httpHeaders.set(Constants.HEADER_X_B3_SPAN_ID, baseSteps.getSpanId());
+                  httpHeaders.set(Constants.HEADER_X_B3_SAMPLED, "1");
+                }));
   }
 
   @Given("Proxy routing_config header set with legacy issuer")
@@ -198,16 +227,26 @@ public class HeaderSteps {
 
   @And("authorization token with aud set")
   public void setAuthorizationWithAud() {
+    baseSteps.authHeader = getConsumerAccessTokenWithAud();
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> httpHeaders.setBearerAuth(getConsumerAccessTokenWithAud())));
+            httpHeaders -> httpHeaders.setBearerAuth(baseSteps.authHeader)));
   }
 
   @And("authorization token with multiple aud set")
   public void setAuthorizationWithMultipleAud() {
+    baseSteps.authHeader = getConsumerAccessTokenWithMultipleAud();
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders -> httpHeaders.setBearerAuth(getConsumerAccessTokenWithMultipleAud())));
+            httpHeaders -> httpHeaders.setBearerAuth(baseSteps.authHeader)));
+  }
+
+  @And("authorization token originates from internet-facing zone {string}")
+  public void setAuthorizationFromInternetFacingZone(String zone) {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessTokenFromZone(zone);
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> httpHeaders.setBearerAuth(baseSteps.authHeader)));
   }
 
   @And("technical headers added")

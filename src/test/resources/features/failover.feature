@@ -19,7 +19,15 @@ Feature: request containing routing_config properly handled
     And API provider set to respond on provider path
     When consumer calls the proxy route without base path
     Then API Provider receives default bearer authorization headers
-    Then API Provider receives authorization OneTokenSimple
+    Then API Provider receives authorization OneTokenWithoutRequestPathAssertion
+
+  Scenario: Consumer calls proxy route with secondary config and conflicting legacy remoteApiUrl, selected routing_config target is used
+    Given Secondary routing_config header set with conflicting remoteApiUrl
+    And skip zone header set
+    And API provider set to respond on provider path
+    When consumer calls the proxy route without base path
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneTokenWithoutRequestPathAssertion
 
   Scenario: Consumer calls proxy route with secondary config and zone is unhealthy, provider called
     Given Secondary routing_config header set
@@ -27,7 +35,7 @@ Feature: request containing routing_config properly handled
     And API provider set to respond on provider path
     When consumer calls the proxy route without base path
     Then API Provider receives default bearer authorization headers
-    Then API Provider receives authorization OneTokenSimple
+    Then API Provider receives authorization OneTokenWithoutRequestPathAssertion
 
 ################ proxy route ################
   Scenario: Consumer calls proxy route with proxy config, real proxy called

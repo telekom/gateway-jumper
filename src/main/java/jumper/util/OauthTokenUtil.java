@@ -30,7 +30,7 @@ public final class OauthTokenUtil {
     throw new UnsupportedOperationException("Utility class");
   }
 
-  static String getTokenWithoutSignature(String token) {
+  private static String getTokenWithoutSignature(String token) {
     String fullyProcessedToken = processToken(token);
 
     int firstDot = fullyProcessedToken.indexOf(".");
@@ -41,10 +41,6 @@ public final class OauthTokenUtil {
     }
 
     return fullyProcessedToken.substring(0, secondDot + 1);
-  }
-
-  public static String getClaimFromToken(String token, String claimName) {
-    return getAllClaimsFromToken(token).getBody().get(claimName, String.class);
   }
 
   public static Jwt<?, Claims> getAllClaimsFromToken(String token) {

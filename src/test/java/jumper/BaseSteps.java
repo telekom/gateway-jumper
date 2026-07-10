@@ -5,6 +5,7 @@
 package jumper;
 
 import static jumper.config.Config.REMOTE_BASE_PATH;
+import static jumper.config.Config.REMOTE_CONFLICTING_BASE_PATH;
 import static jumper.config.Config.REMOTE_FAILOVER_BASE_PATH;
 import static jumper.config.Config.REMOTE_PROVIDER_BASE_PATH;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -76,6 +77,7 @@ public class BaseSteps {
       case "real" -> mockUpstreamServer.failoverRequest(REMOTE_BASE_PATH);
       case "failover" -> mockUpstreamServer.failoverRequest(REMOTE_FAILOVER_BASE_PATH);
       case "provider" -> mockUpstreamServer.failoverRequest(REMOTE_PROVIDER_BASE_PATH);
+      case "conflicting" -> mockUpstreamServer.failoverRequest(REMOTE_CONFLICTING_BASE_PATH);
     }
   }
 
@@ -343,7 +345,16 @@ public class BaseSteps {
   @When("consumer calls the listener route")
   public void consumerCallsTheListenerRoute() {
     mockUpstreamServer.callbackRequest();
+    callListenerRoute();
+  }
 
+  @When("consumer calls the listener route through the configured upstream")
+  public void consumerCallsTheListenerRouteThroughConfiguredUpstream() {
+    mockUpstreamServer.callbackRequestAtPath(REMOTE_BASE_PATH);
+    callListenerRoute();
+  }
+
+  private void callListenerRoute() {
     requestExchange =
         webTestClient
             .get()

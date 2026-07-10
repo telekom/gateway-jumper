@@ -66,6 +66,12 @@ public class MockUpstreamServer {
             .willReturn(aResponse().withTransformers(TestExpectationCallback.NAME)));
   }
 
+  public void callbackRequestAtPath(String path) {
+    server.stubFor(
+        any(urlPathEqualTo(path + "/callback"))
+            .willReturn(aResponse().withTransformers(TestExpectationCallback.NAME)));
+  }
+
   public void failoverRequest(String path) {
     server.stubFor(
         any(urlPathEqualTo(path))
