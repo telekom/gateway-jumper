@@ -29,7 +29,7 @@ SPDX-License-Identifier: Apache-2.0
 		<cucumber.version>7.34.3</cucumber.version>
 		<junit-platform.version>1.14.3</junit-platform.version>
 		<wiremock.version>3.13.2</wiremock.version>
-		<wiremock-jetty.version>12.0.36</wiremock-jetty.version>
+		<wiremock-jetty.version>12.1.11</wiremock-jetty.version>
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
 		<jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
