@@ -57,41 +57,23 @@ class JumperConfigTest {
   }
 
   @Test
-  void determineRealm_keepsJumperConfigRealm() {
+  void determineRealm_usesRealmHeader() {
     // arrange
     JumperConfig jc = new JumperConfig();
-    jc.setRealmName(NON_DEFAULT_REALM);
     ServerHttpRequest request = requestWithRealmHeader(Constants.DEFAULT_REALM);
 
     // act
     String realm = jc.determineRealm(request);
 
     // assert
-    assertEquals(NON_DEFAULT_REALM, realm);
+    assertEquals(Constants.DEFAULT_REALM, realm);
   }
 
   @Test
-  void determineRealm_usesLegacyRealmHeaderWhenJumperConfigRealmIsMissing() {
-    // TODO: remove after mesh LMS phase 2 completes and the legacy realm header fallback is
-    // deleted.
+  void determineRealm_usesLegacyIssuerRealmWhenHeaderIsMissing() {
     // arrange
     JumperConfig jc = new JumperConfig();
-    jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/" + OTHER_REALM);
-    ServerHttpRequest request = requestWithRealmHeader(NON_DEFAULT_REALM);
-
-    // act
-    String realm = jc.determineRealm(request);
-
-    // assert
-    assertEquals(NON_DEFAULT_REALM, realm);
-  }
-
-  @Test
-  void determineRealm_usesLegacyIssuerRealmWhenConfigAndHeaderRealmAreMissing() {
-    // TODO: remove after mesh LMS phase 2 completes and the legacy issuer realm fallback is
-    // deleted.
-    // arrange
-    JumperConfig jc = new JumperConfig();
+    jc.setRealmName(OTHER_REALM);
     jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/" + NON_DEFAULT_REALM);
     ServerHttpRequest request = requestWithoutRealmHeader();
 
@@ -106,6 +88,7 @@ class JumperConfigTest {
   void determineRealm_usesDefaultRealmWhenNoRealmSourceExists() {
     // arrange
     JumperConfig jc = new JumperConfig();
+    jc.setRealmName(NON_DEFAULT_REALM);
     ServerHttpRequest request = requestWithoutRealmHeader();
 
     // act

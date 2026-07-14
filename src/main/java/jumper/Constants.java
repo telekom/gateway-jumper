@@ -48,7 +48,9 @@ public class Constants {
   public static final String HEADER_X_SPACEGATE_TOKEN = "X-Spacegate-Token";
   public static final String HEADER_X_TOKEN_EXCHANGE = "X-Token-Exchange";
   public static final String HEADER_API_BASE_PATH = "api_base_path";
+  public static final String HEADER_X_FORWARDED_FOR = "X-Forwarded-For";
   public static final String HEADER_X_FORWARDED_HOST = "X-Forwarded-Host";
+  public static final String HEADER_X_FORWARDED_PATH = "X-Forwarded-Path";
   public static final String HEADER_X_FORWARDED_PORT = "X-Forwarded-Port";
   public static final String HEADER_X_FORWARDED_PROTO = "X-Forwarded-Proto";
   public static final String HEADER_X_FORWARDED_PORT_PORT = "443";

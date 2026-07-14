@@ -94,17 +94,8 @@ Feature: proper authorization token reaches provider endpoint
     And API consumer receives a 200 status code
     And API Provider receives header x-tardis-traceid that matches regex dummy
 
-  Scenario: Consumer calls proxy route with non-default realm in jumper_config, mesh LMS token issuer uses realm
-    Given ProxyRoute headers are set with jumper_config realm
-    And API provider set to respond with a 200 status code
-    When consumer calls the proxy route
-    Then API Provider receives default bearer authorization headers
-    Then API Provider receives authorization MeshTokenWithNonDefaultRealm
-    And API consumer receives a 200 status code
-
-  # TODO: remove after CP phase 2 completes and the legacy realm header fallback is deleted.
-  Scenario: Consumer calls proxy route with legacy non-default realm header, mesh LMS token issuer uses realm
-    Given ProxyRoute headers are set with legacy realm header
+  Scenario: Consumer calls proxy route with non-default realm header, mesh LMS token issuer uses realm
+    Given ProxyRoute headers are set with realm header
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     Then API Provider receives default bearer authorization headers

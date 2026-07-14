@@ -32,13 +32,6 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
-  public static String getJcMeshWithRealm(String realm) {
-    JumperConfig jc = new JumperConfig();
-    jc.setMesh(true);
-    jc.setRealmName(realm);
-    return toJsonBase64(jc);
-  }
-
   public static String getJcBasicAuthConsumer(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials ba = new BasicAuthCredentials();

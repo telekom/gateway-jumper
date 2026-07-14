@@ -68,18 +68,7 @@ public class TokenUtil {
     };
   }
 
-  public static Consumer<HttpHeaders> getProxyRouteHeadersWithJumperConfigRealm(
-      BaseSteps baseSteps) {
-    return httpHeaders -> {
-      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
-      httpHeaders.set(
-          Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMeshWithRealm(NON_DEFAULT_REALM));
-    };
-  }
-
-  public static Consumer<HttpHeaders> getProxyRouteHeadersWithLegacyRealmHeader(
-      BaseSteps baseSteps) {
+  public static Consumer<HttpHeaders> getProxyRouteHeadersWithRealmHeader(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
