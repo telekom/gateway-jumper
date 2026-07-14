@@ -94,6 +94,34 @@ public class VerificationSteps {
     this.baseSteps.getRequestExchange().expectHeader().doesNotExist("routing_config");
   }
 
+  @Then("API Provider receives documented standard and consumer headers")
+  public void apiProviderReceivesDocumentedHeaders() {
+    this.baseSteps
+        .getRequestExchange()
+        .expectHeader()
+        .valueMatches(Constants.HEADER_X_B3_TRACE_ID, "\\w+")
+        .expectHeader()
+        .valueMatches(Constants.HEADER_X_B3_SPAN_ID, "\\w+")
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_B3_SAMPLED, "1")
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_FORWARDED_HOST, "zone.local.de")
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_FORWARDED_PORT, Constants.HEADER_X_FORWARDED_PORT_PORT)
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_FORWARDED_PROTO, Constants.HEADER_X_FORWARDED_PROTO_HTTPS)
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_FORWARDED_FOR, FORWARDED_FOR)
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_FORWARDED_PATH, FORWARDED_PATH)
+        .expectHeader()
+        .valueEquals(Constants.HEADER_REALM, REALM)
+        .expectHeader()
+        .valueEquals(Constants.HEADER_ENVIRONMENT, ENVIRONMENT)
+        .expectHeader()
+        .valueEquals(CUSTOM_CONSUMER_HEADER, CUSTOM_CONSUMER_HEADER_VALUE);
+  }
+
   @Then("API Provider receives no authorization header")
   public void apiProvidersReceivesNoAuthorizationHeader() {
     this.baseSteps.getRequestExchange().expectHeader().doesNotExist("Authorization");

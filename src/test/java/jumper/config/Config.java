@@ -28,6 +28,10 @@ public class Config {
   public static final String PUBSUB_SUBSCRIBER = "testSubscriber";
   public static final String LISTENER_ISSUE = "issue";
   public static final String LISTENER_PROVIDER = "serviceOwner";
+  public static final String FORWARDED_FOR = "192.0.2.1";
+  public static final String FORWARDED_PATH = "/documented/path";
+  public static final String CUSTOM_CONSUMER_HEADER = "X-Custom-Consumer-Header";
+  public static final String CUSTOM_CONSUMER_HEADER_VALUE = "custom-value";
   public static final int REMOTE_HOST_PORT = 1080;
   public static final String REMOTE_BASE_PATH = "/real";
   public static final String REMOTE_FAILOVER_BASE_PATH = "/failover";

@@ -210,6 +210,17 @@ public class HeaderSteps {
             }));
   }
 
+  @And("documented consumer headers are set")
+  public void addDocumentedConsumerHeaders() {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              httpHeaders.set(Constants.HEADER_X_FORWARDED_FOR, FORWARDED_FOR);
+              httpHeaders.set(Constants.HEADER_X_FORWARDED_PATH, FORWARDED_PATH);
+              httpHeaders.set(CUSTOM_CONSUMER_HEADER, CUSTOM_CONSUMER_HEADER_VALUE);
+            }));
+  }
+
   @And("skip zone header set")
   public void setSkipZoneHeader() {
     baseSteps.setHttpHeadersOfRequest(
