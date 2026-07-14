@@ -43,18 +43,10 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersLegacyIssuer(baseSteps));
   }
 
-  @Given("ProxyRoute headers are set with jumper_config realm")
-  public void proxyRouteHeadersSetWithJumperConfigRealm() {
+  @Given("ProxyRoute headers are set with realm header")
+  public void proxyRouteHeadersSetWithRealmHeader() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
-    baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getProxyRouteHeadersWithJumperConfigRealm(baseSteps));
-  }
-
-  @Given("ProxyRoute headers are set with legacy realm header")
-  public void proxyRouteHeadersSetWithLegacyRealmHeader() {
-    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
-    baseSteps.setHttpHeadersOfRequest(
-        TokenUtil.getProxyRouteHeadersWithLegacyRealmHeader(baseSteps));
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithRealmHeader(baseSteps));
   }
 
   @Given("ProxyRoute headers are set with legacy issuer for non-default realm")
@@ -130,18 +122,11 @@ public class HeaderSteps {
         RoutingConfigUtil.getProxyRouteHeadersLegacyIssuer(baseSteps));
   }
 
-  @Given("Proxy routing_config header set with routing_config realm")
-  public void proxyRoutingConfigHeaderSetWithRoutingConfigRealm() {
+  @Given("Proxy routing_config header set with realm header")
+  public void proxyRoutingConfigHeaderSetWithRealmHeader() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(
-        RoutingConfigUtil.getProxyRouteHeadersWithRoutingConfigRealm(baseSteps));
-  }
-
-  @Given("Proxy routing_config header set with legacy realm header")
-  public void proxyRoutingConfigHeaderSetWithLegacyRealmHeader() {
-    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
-    baseSteps.setHttpHeadersOfRequest(
-        RoutingConfigUtil.getProxyRouteHeadersWithLegacyRealmHeader(baseSteps));
+        RoutingConfigUtil.getProxyRouteHeadersWithRealmHeader(baseSteps));
   }
 
   @Given("Proxy routing_config header set with legacy issuer for non-default realm")

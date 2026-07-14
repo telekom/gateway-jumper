@@ -41,17 +41,7 @@ public class RoutingConfigUtil {
     };
   }
 
-  public static Consumer<HttpHeaders> getProxyRouteHeadersWithRoutingConfigRealm(
-      BaseSteps baseSteps) {
-    return httpHeaders -> {
-      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxyWithRoutingConfigRealm());
-      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
-    };
-  }
-
-  public static Consumer<HttpHeaders> getProxyRouteHeadersWithLegacyRealmHeader(
-      BaseSteps baseSteps) {
+  public static Consumer<HttpHeaders> getProxyRouteHeadersWithRealmHeader(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_REALM, NON_DEFAULT_REALM);
@@ -95,14 +85,6 @@ public class RoutingConfigUtil {
         List.of(getProxyRouteJc(REMOTE_ZONE_NAME), getProxyRouteJc(REMOTE_FAILOVER_ZONE_NAME)));
   }
 
-  public static String getRcProxyWithRoutingConfigRealm() {
-    // proxy + proxy, selected entry realm wins over legacy header and issuer fallbacks
-    return toJsonBase64(
-        List.of(
-            getProxyRouteJcWithRoutingConfigRealm(REMOTE_ZONE_NAME),
-            getProxyRouteJc(REMOTE_FAILOVER_ZONE_NAME)));
-  }
-
   public static String getRcProxyLegacyIssuer(String id) {
     // proxy + proxy, using the legacy issuer trigger as transitional fallback
     return toJsonBase64(
@@ -124,12 +106,6 @@ public class RoutingConfigUtil {
     jc.setMesh(true);
 
     setProxyRouteTarget(jc, targetZone);
-    return jc;
-  }
-
-  private static JumperConfig getProxyRouteJcWithRoutingConfigRealm(String targetZone) {
-    JumperConfig jc = getProxyRouteJc(targetZone);
-    jc.setRealmName(NON_DEFAULT_REALM);
     return jc;
   }
 

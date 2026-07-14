@@ -222,17 +222,12 @@ public class JumperConfig {
   }
 
   String determineRealm(ServerHttpRequest request) {
-    if (StringUtils.isNotBlank(getRealmName())) {
-      return getRealmName();
+    String realmHeader = HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM);
+    if (StringUtils.isNotBlank(realmHeader)) {
+      return realmHeader;
     }
 
-    // TODO: remove legacy realm header and issuer fallbacks after Mesh LMS phase 2 completes.
-    String legacyRealmHeader =
-        HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM);
-    if (StringUtils.isNotBlank(legacyRealmHeader)) {
-      return legacyRealmHeader;
-    }
-
+    // TODO: remove the legacy issuer fallback after the control-plane migration completes.
     if (StringUtils.isNotBlank(getInternalTokenEndpoint())) {
       return getInternalTokenEndpoint().replaceFirst(".*realms/", "");
     }
