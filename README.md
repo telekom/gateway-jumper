@@ -188,6 +188,40 @@ The most common scenario where Jumper creates a new OAuth token by combining inf
 **Outgoing Headers:**
 * `Authorization` - Contains the newly created token
 
+##### Audience (aud) claims
+
+By default, the `aud` claim of the minted token is copied from the incoming consumer token
+(falling back to the `x-pubsub-subscriber-id` header value for Horizon pub/sub calls). Providers
+can instead declare the audience via the `claims` structure in `jumper_config`:
+
+```json
+{
+  "claims": {
+    "default": [
+      { "key": "aud", "value": "hello-world" },
+      { "key": "aud", "valueFrom": "ConsumerClientId" }
+    ]
+  }
+}
+```
+
+* `claims` maps a bucket name to a list of claim entries. Only the `default` bucket is read for
+  now; consumer-named buckets (preferred over `default`) are a future extension.
+* Only entries with `key: "aud"` are honoured. Other keys are ignored so that `jumper_config`
+  cannot overwrite security-critical claims (`azp`, `sub`, `iss`, ...) on the self-signed token.
+* `value` stamps a literal. `valueFrom: "ConsumerClientId"` is the only reference Jumper resolves
+  at request time — it resolves to the consumer token's `azp` claim, falling back to its
+  `clientId` claim. Other references (e.g. provider client id, API base path) arrive from the
+  control plane pre-resolved as literal `value`s.
+* If at least one configured entry resolves to a non-blank value, the configured audience(s)
+  **replace** the consumer-derived `aud`; otherwise the default behaviour applies unchanged.
+* A single audience is emitted as a JSON string, several audiences as a JSON array.
+* The same logic applies on the [zone failover](#zone-failover) path: `claims` are read from the
+  selected `routing_config` entry.
+
+This applies to the provider-facing token minted in the One Token and Last Mile Security
+scenarios; the Mesh LMS token is unaffected.
+
 #### Last Mile Security Token (Legacy)
 
 A legacy scenario where Jumper forwards both the original token and a new LMS token (in an `X-Gateway-Token` header).
@@ -224,6 +258,9 @@ A legacy scenario where Jumper forwards both the original token and a new LMS to
 **Outgoing Headers:**
 * `Authorization` - Original incoming token
 * `X-Gateway-Token` - New LMS token
+
+The LMS token's `aud` claim can be overridden via the `jumper_config` `claims` structure — see
+[Audience (aud) claims](#audience-aud-claims).
 
 #### Mesh LMS Token
 

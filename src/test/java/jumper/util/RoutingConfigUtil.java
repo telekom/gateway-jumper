@@ -24,6 +24,14 @@ public class RoutingConfigUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithAudClaim(BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondaryWithAudClaim());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
+    };
+  }
+
   public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithLoadbalancing(
       BaseSteps baseSteps) {
     return httpHeaders -> {
@@ -72,6 +80,16 @@ public class RoutingConfigUtil {
   public static String getRcSecondary() {
     // proxy + real
     return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME), getRealRouteJc()));
+  }
+
+  public static String getRcSecondaryWithAudClaim() {
+    // proxy + real; only the real (secondary-zone) entry declares the aud claim, while the
+    // jumper_config header stays claim-free - pins that the failover path reads claims from the
+    // selected routing_config entry (DHEI-21196)
+    JumperConfig realRouteJc = getRealRouteJc();
+    realRouteJc.setClaims(
+        JumperConfigUtil.defaultClaims(JumperConfigUtil.audClaimLiteral(CONFIGURED_AUDIENCE)));
+    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME), realRouteJc));
   }
 
   public static String getRcSecondaryLoadbalancing() {

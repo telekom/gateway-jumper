@@ -23,6 +23,13 @@ import lombok.Singular;
 public class AccessToken {
 
   private String clientId;
+
+  /**
+   * Value of the {@code azp} claim on the consumer token. Defaults to {@code clientId} (matching
+   * real Iris tokens); pass a blank value to omit the claim entirely.
+   */
+  private String azp;
+
   private String env;
   private String originZone;
   private String originStargate;
@@ -37,7 +44,10 @@ public class AccessToken {
   public String getConsumerAccessToken() {
     HashMap<String, String> claims = new HashMap<>();
     claims.put("typ", "Bearer");
-    claims.put("azp", clientId);
+    String azpClaim = azp != null ? azp : clientId;
+    if (azpClaim != null && !azpClaim.isBlank()) {
+      claims.put("azp", azpClaim);
+    }
     claims.put("sub", UUID.randomUUID().toString());
     claims.put("originZone", originZone);
     claims.put("originStargate", originStargate);

@@ -14,7 +14,10 @@ import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.Jwts;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import jumper.Constants;
+import jumper.model.config.Claim;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.KeyInfo;
 import jumper.util.AccessToken;
@@ -185,6 +188,143 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
+  @DisplayName(
+      "a configured literal aud replaces the consumer token audience on the provider token")
+  void configuredLiteralAud_overridesConsumerAudience() {
+    // arrange
+    String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, literalAud("configured-audience"));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
+    Claims claims = parse(providerLmsToken);
+
+    // assert: the configured audience wins over both the consumer aud and the subscriberId
+    assertThat(claims.getAudience()).containsExactly("configured-audience");
+  }
+
+  @Test
+  @DisplayName("a configured ConsumerClientId aud resolves the consumer token's azp")
+  void configuredConsumerClientIdAud_resolvesAzp() {
+    // arrange: azp differs from clientId to prove azp is the first choice
+    String consumerToken =
+        AccessToken.builder()
+            .clientId("eni--local-team--local-app")
+            .azp("azp-client")
+            .originZone("localZone")
+            .originStargate("https://zone.local.de")
+            .build()
+            .getConsumerAccessToken();
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, referenceAud(Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    Claims claims = parse(providerLmsToken);
+
+    // assert
+    assertThat(claims.getAudience()).containsExactly("azp-client");
+  }
+
+  @Test
+  @DisplayName("ConsumerClientId falls back to the clientId claim when azp is absent")
+  void configuredConsumerClientIdAud_fallsBackToClientId() {
+    // arrange: a blank azp omits the claim from the consumer token entirely
+    String consumerToken =
+        AccessToken.builder()
+            .clientId("eni--local-team--local-app")
+            .azp("")
+            .originZone("localZone")
+            .originStargate("https://zone.local.de")
+            .build()
+            .getConsumerAccessToken();
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, referenceAud(Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    Claims claims = parse(providerLmsToken);
+
+    // assert: jc.getConsumer() carries the consumer token's clientId claim
+    assertThat(claims.getAudience()).containsExactly("eni--local-team--local-app");
+  }
+
+  @Test
+  @DisplayName("a single configured aud is emitted as a JSON string on the wire")
+  void singleConfiguredAud_emitsPlainStringOnTheWire() {
+    // arrange
+    String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, literalAud("configured-audience"));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+
+    // assert
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
+    assertThat(aud.isString()).isTrue();
+    assertThat(aud.asString()).isEqualTo("configured-audience");
+  }
+
+  @Test
+  @DisplayName("multiple configured aud entries are emitted as a JSON array on the wire")
+  void multipleConfiguredAud_emitJsonArrayOnTheWire() {
+    // arrange
+    String consumerToken = consumerTokenWithAudiences(List.of());
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, literalAud("audience-one"), literalAud("audience-two"));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+
+    // assert
+    JsonNode aud = rawPayloadJson(providerLmsToken).get("aud");
+    assertThat(aud.isArray()).isTrue();
+    assertThat(aud.size()).isEqualTo(2);
+    Claims claims = parse(providerLmsToken);
+    assertThat(claims.getAudience()).containsExactlyInAnyOrder("audience-one", "audience-two");
+  }
+
+  @Test
+  @DisplayName("configured claims that all resolve blank fall back to the consumer-derived aud")
+  void configuredClaimsResolvingBlank_fallBackToConsumerAudience() {
+    // arrange
+    String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, literalAud(""));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+    Claims claims = parse(providerLmsToken);
+
+    // assert
+    assertThat(claims.getAudience()).containsExactly("consumerAud");
+  }
+
+  @Test
+  @DisplayName("the mesh LMS token ignores configured claims and keeps the consumer audience")
+  void meshToken_ignoresConfiguredClaims() {
+    // arrange
+    String consumerToken = consumerTokenWithAudiences(List.of("consumerAud"));
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, literalAud("configured-audience"));
+
+    // act
+    String meshLmsToken = tokenGeneratorService.generateMeshLmsToken(jc, "GET", ISSUER);
+    Claims claims = parse(meshLmsToken);
+
+    // assert: D1 gate - mesh aud drives cross-zone validation and must stay untouched
+    assertThat(claims.getAudience()).containsExactly("consumerAud");
+  }
+
+  @Test
   @DisplayName("createJwtTokenFromKey rejects an RS256 key weaker than 2048 bits with 401")
   void weakKey_isRejectedWith401() {
     // arrange
@@ -234,6 +374,26 @@ class TokenGeneratorServiceTest {
     jc.setConsumerOriginStargate("https://zone.local.de");
     jc.setEnvName("localEnv");
     return jc;
+  }
+
+  private static void setConfiguredClaims(JumperConfig jc, Claim... claimEntries) {
+    HashMap<String, List<Claim>> claims = new HashMap<>();
+    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(claimEntries));
+    jc.setClaims(claims);
+  }
+
+  private static Claim literalAud(String value) {
+    Claim claim = new Claim();
+    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setValue(value);
+    return claim;
+  }
+
+  private static Claim referenceAud(String valueFrom) {
+    Claim claim = new Claim();
+    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setValueFrom(valueFrom);
+    return claim;
   }
 
   private static Claims parse(String token) {

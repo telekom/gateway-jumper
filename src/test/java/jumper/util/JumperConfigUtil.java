@@ -32,6 +32,45 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  public static String getJcClaimsAudLiteral() {
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(audClaimLiteral(CONFIGURED_AUDIENCE)));
+    return toJsonBase64(jc);
+  }
+
+  public static String getJcClaimsAudConsumerClientId() {
+    Claim claim = new Claim();
+    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setValueFrom(Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID);
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(claim));
+    return toJsonBase64(jc);
+  }
+
+  public static String getJcClaimsNonAudKey() {
+    // only "aud" is honoured; any other key must be ignored (trust boundary of the
+    // self-signed token)
+    Claim claim = new Claim();
+    claim.setKey("azp");
+    claim.setValue("forged-azp");
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(claim));
+    return toJsonBase64(jc);
+  }
+
+  public static HashMap<String, List<Claim>> defaultClaims(Claim... claims) {
+    HashMap<String, List<Claim>> claimsMap = new HashMap<>();
+    claimsMap.put(Constants.CLAIMS_DEFAULT_KEY, List.of(claims));
+    return claimsMap;
+  }
+
+  public static Claim audClaimLiteral(String value) {
+    Claim claim = new Claim();
+    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setValue(value);
+    return claim;
+  }
+
   public static String getJcBasicAuthConsumer(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials ba = new BasicAuthCredentials();

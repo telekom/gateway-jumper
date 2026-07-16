@@ -47,6 +47,27 @@ public class JumperConfigSteps {
             httpHeaders -> httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity())));
   }
 
+  @And("jumperConfig claims {string} set")
+  public void setJumperConfigClaims(String jc_case) {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders -> {
+              switch (jc_case) {
+                case "aud literal":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcClaimsAudLiteral());
+                  break;
+                case "aud consumerClientId":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcClaimsAudConsumerClientId());
+                  break;
+                case "non-aud key":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcClaimsNonAudKey());
+                  break;
+                default:
+                  assert false : "not defined";
+              }
+            }));
+  }
+
   @And("jumperConfig oauth {string} set")
   public void setJumperConfigOauth(String jc_case) {
     baseSteps.setHttpHeadersOfRequest(

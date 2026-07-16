@@ -75,6 +75,15 @@ Feature: request containing routing_config properly handled
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization MeshTokenWithNonDefaultRealm
 
+################ configured aud claims ################
+  Scenario: Consumer calls proxy route with secondary config carrying aud claim and skip header, provider LMS token carries configured audience
+    Given Secondary routing_config header set with aud claim
+    And skip zone header set
+    And API provider set to respond on provider path
+    When consumer calls the proxy route without base path
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneTokenSimpleWithConfiguredAud
+
 ################ headers ################
   Scenario: Consumer calls proxy route with secondary config, check header stripped
     Given Secondary routing_config header set

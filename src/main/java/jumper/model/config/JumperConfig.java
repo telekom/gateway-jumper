@@ -29,6 +29,7 @@ public class JumperConfig {
 
   private HashMap<String, OauthCredentials> oauth;
   private HashMap<String, BasicAuthCredentials> basicAuth;
+  private HashMap<String, List<Claim>> claims;
   private HashMap<String, RouteListener> routeListener;
   private List<String> removeHeaders;
   private GatewayClient gatewayClient;
@@ -283,5 +284,17 @@ public class JumperConfig {
   public String getSecurityScopes() {
     Optional<OauthCredentials> oauthCredentials = getOauthCredentials();
     return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
+  }
+
+  /**
+   * Configured claims for this request. Only the "default" bucket is read for now; consumer-named
+   * buckets (preferred over "default") are a future extension — see DHEI-21196.
+   */
+  @JsonIgnore
+  public List<Claim> getConfiguredClaims() {
+    if (Objects.nonNull(getClaims())) {
+      return getClaims().getOrDefault(Constants.CLAIMS_DEFAULT_KEY, List.of());
+    }
+    return List.of();
   }
 }

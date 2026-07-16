@@ -11,10 +11,12 @@ import java.util.*;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.KeyInfo;
+import jumper.util.ClaimUtil;
 import jumper.util.OauthTokenUtil;
 import jumper.util.RsaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -99,7 +101,8 @@ public class TokenGeneratorService {
       String operation,
       String issuer,
       String publisherId,
-      String subscriberId) {
+      String subscriberId,
+      boolean stampConfiguredAudiences) {
 
     Jwt<?, Claims> authorizationTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
@@ -142,41 +145,64 @@ public class TokenGeneratorService {
       claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
     }
 
-    // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
-    // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
-    // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
-      if (audiences.size() == 1) {
-        claims.audience().single(audiences.iterator().next());
-      } else {
-        claims.audience().add(audiences).and();
-      }
+    // ConsumerClientId reference resolution: azp is the OIDC-standard choice, the consumer
+    // token's clientId claim (jc.getConsumer()) is the fallback.
+    String consumerClientId =
+        Optional.ofNullable(
+                authorizationTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_AZP, String.class))
+            .filter(StringUtils::isNotBlank)
+            .orElse(jc.getConsumer());
+
+    List<String> configuredAudiences =
+        stampConfiguredAudiences
+            ? ClaimUtil.resolveAudiences(jc.getConfiguredClaims(), consumerClientId)
+            : List.of();
+
+    if (!configuredAudiences.isEmpty()) {
+      // provider-declared audiences from jumper_config replace the consumer-derived aud
+      setAudience(claims, configuredAudiences);
+    } else if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
+      setAudience(claims, audiences);
     } else if (Objects.nonNull(subscriberId)) {
-      claims.audience().single(subscriberId);
+      setAudience(claims, List.of(subscriberId));
     }
 
     return fromRealm(claims.build(), issuer, expiration, issuedAt);
+  }
+
+  // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
+  // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
+  // always emits a JSON array, even when adding just one element.
+  private static void setAudience(ClaimsBuilder claims, Collection<String> audiences) {
+    if (audiences.size() == 1) {
+      claims.audience().single(audiences.iterator().next());
+    } else {
+      claims.audience().add(audiences).and();
+    }
   }
 
   /**
    * Generates a provider-facing LMS token with {@code azp: "stargate"}.
    *
    * <p>Used on real routes to replace the consumer's Iris token before forwarding to the upstream
-   * API.
+   * API. Audiences configured in jumper_config {@code claims} are stamped onto the token's {@code
+   * aud} claim, replacing the consumer-derived audience.
    */
   public String generateProviderLmsToken(
       JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
-    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
+    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId, true);
   }
 
   /**
    * Generates a mesh LMS token with {@code azp: "gateway"}.
    *
    * <p>Used on proxy routes for cross-zone gateway-to-gateway authentication. The provider zone
-   * validates this token against the consumer zone's StarGate JWKS.
+   * validates this token against the consumer zone's StarGate JWKS. Configured {@code claims} are
+   * deliberately not applied here: the mesh token's {@code aud} drives cross-zone validation, and
+   * the destination zone mints its own provider LMS token from its own jumper_config.
    */
   public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
-    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
+    return generateLmsToken(jc, "gateway", operation, issuer, null, null, false);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

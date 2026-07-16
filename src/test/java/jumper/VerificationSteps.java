@@ -167,6 +167,23 @@ public class VerificationSteps {
           .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkMultipleAud);
+    } else if (tokenType.equalsIgnoreCase("OneTokenWithConfiguredAud")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredAud);
+    } else if (tokenType.equalsIgnoreCase("OneTokenWithConsumerClientIdAud")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkConsumerClientIdAud);
+    } else if (tokenType.equalsIgnoreCase("OneTokenSimpleWithConfiguredAud")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneTokenSimple)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredAud);
     } else if (tokenType.equalsIgnoreCase("MeshToken")) {
       this.baseSteps
           .getRequestExchange()
@@ -295,6 +312,21 @@ public class VerificationSteps {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(Set.of("testAudience1", "testAudience2"), claimsFromToken.getBody().getAudience());
+  }
+
+  // aud configured via jumper_config claims (DHEI-21196); azp pins the provider LMS token
+  private void checkConfiguredAud(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
+
+    assertEquals("stargate", claimsFromToken.getBody().get("azp", String.class));
+    assertEquals(Set.of(CONFIGURED_AUDIENCE), claimsFromToken.getBody().getAudience());
+  }
+
+  private void checkConsumerClientIdAud(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
+
+    assertEquals("stargate", claimsFromToken.getBody().get("azp", String.class));
+    assertEquals(Set.of(CONSUMER), claimsFromToken.getBody().getAudience());
   }
 
   private void checkMeshToken(String meshLmsToken) {

@@ -6,16 +6,30 @@ package jumper.model.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.stream.Stream;
 import jumper.Constants;
+import jumper.util.AccessToken;
+import jumper.util.ObjectMapperUtil;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import tools.jackson.databind.json.JsonMapper;
 
 class JumperConfigTest {
+
+  @BeforeAll
+  static void initObjectMapper() {
+    // JumperConfig's base64 (de)serialization helpers and OauthTokenUtil run through
+    // ObjectMapperUtil, which is normally populated by Spring. Populate the static holder for
+    // this context-less unit test.
+    new ObjectMapperUtil(JsonMapper.builder().build());
+  }
 
   private static final String ISSUER = "http://localhost:1081/auth/realms/default";
   private static final String NON_DEFAULT_REALM = "sit";
@@ -96,6 +110,58 @@ class JumperConfigTest {
 
     // assert
     assertEquals(Constants.DEFAULT_REALM, realm);
+  }
+
+  /**
+   * Guards the zone-failover path of DHEI-21196: {@code claims} deserialized from a routing_config
+   * entry must survive {@link JumperConfig#fillProcessingInfo}, which re-sources other fields (e.g.
+   * routeListener, gatewayClient) from the jumper_config header.
+   */
+  @Test
+  void fillProcessingInfo_preservesClaimsFromRoutingConfigEntry() {
+    // arrange: a routing_config list whose secondary entry carries an aud claim; the jumper_config
+    // header ("e30=" = {}) deliberately has no claims, mirroring the CP contract
+    Claim audClaim = new Claim();
+    audClaim.setKey(Constants.TOKEN_CLAIM_AUD);
+    audClaim.setValue("configured-audience");
+    HashMap<String, List<Claim>> claims = new HashMap<>();
+    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(audClaim));
+
+    JumperConfig secondaryEntry = new JumperConfig();
+    secondaryEntry.setClaims(claims);
+    secondaryEntry.setRemoteApiUrl("http://localhost:1080/provider");
+    String routingConfig = JumperConfig.toJsonBase64(List.of(new JumperConfig(), secondaryEntry));
+
+    String consumerToken =
+        AccessToken.builder()
+            .clientId("eni--local-team--local-app")
+            .originZone("localZone")
+            .originStargate("https://zone.local.de")
+            .build()
+            .getConsumerAccessToken();
+
+    ServerHttpRequest request =
+        MockServerHttpRequest.get("/")
+            .header(Constants.HEADER_AUTHORIZATION, "Bearer " + consumerToken)
+            .header(Constants.HEADER_ROUTING_CONFIG, routingConfig)
+            .header(Constants.HEADER_JUMPER_CONFIG, "e30=")
+            .build();
+
+    // act
+    JumperConfig picked = JumperConfig.parseJumperConfigListFrom(request).get(1);
+    picked.fillProcessingInfo(request);
+
+    // assert
+    assertEquals(1, picked.getConfiguredClaims().size());
+    assertEquals("configured-audience", picked.getConfiguredClaims().get(0).getValue());
+    assertEquals("eni--local-team--local-app", picked.getConsumer());
+  }
+
+  @Test
+  void getConfiguredClaims_returnsEmptyListWhenClaimsAbsent() {
+    JumperConfig jc = new JumperConfig();
+
+    assertEquals(List.of(), jc.getConfiguredClaims());
   }
 
   private static ServerHttpRequest requestWithRealmHeader(String realm) {

@@ -102,6 +102,13 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getSecondaryRouteHeaders(baseSteps));
   }
 
+  @Given("Secondary routing_config header set with aud claim")
+  public void secondaryRoutingConfigHeaderSetWithAudClaim() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getSecondaryRouteHeadersWithAudClaim(baseSteps));
+  }
+
   @Given("Secondary routing_config with loadbalancing header set")
   public void secondaryRoutingConfigWithLoadbalancingHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
