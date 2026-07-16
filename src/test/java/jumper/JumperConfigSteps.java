@@ -103,6 +103,15 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.CONSUMER.getJcOauthWithScope(baseSteps.getId()));
                   break;
+                case "consumer scope override with provider default":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      getJcOauthConsumerScopeOverridesProviderDefault(baseSteps.getId()));
+                  break;
+                case "consumer grant_type without client auth":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getJcOauthConsumerWithoutClientAuth());
+                  break;
                 case "provider grant_type key":
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,

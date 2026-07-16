@@ -106,6 +106,36 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  /**
+   * Merge scenario: the provider "default" entry carries the full client_credentials setup, the
+   * consumer entry overrides only the scope and inherits everything else.
+   */
+  public static String getJcOauthConsumerScopeOverridesProviderDefault(String id) {
+    HashMap<String, OauthCredentials> oauth = new HashMap<>();
+    OauthCredentials providerDefault = new OauthCredentials();
+    providerDefault.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+    providerDefault.setClientSecret("secret");
+    providerDefault.setGrantType("client_credentials");
+    OauthCredentials consumerOverride = new OauthCredentials();
+    consumerOverride.setScopes(OAUTH_SCOPE_CONFIGURED);
+    oauth.put(Constants.OAUTH_PROVIDER_KEY, providerDefault);
+    oauth.put(CONSUMER, consumerOverride);
+    JumperConfig jc = new JumperConfig();
+    jc.setOauth(oauth);
+    return toJsonBase64(jc);
+  }
+
+  /** Misconfiguration: grant type present but no client authentication resolvable at all. */
+  public static String getJcOauthConsumerWithoutClientAuth() {
+    HashMap<String, OauthCredentials> oauth = new HashMap<>();
+    OauthCredentials oc = new OauthCredentials();
+    oc.setGrantType("client_credentials");
+    oauth.put(CONSUMER, oc);
+    JumperConfig jc = new JumperConfig();
+    jc.setOauth(oauth);
+    return toJsonBase64(jc);
+  }
+
   public enum JcOauthConfig {
     CONSUMER,
     PROVIDER;

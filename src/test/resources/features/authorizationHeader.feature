@@ -154,12 +154,22 @@ Feature: proper authorization token reaches provider endpoint
     And API consumer receives a 200 status code
 
   ################ external ################
-  Scenario: Consumer calls proxy route with jc with oauth, but client credentials not defined, consumer receives 401
+  Scenario: Consumer calls proxy route with jc with oauth, but client credentials not defined, consumer receives 400
     Given RealRoute headers are set
     And oauth tokenEndpoint set
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    And API consumer receives a 401 status code
+    And API consumer receives a 400 status code
+
+  Scenario: Consumer oauth entry with grant_type but no resolvable client authentication, consumer receives 400 and IDP is not called
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "consumer grant_type without client auth" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    And API consumer receives a 400 status code
+    And error response contains msg "External IdP OAuth config incomplete for consumer 'eni--local-team--local-app': no client authentication resolvable (need clientId+clientSecret, clientKey, username+password, or refreshToken)" error "Bad Request" status 400
+    And IDP token endpoint was called exactly 0 times
 
   Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via basic auth
     Given RealRoute headers are set
@@ -252,6 +262,16 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
     And API Provider receives header x-tardis-traceid that matches regex dummy
+
+  Scenario: Consumer oauth entry overrides only the scope, client credentials inherited from provider default entry
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "consumer scope override with provider default" set
+    And IDP set to provide externalBasicAuthCredentialsScoped token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
 
     ################ basic auth ################
   Scenario: Consumer calls proxy route with real route headers, jc with consumer specific basic auth provided, consumer specific basic auth authorization sent

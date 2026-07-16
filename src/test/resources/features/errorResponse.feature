@@ -175,8 +175,8 @@ Feature: proper error message returned based on conditions
     And oauth tokenEndpoint set
     And jumperConfig set with key type "empty"
     And jumperConfig oauth "provider grant_type key" set
-    And IDP set to provide externalInvalidAuth token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    And API consumer receives a 401 status code
-    And error response contains msg "Failed to retrieve token from http://localhost:1081/external, original status: 404 NOT_FOUND" error "Unauthorized" status 401
+    And API consumer receives a 400 status code
+    And error response contains msg "External IdP OAuth config incomplete for consumer 'eni--local-team--local-app': no client authentication resolvable (need clientId+clientSecret, clientKey, username+password, or refreshToken)" error "Bad Request" status 400
+    And IDP token endpoint was called exactly 0 times

@@ -193,6 +193,9 @@ public class BaseSteps {
       case "externalBasicAuthCredentials":
         mockIrisServer.createExpectationExternalBasicAuthCredentials(id);
         break;
+      case "externalBasicAuthCredentialsScoped":
+        mockIrisServer.createExpectationExternalBasicAuthCredentialsScoped(id);
+        break;
       case "externalUsernamePasswordCredentials":
         mockIrisServer.createExpectationExternalTokenFromUsernamePassword(id);
         break;

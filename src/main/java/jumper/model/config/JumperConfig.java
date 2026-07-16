@@ -266,18 +266,34 @@ public class JumperConfig {
     return Optional.empty();
   }
 
-  public Optional<OauthCredentials> getOauthCredentials() {
-    if (Objects.nonNull(getOauth())) {
-      if (getOauth().containsKey(getConsumer())) {
-        return Optional.of(getOauth().get(getConsumer()));
-      }
+  // Rollout flag for the consumer-over-default merge below, bound from
+  // jumper.oauth.merge-consumer-with-default by OauthCredentialsMergeConfiguration. Static because
+  // JumperConfig instances are deserialized from the jumper_config header per request and have no
+  // access to Spring configuration.
+  private static volatile boolean mergeConsumerWithDefault = true;
 
-      if (getOauth().containsKey(Constants.OAUTH_PROVIDER_KEY)) {
-        return Optional.of(getOauth().get(Constants.OAUTH_PROVIDER_KEY));
-      }
+  public static void setMergeConsumerWithDefault(boolean enabled) {
+    mergeConsumerWithDefault = enabled;
+  }
+
+  public Optional<OauthCredentials> getOauthCredentials() {
+    if (Objects.isNull(getOauth())) {
+      return Optional.empty();
     }
 
-    return Optional.empty();
+    OauthCredentials providerDefault = getOauth().get(Constants.OAUTH_PROVIDER_KEY);
+    OauthCredentials consumerEntry = getOauth().get(getConsumer());
+
+    if (Objects.nonNull(consumerEntry)) {
+      if (mergeConsumerWithDefault) {
+        // A partial consumer entry (e.g. only scopes) inherits every blank field from the
+        // provider "default" entry; non-blank consumer fields win.
+        return Optional.of(consumerEntry.withDefaults(providerDefault));
+      }
+      return Optional.of(consumerEntry);
+    }
+
+    return Optional.ofNullable(providerDefault);
   }
 
   public String getSecurityScopes() {
