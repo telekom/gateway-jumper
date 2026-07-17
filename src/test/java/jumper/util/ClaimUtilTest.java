@@ -6,6 +6,7 @@ package jumper.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Arrays;
 import java.util.List;
 import jumper.model.config.Claim;
 import org.junit.jupiter.api.DisplayName;
@@ -80,6 +81,17 @@ class ClaimUtilTest {
   void nullOrEmptyClaims_resolveToEmpty() {
     assertThat(ClaimUtil.resolveAudiences(null, CONSUMER_CLIENT_ID)).isEmpty();
     assertThat(ClaimUtil.resolveAudiences(List.of(), CONSUMER_CLIENT_ID)).isEmpty();
+  }
+
+  @Test
+  @DisplayName("a null claim entry is skipped instead of throwing")
+  void nullClaimEntry_isSkipped() {
+    // a malformed jumper_config like {"claims":{"default":[null]}} deserializes to a list
+    // with a null element - it must degrade to the fallback aud, not crash token generation
+    List<Claim> claims = Arrays.asList(null, claim("aud", "literal-audience", null));
+
+    assertThat(ClaimUtil.resolveAudiences(claims, CONSUMER_CLIENT_ID))
+        .containsExactly("literal-audience");
   }
 
   @Test

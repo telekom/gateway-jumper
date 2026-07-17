@@ -34,7 +34,9 @@ public final class ClaimUtil {
     }
     List<String> resolvedAudiences = new ArrayList<>();
     for (Claim claim : claims) {
-      if (!Constants.TOKEN_CLAIM_AUD.equals(claim.getKey())) {
+      // null entries can reach us from a malformed jumper_config ([null] deserializes as-is);
+      // skip them so token generation degrades to the consumer-derived aud instead of a 5xx
+      if (Objects.isNull(claim) || !Constants.TOKEN_CLAIM_AUD.equals(claim.getKey())) {
         continue;
       }
       String resolved = resolve(claim, consumerClientId);

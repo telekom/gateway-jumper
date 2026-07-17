@@ -62,6 +62,9 @@ public class JumperConfigSteps {
                 case "non-aud key":
                   httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcClaimsNonAudKey());
                   break;
+                case "mesh with aud literal":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcMeshWithAudClaimLiteral());
+                  break;
                 default:
                   assert false : "not defined";
               }

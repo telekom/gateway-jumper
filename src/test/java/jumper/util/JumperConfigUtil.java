@@ -38,6 +38,13 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  public static String getJcMeshWithAudClaimLiteral() {
+    JumperConfig jc = new JumperConfig();
+    jc.setMesh(true);
+    jc.setClaims(defaultClaims(audClaimLiteral(CONFIGURED_AUDIENCE)));
+    return toJsonBase64(jc);
+  }
+
   public static String getJcClaimsAudConsumerClientId() {
     Claim claim = new Claim();
     claim.setKey(Constants.TOKEN_CLAIM_AUD);

@@ -293,7 +293,9 @@ public class JumperConfig {
   @JsonIgnore
   public List<Claim> getConfiguredClaims() {
     if (Objects.nonNull(getClaims())) {
-      return getClaims().getOrDefault(Constants.CLAIMS_DEFAULT_KEY, List.of());
+      // getOrDefault returns null for an explicit {"default": null} bucket - normalize that too
+      List<Claim> defaultBucket = getClaims().get(Constants.CLAIMS_DEFAULT_KEY);
+      return Objects.requireNonNullElse(defaultBucket, List.of());
     }
     return List.of();
   }

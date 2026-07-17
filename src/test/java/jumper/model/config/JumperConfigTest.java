@@ -121,28 +121,14 @@ class JumperConfigTest {
   void fillProcessingInfo_preservesClaimsFromRoutingConfigEntry() {
     // arrange: a routing_config list whose secondary entry carries an aud claim; the jumper_config
     // header ("e30=" = {}) deliberately has no claims, mirroring the CP contract
-    Claim audClaim = new Claim();
-    audClaim.setKey(Constants.TOKEN_CLAIM_AUD);
-    audClaim.setValue("configured-audience");
-    HashMap<String, List<Claim>> claims = new HashMap<>();
-    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(audClaim));
-
     JumperConfig secondaryEntry = new JumperConfig();
-    secondaryEntry.setClaims(claims);
+    secondaryEntry.setClaims(claimsMapOf("configured-audience"));
     secondaryEntry.setRemoteApiUrl("http://localhost:1080/provider");
     String routingConfig = JumperConfig.toJsonBase64(List.of(new JumperConfig(), secondaryEntry));
 
-    String consumerToken =
-        AccessToken.builder()
-            .clientId("eni--local-team--local-app")
-            .originZone("localZone")
-            .originStargate("https://zone.local.de")
-            .build()
-            .getConsumerAccessToken();
-
     ServerHttpRequest request =
         MockServerHttpRequest.get("/")
-            .header(Constants.HEADER_AUTHORIZATION, "Bearer " + consumerToken)
+            .header(Constants.HEADER_AUTHORIZATION, "Bearer " + consumerToken())
             .header(Constants.HEADER_ROUTING_CONFIG, routingConfig)
             .header(Constants.HEADER_JUMPER_CONFIG, "e30=")
             .build();
@@ -158,10 +144,69 @@ class JumperConfigTest {
   }
 
   @Test
+  void fillProcessingInfo_keepsRoutingConfigClaimsOverConflictingJumperConfigClaims() {
+    // arrange: the jumper_config header carries its own, different claims - the selected
+    // routing_config entry must still win (fillProcessingInfo re-sources routeListener and
+    // gatewayClient from jumper_config, but never claims)
+    JumperConfig secondaryEntry = new JumperConfig();
+    secondaryEntry.setClaims(claimsMapOf("configured-audience"));
+    secondaryEntry.setRemoteApiUrl("http://localhost:1080/provider");
+    String routingConfig = JumperConfig.toJsonBase64(List.of(new JumperConfig(), secondaryEntry));
+
+    JumperConfig headerJc = new JumperConfig();
+    headerJc.setClaims(claimsMapOf("header-audience"));
+    String jumperConfig = JumperConfig.toJsonBase64(headerJc);
+
+    ServerHttpRequest request =
+        MockServerHttpRequest.get("/")
+            .header(Constants.HEADER_AUTHORIZATION, "Bearer " + consumerToken())
+            .header(Constants.HEADER_ROUTING_CONFIG, routingConfig)
+            .header(Constants.HEADER_JUMPER_CONFIG, jumperConfig)
+            .build();
+
+    // act
+    JumperConfig picked = JumperConfig.parseJumperConfigListFrom(request).get(1);
+    picked.fillProcessingInfo(request);
+
+    // assert
+    assertEquals(1, picked.getConfiguredClaims().size());
+    assertEquals("configured-audience", picked.getConfiguredClaims().get(0).getValue());
+  }
+
+  @Test
   void getConfiguredClaims_returnsEmptyListWhenClaimsAbsent() {
     JumperConfig jc = new JumperConfig();
 
     assertEquals(List.of(), jc.getConfiguredClaims());
+  }
+
+  @Test
+  void getConfiguredClaims_normalizesExplicitNullBucket() {
+    // {"claims":{"default":null}} deserializes to a map entry with a null value
+    JumperConfig jc = new JumperConfig();
+    HashMap<String, List<Claim>> claims = new HashMap<>();
+    claims.put(Constants.CLAIMS_DEFAULT_KEY, null);
+    jc.setClaims(claims);
+
+    assertEquals(List.of(), jc.getConfiguredClaims());
+  }
+
+  private static HashMap<String, List<Claim>> claimsMapOf(String audValue) {
+    Claim audClaim = new Claim();
+    audClaim.setKey(Constants.TOKEN_CLAIM_AUD);
+    audClaim.setValue(audValue);
+    HashMap<String, List<Claim>> claims = new HashMap<>();
+    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(audClaim));
+    return claims;
+  }
+
+  private static String consumerToken() {
+    return AccessToken.builder()
+        .clientId("eni--local-team--local-app")
+        .originZone("localZone")
+        .originStargate("https://zone.local.de")
+        .build()
+        .getConsumerAccessToken();
   }
 
   private static ServerHttpRequest requestWithRealmHeader(String realm) {

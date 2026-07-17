@@ -171,12 +171,23 @@ public class VerificationSteps {
       this.baseSteps
           .getRequestExchange()
           .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
+          .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredAud);
     } else if (tokenType.equalsIgnoreCase("OneTokenWithConsumerClientIdAud")) {
       this.baseSteps
           .getRequestExchange()
           .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
+          .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkConsumerClientIdAud);
+    } else if (tokenType.equalsIgnoreCase("MeshTokenWithoutConfiguredAud")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkMeshTokenIgnoresConfiguredAud)
+          .expectHeader()
+          .doesNotExist(Constants.HEADER_CONSUMER_TOKEN);
     } else if (tokenType.equalsIgnoreCase("OneTokenSimpleWithConfiguredAud")) {
       this.baseSteps
           .getRequestExchange()
@@ -331,6 +342,15 @@ public class VerificationSteps {
 
   private void checkMeshToken(String meshLmsToken) {
     checkMeshToken(meshLmsToken, Constants.DEFAULT_REALM);
+  }
+
+  // pins the DHEI-21196 gate end-to-end: configured claims must not leak onto the mesh LMS
+  // token (the consumer token in this scenario carries no aud, so any aud here is a leak)
+  private void checkMeshTokenIgnoresConfiguredAud(String meshLmsToken) {
+    checkMeshToken(meshLmsToken);
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(meshLmsToken);
+
+    assertNull(claimsFromToken.getBody().getAudience());
   }
 
   private void checkMeshTokenWithNonDefaultRealm(String meshLmsToken) {

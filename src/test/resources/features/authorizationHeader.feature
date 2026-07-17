@@ -62,6 +62,42 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization OneTokenWithMultipleAud
     And API consumer receives a 200 status code
 
+  ################ configured aud claims ################
+  Scenario: Consumer calls proxy route with jc claims containing literal aud, OneToken carries the configured audience
+    Given RealRoute headers are set
+    And jumperConfig claims "aud literal" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneTokenWithConfiguredAud
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with iris token containing aud and jc claims containing literal aud, configured audience replaces consumer token audience
+    Given RealRoute headers are set
+    And authorization token with aud set
+    And jumperConfig claims "aud literal" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithConfiguredAud
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc claims containing ConsumerClientId aud, OneToken carries the consumer client id as audience
+    Given RealRoute headers are set
+    And jumperConfig claims "aud consumerClientId" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithConsumerClientIdAud
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc claims containing non-aud key, claim is ignored and consumer token audience is unchanged
+    Given RealRoute headers are set
+    And authorization token with aud set
+    And jumperConfig claims "non-aud key" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithAud
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route and realm header contains several values, correct issuer set in OneToken
     Given RealRoute headers are set
     And several realm fields are contained in the header
@@ -74,6 +110,15 @@ Feature: proper authorization token reaches provider endpoint
     And API Provider receives header x-tardis-traceid that matches regex dummy
 
   ################ mesh ################
+  Scenario: Consumer calls proxy route with mesh flag and jc claims containing literal aud, mesh LMS token ignores configured claims
+    Given ProxyRoute headers are set
+    And jumperConfig claims "mesh with aud literal" set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization MeshTokenWithoutConfiguredAud
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route with mesh flag, mesh LMS token sent
     Given ProxyRoute headers are set
     And API provider set to respond with a 200 status code

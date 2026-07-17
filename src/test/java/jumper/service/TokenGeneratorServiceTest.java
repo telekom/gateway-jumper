@@ -309,6 +309,25 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
+  @DisplayName(
+      "configured claims that all resolve blank fall back to subscriberId when the consumer token"
+          + " has no aud")
+  void configuredClaimsResolvingBlank_fallBackToSubscriberId() {
+    // arrange
+    String consumerToken = consumerTokenWithAudiences(List.of());
+    JumperConfig jc = jumperConfig(consumerToken);
+    setConfiguredClaims(jc, literalAud(""));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
+    Claims claims = parse(providerLmsToken);
+
+    // assert
+    assertThat(claims.getAudience()).containsExactly("subscriber-1");
+  }
+
+  @Test
   @DisplayName("the mesh LMS token ignores configured claims and keeps the consumer audience")
   void meshToken_ignoresConfiguredClaims() {
     // arrange
