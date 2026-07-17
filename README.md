@@ -329,7 +329,7 @@ If credentials differ per consumer, the following `jumper_config` can be used in
 
 **Merge semantics:** A consumer-specific entry does not need to be complete. Every blank field is inherited from the provider `default` entry, while non-blank consumer fields win. This allows a consumer to override e.g. only `scopes` and still use the provider's client credentials. `scopes` is replaced as a whole, never combined with the default scopes. The merge can be disabled with `jumper.oauth.merge-consumer-with-default: false` (default `true`), restoring the legacy all-or-nothing lookup.
 
-**Validation:** If the resolved configuration contains no usable client authentication (neither `clientId`+`clientSecret`, `clientKey`, `username`+`password`, nor `refreshToken`), Jumper rejects the request with `400 Bad Request` and a descriptive message instead of sending a credential-less token request to the external IdP (which would surface as an opaque 401). Such rejections are counted in the `jumper_external_oauth_config_error_total` metric.
+**Validation:** If the resolved configuration contains no usable client authentication (neither `clientId`+`clientSecret`, `clientKey`, `username`+`password`, nor `refreshToken`), Jumper rejects the request with `400 Bad Request` and a descriptive message instead of sending a credential-less token request to the external IdP (which would surface as an opaque 401). Configurations without a `grantType` use the legacy header-based flow, which supports `clientId`+`clientSecret` only — the alternative mechanisms require a `grantType` to be set, and the error message says so. Such rejections are counted in the `jumper_external_oauth_config_error_total` metric.
 
 #### Basic Auth Token
 

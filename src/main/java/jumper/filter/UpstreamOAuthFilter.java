@@ -156,7 +156,9 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
         // This path uses only the (merged) credentials object — no header fallback. Fail loud on
         // an incomplete config instead of sending a credential-less token request.
         if (!hasResolvableClientAuth(oauthCredentials.get())) {
-          return missingClientAuthError(jumperConfig);
+          return missingClientAuthError(
+              jumperConfig,
+              "need clientId+clientSecret, clientKey, username+password, or refreshToken");
         }
         // Store token cache key in exchange for 4xx-based eviction
         String tokenCacheKey =
@@ -206,7 +208,12 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       return tokenFetchService.getAccessTokenWithClientCredentials(
           tokenEndpoint, clientId, clientSecret, clientScope);
     } else {
-      return missingClientAuthError(jc);
+      // The legacy path authenticates exclusively with clientId+clientSecret — don't advertise
+      // mechanisms it ignores; they only work on the grantType-based path.
+      return missingClientAuthError(
+          jc,
+          "need clientId+clientSecret; to authenticate with clientKey, username+password, or"
+              + " refreshToken, set oauth.grantType");
     }
   }
 
@@ -224,7 +231,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
         || StringUtils.isNotBlank(credentials.getRefreshToken());
   }
 
-  private Mono<TokenInfo> missingClientAuthError(JumperConfig jumperConfig) {
+  private Mono<TokenInfo> missingClientAuthError(JumperConfig jumperConfig, String requirement) {
     log.error(
         "External IdP OAuth config incomplete for consumer '{}', tokenEndpoint '{}': no client"
             + " authentication resolvable",
@@ -238,8 +245,9 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
             HttpStatus.BAD_REQUEST,
             "External IdP OAuth config incomplete for consumer '"
                 + jumperConfig.getConsumer()
-                + "': no client authentication resolvable (need clientId+clientSecret, clientKey,"
-                + " username+password, or refreshToken)"));
+                + "': no client authentication resolvable ("
+                + requirement
+                + ")"));
   }
 
   private static String determineClientScope(
