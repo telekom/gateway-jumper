@@ -65,12 +65,29 @@ public class TokenCacheService {
     }
   }
 
+  /**
+   * The hash must cover every field that distinguishes one token identity from another —
+   * credentials may consist solely of a refreshToken, clientKey or username+password, so keying on
+   * clientId+clientSecret alone would collide distinct credential sets on the same endpoint.
+   */
   public String generateTokenCacheKey(String tokenEndpoint, OauthCredentials oauthCredentials) {
-    return generateTokenCacheKey(
-        tokenEndpoint,
-        oauthCredentials.getId(),
-        oauthCredentials.getClientSecret(),
-        oauthCredentials.getScopes());
+    String safeScopes = oauthCredentials.getScopes() != null ? oauthCredentials.getScopes() : "";
+    String hashedCredentials =
+        hashCredentials(
+            oauthCredentials.getClientId(),
+            oauthCredentials.getClientSecret(),
+            oauthCredentials.getClientKey(),
+            oauthCredentials.getUsername(),
+            oauthCredentials.getPassword(),
+            oauthCredentials.getRefreshToken(),
+            oauthCredentials.getGrantType());
+    return tokenEndpoint
+        + TOKEN_CACHE_KEY_DELIMITER
+        + oauthCredentials.getId()
+        + TOKEN_CACHE_KEY_DELIMITER
+        + hashedCredentials
+        + TOKEN_CACHE_KEY_DELIMITER
+        + safeScopes;
   }
 
   public String generateTokenCacheKey(
@@ -95,10 +112,14 @@ public class TokenCacheService {
     return token.getExpiresIn() > this.ttlOffset;
   }
 
-  private String hashCredentials(String clientId, String clientSecret) {
+  private String hashCredentials(String... fields) {
     try {
-      String combined =
-          (clientId != null ? clientId : "") + (clientSecret != null ? clientSecret : "");
+      StringBuilder combinedBuilder = new StringBuilder();
+      for (String field : fields) {
+        // NUL-delimit so adjacent fields can't blur into the same digest input
+        combinedBuilder.append(field != null ? field : "").append('\0');
+      }
+      String combined = combinedBuilder.toString();
       java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
       byte[] hash = digest.digest(combined.getBytes(java.nio.charset.StandardCharsets.UTF_8));
       StringBuilder hexString = new StringBuilder();
