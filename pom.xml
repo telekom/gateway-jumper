@@ -32,7 +32,7 @@ SPDX-License-Identifier: Apache-2.0
 		<wiremock-jetty.version>12.1.11</wiremock-jetty.version>
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
-		<jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
+		<jib-maven-plugin.version>3.5.2</jib-maven-plugin.version>
 		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot</jib.base-image>
 	</properties>
 
