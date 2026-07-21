@@ -10,11 +10,13 @@ import java.security.interfaces.RSAKey;
 import java.util.*;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
+import jumper.model.config.JumperConfig.ConfiguredClaim;
 import jumper.model.config.KeyInfo;
 import jumper.util.OauthTokenUtil;
 import jumper.util.RsaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -99,7 +101,8 @@ public class TokenGeneratorService {
       String operation,
       String issuer,
       String publisherId,
-      String subscriberId) {
+      String subscriberId,
+      String configuredAudience) {
 
     Jwt<?, Claims> authorizationTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
@@ -145,7 +148,11 @@ public class TokenGeneratorService {
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
     // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
     // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
+    // Provider audience precedence: configured audience, incoming token audiences, then the
+    // subscriberId fallback used by pub/sub calls.
+    if (Objects.nonNull(configuredAudience)) {
+      claims.audience().single(configuredAudience);
+    } else if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
       if (audiences.size() == 1) {
         claims.audience().single(audiences.iterator().next());
       } else {
@@ -166,7 +173,9 @@ public class TokenGeneratorService {
    */
   public String generateProviderLmsToken(
       JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
-    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
+    String configuredAudience = resolveConfiguredAudience(jc);
+    return generateLmsToken(
+        jc, "stargate", operation, issuer, publisherId, subscriberId, configuredAudience);
   }
 
   /**
@@ -176,7 +185,40 @@ public class TokenGeneratorService {
    * validates this token against the consumer zone's StarGate JWKS.
    */
   public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
-    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
+    return generateLmsToken(jc, "gateway", operation, issuer, null, null, null);
+  }
+
+  private static String resolveConfiguredAudience(JumperConfig jc) {
+    Optional<ConfiguredClaim> configuredClaim = jc.getConfiguredAudienceClaim();
+    if (configuredClaim.isEmpty()) {
+      return null;
+    }
+
+    ConfiguredClaim claim = configuredClaim.get();
+    boolean hasValue = Objects.nonNull(claim.getValue());
+    boolean hasValueFrom = Objects.nonNull(claim.getValueFrom());
+    if (hasValue == hasValueFrom) {
+      throw invalidAudienceConfiguration("exactly one of value or valueFrom must be set");
+    }
+    if (hasValue) {
+      if (StringUtils.isBlank(claim.getValue())) {
+        throw invalidAudienceConfiguration("value must not be blank");
+      }
+      return claim.getValue();
+    }
+    if (!Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID.equals(claim.getValueFrom())) {
+      throw invalidAudienceConfiguration("unsupported valueFrom");
+    }
+    if (StringUtils.isBlank(jc.getConsumer())) {
+      throw invalidAudienceConfiguration("ConsumerClientId could not be resolved");
+    }
+    return jc.getConsumer();
+  }
+
+  private static ResponseStatusException invalidAudienceConfiguration(String reason) {
+    log.error("Invalid aud claim configuration: {}", reason);
+    return new ResponseStatusException(
+        HttpStatus.INTERNAL_SERVER_ERROR, "Invalid aud claim configuration: " + reason);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

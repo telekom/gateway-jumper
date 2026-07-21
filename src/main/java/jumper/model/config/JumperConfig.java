@@ -29,6 +29,7 @@ public class JumperConfig {
 
   private HashMap<String, OauthCredentials> oauth;
   private HashMap<String, BasicAuthCredentials> basicAuth;
+  private HashMap<String, List<ConfiguredClaim>> claims;
   private HashMap<String, RouteListener> routeListener;
   private List<String> removeHeaders;
   private GatewayClient gatewayClient;
@@ -283,5 +284,30 @@ public class JumperConfig {
   public String getSecurityScopes() {
     Optional<OauthCredentials> oauthCredentials = getOauthCredentials();
     return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
+  }
+
+  @JsonIgnore
+  public Optional<ConfiguredClaim> getConfiguredAudienceClaim() {
+    if (Objects.isNull(claims)) {
+      return Optional.empty();
+    }
+
+    List<ConfiguredClaim> defaultClaims = claims.get(Constants.CLAIMS_DEFAULT_KEY);
+    if (Objects.isNull(defaultClaims)) {
+      return Optional.empty();
+    }
+
+    return defaultClaims.stream()
+        .filter(Objects::nonNull)
+        .filter(claim -> Constants.TOKEN_CLAIM_AUD.equals(claim.getKey()))
+        .findFirst();
+  }
+
+  @Data
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static class ConfiguredClaim {
+    private String key;
+    private String value;
+    private String valueFrom;
   }
 }

@@ -21,6 +21,14 @@ Feature: request containing routing_config properly handled
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization OneTokenSimple
 
+  Scenario: Consumer calls secondary provider route with a configured audience
+    Given Secondary routing_config header set with configured audience
+    And skip zone header set
+    And API provider set to respond on provider path
+    When consumer calls the proxy route without base path
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization OneTokenSimpleWithConfiguredAudience
+
   Scenario: Consumer calls proxy route with secondary config and zone is unhealthy, provider called
     Given Secondary routing_config header set
     And set zone state to unhealthy

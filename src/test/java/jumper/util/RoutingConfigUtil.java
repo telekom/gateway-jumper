@@ -24,6 +24,14 @@ public class RoutingConfigUtil {
     };
   }
 
+  public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithAudience(BaseSteps baseSteps) {
+    return httpHeaders -> {
+      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcSecondaryWithAudience());
+      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
+    };
+  }
+
   public static Consumer<HttpHeaders> getSecondaryRouteHeadersWithLoadbalancing(
       BaseSteps baseSteps) {
     return httpHeaders -> {
@@ -72,6 +80,13 @@ public class RoutingConfigUtil {
   public static String getRcSecondary() {
     // proxy + real
     return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME), getRealRouteJc()));
+  }
+
+  public static String getRcSecondaryWithAudience() {
+    JumperConfig realRoute = getRealRouteJc();
+    realRoute.setClaims(
+        JumperConfigUtil.defaultClaims(JumperConfigUtil.audienceClaim(CONFIGURED_AUDIENCE, null)));
+    return toJsonBase64(List.of(getProxyRouteJc(REMOTE_ZONE_NAME), realRoute));
   }
 
   public static String getRcSecondaryLoadbalancing() {

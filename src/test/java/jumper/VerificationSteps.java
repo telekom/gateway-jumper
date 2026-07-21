@@ -167,6 +167,20 @@ public class VerificationSteps {
           .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkMultipleAud);
+    } else if (tokenType.equalsIgnoreCase("OneTokenWithConfiguredConsumerAudience")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredConsumerAudience);
+    } else if (tokenType.equalsIgnoreCase("OneTokenSimpleWithConfiguredAudience")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneTokenSimple)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredAudience);
     } else if (tokenType.equalsIgnoreCase("MeshToken")) {
       this.baseSteps
           .getRequestExchange()
@@ -295,6 +309,18 @@ public class VerificationSteps {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(Set.of("testAudience1", "testAudience2"), claimsFromToken.getBody().getAudience());
+  }
+
+  private void checkConfiguredConsumerAudience(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
+
+    assertEquals(Set.of(CONSUMER), claimsFromToken.getBody().getAudience());
+  }
+
+  private void checkConfiguredAudience(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
+
+    assertEquals(Set.of(CONFIGURED_AUDIENCE), claimsFromToken.getBody().getAudience());
   }
 
   private void checkMeshToken(String meshLmsToken) {
