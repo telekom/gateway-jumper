@@ -6,6 +6,7 @@ package jumper.service;
 
 import static jumper.config.Config.LOCAL_ISSUER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -14,8 +15,12 @@ import io.jsonwebtoken.Jwt;
 import io.jsonwebtoken.Jwts;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Stream;
+import jumper.Constants;
 import jumper.model.config.JumperConfig;
+import jumper.model.config.JumperConfig.ConfiguredClaim;
 import jumper.model.config.KeyInfo;
 import jumper.util.AccessToken;
 import jumper.util.OauthTokenUtil;
@@ -25,6 +30,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -185,6 +193,65 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
+  @DisplayName("configured audience overrides incoming audience and subscriberId")
+  void configuredAudience_hasHighestPrecedence() {
+    // arrange
+    JumperConfig jc = jumperConfig(consumerTokenWithAudiences(List.of("consumerAud")));
+    setConfiguredAudience(jc, configuredAudience("provider-audience", null));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, "subscriber-1");
+
+    // assert
+    assertThat(parse(providerLmsToken).getAudience()).containsExactly("provider-audience");
+  }
+
+  @Test
+  @DisplayName("ConsumerClientId resolves the original consumer after a mesh hop")
+  void consumerClientId_resolvesOriginalConsumerAfterMeshHop() {
+    // arrange
+    JumperConfig consumerZoneConfig =
+        jumperConfig(consumerTokenWithAudiences(List.of("consumerAud")));
+    String meshToken =
+        tokenGeneratorService.generateMeshLmsToken(consumerZoneConfig, "GET", ISSUER);
+    JumperConfig providerZoneConfig = jumperConfig(meshToken);
+    setConfiguredAudience(
+        providerZoneConfig,
+        configuredAudience(null, Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(
+            providerZoneConfig, "GET", ISSUER, null, null);
+
+    // assert
+    assertThat(parse(meshToken).get("azp", String.class)).isEqualTo("gateway");
+    assertThat(parse(providerLmsToken).getAudience()).containsExactly("eni--local-team--local-app");
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("invalidAudienceConfigurations")
+  void invalidConfiguredAudience_returnsInternalServerError(
+      String description, ConfiguredClaim claim, String consumer, String expectedReason) {
+    // arrange
+    JumperConfig jc = jumperConfig(consumerTokenWithAudiences(List.of()));
+    jc.setConsumer(consumer);
+    setConfiguredAudience(jc, claim);
+
+    // act
+    ResponseStatusException exception =
+        assertThrows(
+            ResponseStatusException.class,
+            () -> tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null));
+
+    // assert
+    assertThat(exception.getStatusCode().value()).isEqualTo(500);
+    assertThat(exception.getReason())
+        .isEqualTo("Invalid aud claim configuration: " + expectedReason);
+  }
+
+  @Test
   @DisplayName("createJwtTokenFromKey rejects an RS256 key weaker than 2048 bits with 401")
   void weakKey_isRejectedWith401() {
     // arrange
@@ -234,6 +301,46 @@ class TokenGeneratorServiceTest {
     jc.setConsumerOriginStargate("https://zone.local.de");
     jc.setEnvName("localEnv");
     return jc;
+  }
+
+  private static void setConfiguredAudience(JumperConfig jc, ConfiguredClaim claim) {
+    HashMap<String, List<ConfiguredClaim>> claims = new HashMap<>();
+    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(claim));
+    jc.setClaims(claims);
+  }
+
+  private static ConfiguredClaim configuredAudience(String value, String valueFrom) {
+    ConfiguredClaim claim = new ConfiguredClaim();
+    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setValue(value);
+    claim.setValueFrom(valueFrom);
+    return claim;
+  }
+
+  private static Stream<Arguments> invalidAudienceConfigurations() {
+    return Stream.of(
+        Arguments.of(
+            "missing value and valueFrom",
+            configuredAudience(null, null),
+            "consumer",
+            "exactly one of value or valueFrom must be set"),
+        Arguments.of(
+            "value and valueFrom both set",
+            configuredAudience("audience", Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID),
+            "consumer",
+            "exactly one of value or valueFrom must be set"),
+        Arguments.of(
+            "blank value", configuredAudience(" ", null), "consumer", "value must not be blank"),
+        Arguments.of(
+            "unsupported valueFrom",
+            configuredAudience(null, "ProviderClientId"),
+            "consumer",
+            "unsupported valueFrom"),
+        Arguments.of(
+            "unresolved ConsumerClientId",
+            configuredAudience(null, Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID),
+            null,
+            "ConsumerClientId could not be resolved"));
   }
 
   private static Claims parse(String token) {

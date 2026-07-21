@@ -188,6 +188,35 @@ The most common scenario where Jumper creates a new OAuth token by combining inf
 **Outgoing Headers:**
 * `Authorization` - Contains the newly created token
 
+##### Audience claim
+
+Providers can configure one audience for the provider-facing token through `jumper_config`:
+
+```json
+{
+  "claims": {
+    "default": [
+      { "key": "aud", "value": "checkout-api" }
+    ]
+  }
+}
+```
+
+The audience can be a literal `value` or use `valueFrom: "ConsumerClientId"`, which resolves to
+the incoming token's `clientId`. Exactly one of `value` or `valueFrom` must be set. Invalid `aud`
+configuration fails provider-token generation with an HTTP 500 response.
+
+Provider-token audience precedence is:
+
+1. The configured provider audience.
+2. Audience values from the incoming token.
+3. The `x-pubsub-subscriber-id` fallback for pub/sub calls.
+
+Configured provider claims are not applied when Jumper creates a mesh token. Mesh token generation
+preserves the incoming audience, allowing the destination gateway to use it when minting the
+provider token. If no audience crosses the mesh, the destination can still use the pub/sub
+subscriber fallback.
+
 #### Last Mile Security Token (Legacy)
 
 A legacy scenario where Jumper forwards both the original token and a new LMS token (in an `X-Gateway-Token` header).

@@ -32,6 +32,27 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  public static String getJcConsumerClientIdAudience() {
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(audienceClaim(null, Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID)));
+    return toJsonBase64(jc);
+  }
+
+  public static HashMap<String, List<JumperConfig.ConfiguredClaim>> defaultClaims(
+      JumperConfig.ConfiguredClaim claim) {
+    HashMap<String, List<JumperConfig.ConfiguredClaim>> claims = new HashMap<>();
+    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(claim));
+    return claims;
+  }
+
+  public static JumperConfig.ConfiguredClaim audienceClaim(String value, String valueFrom) {
+    JumperConfig.ConfiguredClaim claim = new JumperConfig.ConfiguredClaim();
+    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setValue(value);
+    claim.setValueFrom(valueFrom);
+    return claim;
+  }
+
   public static String getJcBasicAuthConsumer(String id) {
     HashMap<String, BasicAuthCredentials> basicAuthCredentialsHashMap = new HashMap<>();
     BasicAuthCredentials ba = new BasicAuthCredentials();

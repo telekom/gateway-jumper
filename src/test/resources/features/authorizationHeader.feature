@@ -62,6 +62,14 @@ Feature: proper authorization token reaches provider endpoint
     Then API Provider receives authorization OneTokenWithMultipleAud
     And API consumer receives a 200 status code
 
+  Scenario: ConsumerClientId configured as audience resolves to the calling application
+    Given RealRoute headers are set
+    And jumperConfig with ConsumerClientId audience set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithConfiguredConsumerAudience
+    And API consumer receives a 200 status code
+
   Scenario: Consumer calls proxy route and realm header contains several values, correct issuer set in OneToken
     Given RealRoute headers are set
     And several realm fields are contained in the header
