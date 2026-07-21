@@ -10,6 +10,7 @@ public class Config {
   public static final String CONSUMER_EXTERNAL_CONFIGURED = "external_configured";
   public static final String CONSUMER_EXTERNAL_HEADER = "external_header";
   public static final String SCOPES = "scope1 scope2";
+  public static final String CONFIGURED_AUDIENCE = "configured-audience";
   public static final String OAUTH_SCOPE_CONFIGURED = "scope_configured";
   public static final String OAUTH_SCOPE_HEADER = "scope_header";
   public static final String ORIGIN_STARGATE = "https://zone.local.de";
