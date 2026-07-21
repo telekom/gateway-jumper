@@ -108,6 +108,8 @@ public class Constants {
 
   public static final String BASIC_AUTH_PROVIDER_KEY = "default";
   public static final String OAUTH_PROVIDER_KEY = "default";
+  public static final String CLAIMS_DEFAULT_KEY = "default";
+  public static final String CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID = "ConsumerClientId";
 
   public static final String ENVIRONMENT_PLACEHOLDER = "ENVIRONMENT_PLACEHOLDER";
 }

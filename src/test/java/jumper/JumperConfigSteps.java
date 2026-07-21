@@ -47,6 +47,14 @@ public class JumperConfigSteps {
             httpHeaders -> httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity())));
   }
 
+  @And("jumperConfig with ConsumerClientId audience set")
+  public void setJumperConfigConsumerClientIdAudience() {
+    baseSteps.setHttpHeadersOfRequest(
+        baseSteps.httpHeadersOfRequest.andThen(
+            httpHeaders ->
+                httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcConsumerClientIdAudience())));
+  }
+
   @And("jumperConfig oauth {string} set")
   public void setJumperConfigOauth(String jc_case) {
     baseSteps.setHttpHeadersOfRequest(
