@@ -270,16 +270,6 @@ public class JumperConfig {
     return Optional.empty();
   }
 
-  // Rollout flag for the consumer-over-default merge below, bound from
-  // jumper.oauth.merge-consumer-with-default by OauthCredentialsMergeConfiguration. Static because
-  // JumperConfig instances are deserialized from the jumper_config header per request and have no
-  // access to Spring configuration.
-  private static volatile boolean mergeConsumerWithDefault = true;
-
-  public static void setMergeConsumerWithDefault(boolean enabled) {
-    mergeConsumerWithDefault = enabled;
-  }
-
   public Optional<OauthCredentials> getOauthCredentials() {
     if (Objects.isNull(getOauth())) {
       return Optional.empty();
@@ -288,16 +278,20 @@ public class JumperConfig {
     OauthCredentials providerDefault = getOauth().get(Constants.OAUTH_PROVIDER_KEY);
     OauthCredentials consumerEntry = getOauth().get(getConsumer());
 
-    if (Objects.nonNull(consumerEntry)) {
-      if (mergeConsumerWithDefault) {
-        // A partial consumer entry (e.g. only scopes) inherits every blank field from the
-        // provider "default" entry; non-blank consumer fields win.
-        return Optional.of(consumerEntry.withDefaults(providerDefault));
-      }
-      return Optional.of(consumerEntry);
+    if (Objects.isNull(consumerEntry)) {
+      return Optional.ofNullable(providerDefault);
     }
 
-    return Optional.ofNullable(providerDefault);
+    // Authentication configuration is atomic: a consumer entry carrying any of it is used as-is,
+    // never completed from the provider "default" entry. The one supported partial shape is a
+    // scopes-only entry, which rides on the default's authentication bundle.
+    if (consumerEntry.hasAuthConfig() || Objects.isNull(providerDefault)) {
+      return Optional.of(consumerEntry);
+    }
+    if (StringUtils.isNotBlank(consumerEntry.getScopes())) {
+      return Optional.of(providerDefault.withScopes(consumerEntry.getScopes()));
+    }
+    return Optional.of(providerDefault);
   }
 
   public String getSecurityScopes() {

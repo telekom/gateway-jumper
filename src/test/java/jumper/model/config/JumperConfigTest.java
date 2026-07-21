@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.Optional;
 import java.util.stream.Stream;
 import jumper.Constants;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -26,11 +25,6 @@ class JumperConfigTest {
   private static final String NON_DEFAULT_REALM = "sit";
   private static final String OTHER_REALM = "rv";
   private static final String CONSUMER = "some--consumer--app";
-
-  @AfterEach
-  void resetMergeFlag() {
-    JumperConfig.setMergeConsumerWithDefault(true);
-  }
 
   static Stream<Arguments> isMeshRouteCases() {
     return Stream.of(
@@ -110,14 +104,14 @@ class JumperConfigTest {
   }
 
   @Test
-  void getOauthCredentials_partialConsumerEntryInheritsFromDefault() {
+  void getOauthCredentials_scopesOnlyConsumerEntryUsesDefaultAuthBundle() {
     // arrange
     JumperConfig jc = jumperConfigWithOauth(consumerScopesOnly(), fullDefault());
 
     // act
     Optional<OauthCredentials> result = jc.getOauthCredentials();
 
-    // assert: consumer scope wins, everything else inherited from default
+    // assert: consumer scope wins, authentication comes from the default entry as a whole
     assertTrue(result.isPresent());
     assertEquals("consumer-scope", result.get().getScopes());
     assertEquals("default-clientId", result.get().getClientId());
@@ -126,11 +120,11 @@ class JumperConfigTest {
   }
 
   @Test
-  void getOauthCredentials_fullConsumerEntryDoesNotLeakDefaultFields() {
-    // arrange
+  void getOauthCredentials_consumerEntryWithAuthConfigIsUsedAsIs() {
+    // arrange: a consumer entry carrying authentication config is atomic — nothing is
+    // completed from the default entry, not even blank fields
     OauthCredentials consumer = new OauthCredentials();
     consumer.setClientId("consumer-clientId");
-    consumer.setClientSecret("consumer-clientSecret");
     OauthCredentials def = fullDefault();
     def.setScopes("default-scope");
     JumperConfig jc = jumperConfigWithOauth(consumer, def);
@@ -141,7 +135,23 @@ class JumperConfigTest {
     // assert
     assertTrue(result.isPresent());
     assertEquals("consumer-clientId", result.get().getClientId());
-    assertEquals("consumer-clientSecret", result.get().getClientSecret());
+    assertNull(result.get().getClientSecret());
+    assertNull(result.get().getGrantType());
+    assertNull(result.get().getScopes());
+  }
+
+  @Test
+  void getOauthCredentials_emptyConsumerEntryFallsBackToDefault() {
+    // arrange
+    JumperConfig jc = jumperConfigWithOauth(new OauthCredentials(), fullDefault());
+
+    // act
+    Optional<OauthCredentials> result = jc.getOauthCredentials();
+
+    // assert
+    assertTrue(result.isPresent());
+    assertEquals("default-clientId", result.get().getClientId());
+    assertEquals("client_credentials", result.get().getGrantType());
   }
 
   @Test
@@ -181,41 +191,11 @@ class JumperConfigTest {
     assertTrue(jc.getOauthCredentials().isEmpty());
   }
 
+  // Pins the OneToken scope-claim semantics: a consumer entry carrying auth config is used
+  // as-is, so a missing scope stays missing — no scope claim, exactly as before the change.
   @Test
-  void getOauthCredentials_mergeDisabledReturnsConsumerEntryAsIs() {
+  void getSecurityScopes_consumerEntryWithAuthConfigDoesNotInheritDefaultScopes() {
     // arrange
-    JumperConfig.setMergeConsumerWithDefault(false);
-    JumperConfig jc = jumperConfigWithOauth(consumerScopesOnly(), fullDefault());
-
-    // act
-    Optional<OauthCredentials> result = jc.getOauthCredentials();
-
-    // assert: legacy all-or-nothing lookup
-    assertTrue(result.isPresent());
-    assertEquals("consumer-scope", result.get().getScopes());
-    assertNull(result.get().getClientId());
-    assertNull(result.get().getGrantType());
-  }
-
-  // Pins the OneToken scope-claim semantics: a consumer entry without scopes inherits the
-  // default scopes since the merge, instead of yielding no scope claim at all.
-  @Test
-  void getSecurityScopes_consumerEntryWithoutScopesInheritsDefaultScopes() {
-    // arrange
-    OauthCredentials consumer = new OauthCredentials();
-    consumer.setClientId("consumer-clientId");
-    OauthCredentials def = fullDefault();
-    def.setScopes("default-scope");
-    JumperConfig jc = jumperConfigWithOauth(consumer, def);
-
-    // act & assert
-    assertEquals("default-scope", jc.getSecurityScopes());
-  }
-
-  @Test
-  void getSecurityScopes_mergeDisabledKeepsLegacyNullScope() {
-    // arrange
-    JumperConfig.setMergeConsumerWithDefault(false);
     OauthCredentials consumer = new OauthCredentials();
     consumer.setClientId("consumer-clientId");
     OauthCredentials def = fullDefault();
@@ -224,6 +204,17 @@ class JumperConfigTest {
 
     // act & assert
     assertNull(jc.getSecurityScopes());
+  }
+
+  @Test
+  void getSecurityScopes_scopesOnlyConsumerEntryYieldsConsumerScope() {
+    // arrange
+    OauthCredentials def = fullDefault();
+    def.setScopes("default-scope");
+    JumperConfig jc = jumperConfigWithOauth(consumerScopesOnly(), def);
+
+    // act & assert
+    assertEquals("consumer-scope", jc.getSecurityScopes());
   }
 
   private static JumperConfig jumperConfigWithOauth(

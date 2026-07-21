@@ -118,8 +118,8 @@ class UpstreamOAuthFilterTest {
 
   @Test
   void mergedConsumerAndDefaultBothWithoutClientAuthRejectsBeforeIdpCall() {
-    // arrange: neither the consumer entry nor the default entry carries client authentication;
-    // the merge inherits the default's grant type, so the modern path must still fail loud
+    // arrange: the scopes-only consumer entry rides on the default's auth bundle, which carries
+    // a grant type but no client authentication — the modern path must still fail loud
     OauthCredentials consumer = new OauthCredentials();
     consumer.setScopes("consumer-scope");
     OauthCredentials def = new OauthCredentials();

@@ -128,12 +128,6 @@ spring:
       max-in-memory-size: 12582912
 
 jumper:
-  oauth:
-    # Consumer-specific entries in jumper_config.oauth inherit every blank field
-    # (clientId, clientSecret, ...) from the provider "default" entry; non-blank
-    # consumer fields win (scopes replace the default scopes, they are not
-    # combined). Set to false to restore the legacy all-or-nothing lookup.
-    merge-consumer-with-default: ${JUMPER_OAUTH_MERGE_CONSUMER_WITH_DEFAULT:true}
   tracing:
     filter-param-list: X-Amz-.*,sig
   issuer:

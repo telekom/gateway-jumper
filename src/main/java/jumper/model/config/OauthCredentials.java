@@ -32,28 +32,33 @@ public class OauthCredentials {
   }
 
   /**
-   * Returns a new instance with the values of this (consumer) entry; every blank field is inherited
-   * from {@code base} (the "default" provider entry). A non-blank consumer field always wins —
-   * including {@code scopes}, which is replaced as a whole, never combined with the default scopes.
+   * True if this entry carries any authentication-related configuration — everything except {@code
+   * scopes}. Authentication configuration is atomic: an entry carrying any of it is used as-is and
+   * never completed from another entry.
    */
-  public OauthCredentials withDefaults(OauthCredentials base) {
-    if (base == null) {
-      return this;
-    }
-    OauthCredentials merged = new OauthCredentials();
-    merged.setClientId(firstNonBlank(this.clientId, base.clientId));
-    merged.setClientSecret(firstNonBlank(this.clientSecret, base.clientSecret));
-    merged.setClientKey(firstNonBlank(this.clientKey, base.clientKey));
-    merged.setScopes(firstNonBlank(this.scopes, base.scopes));
-    merged.setUsername(firstNonBlank(this.username, base.username));
-    merged.setPassword(firstNonBlank(this.password, base.password));
-    merged.setRefreshToken(firstNonBlank(this.refreshToken, base.refreshToken));
-    merged.setGrantType(firstNonBlank(this.grantType, base.grantType));
-    merged.setTokenRequest(firstNonBlank(this.tokenRequest, base.tokenRequest));
-    return merged;
+  public boolean hasAuthConfig() {
+    return StringUtils.isNotBlank(clientId)
+        || StringUtils.isNotBlank(clientSecret)
+        || StringUtils.isNotBlank(clientKey)
+        || StringUtils.isNotBlank(username)
+        || StringUtils.isNotBlank(password)
+        || StringUtils.isNotBlank(refreshToken)
+        || StringUtils.isNotBlank(grantType)
+        || StringUtils.isNotBlank(tokenRequest);
   }
 
-  private static String firstNonBlank(String preferred, String fallback) {
-    return StringUtils.isNotBlank(preferred) ? preferred : fallback;
+  /** Returns a copy of this entry with {@code scopes} replaced. */
+  public OauthCredentials withScopes(String newScopes) {
+    OauthCredentials copy = new OauthCredentials();
+    copy.setClientId(this.clientId);
+    copy.setClientSecret(this.clientSecret);
+    copy.setClientKey(this.clientKey);
+    copy.setScopes(newScopes);
+    copy.setUsername(this.username);
+    copy.setPassword(this.password);
+    copy.setRefreshToken(this.refreshToken);
+    copy.setGrantType(this.grantType);
+    copy.setTokenRequest(this.tokenRequest);
+    return copy;
   }
 }

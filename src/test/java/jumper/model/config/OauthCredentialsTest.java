@@ -5,94 +5,84 @@
 package jumper.model.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class OauthCredentialsTest {
 
-  @Test
-  void withDefaults_consumerFieldsWin() {
-    OauthCredentials consumer = fullCredentials("consumer");
-    OauthCredentials base = fullCredentials("default");
+  static Stream<Arguments> authConfigFields() {
+    return Stream.of(
+        Arguments.of(
+            "clientId", (BiConsumer<OauthCredentials, String>) OauthCredentials::setClientId),
+        Arguments.of(
+            "clientSecret",
+            (BiConsumer<OauthCredentials, String>) OauthCredentials::setClientSecret),
+        Arguments.of(
+            "clientKey", (BiConsumer<OauthCredentials, String>) OauthCredentials::setClientKey),
+        Arguments.of(
+            "username", (BiConsumer<OauthCredentials, String>) OauthCredentials::setUsername),
+        Arguments.of(
+            "password", (BiConsumer<OauthCredentials, String>) OauthCredentials::setPassword),
+        Arguments.of(
+            "refreshToken",
+            (BiConsumer<OauthCredentials, String>) OauthCredentials::setRefreshToken),
+        Arguments.of(
+            "grantType", (BiConsumer<OauthCredentials, String>) OauthCredentials::setGrantType),
+        Arguments.of(
+            "tokenRequest",
+            (BiConsumer<OauthCredentials, String>) OauthCredentials::setTokenRequest));
+  }
 
-    OauthCredentials merged = consumer.withDefaults(base);
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("authConfigFields")
+  void hasAuthConfig_trueForEveryAuthField(
+      String field, BiConsumer<OauthCredentials, String> setField) {
+    OauthCredentials credentials = new OauthCredentials();
+    setField.accept(credentials, "value");
 
-    assertEquals("consumer-clientId", merged.getClientId());
-    assertEquals("consumer-clientSecret", merged.getClientSecret());
-    assertEquals("consumer-clientKey", merged.getClientKey());
-    assertEquals("consumer-scopes", merged.getScopes());
-    assertEquals("consumer-username", merged.getUsername());
-    assertEquals("consumer-password", merged.getPassword());
-    assertEquals("consumer-refreshToken", merged.getRefreshToken());
-    assertEquals("consumer-grantType", merged.getGrantType());
-    assertEquals("consumer-tokenRequest", merged.getTokenRequest());
+    assertTrue(credentials.hasAuthConfig());
   }
 
   @Test
-  void withDefaults_missingFieldsInheritFromBase() {
-    OauthCredentials consumer = new OauthCredentials();
-    consumer.setScopes("consumer-scopes");
-    OauthCredentials base = fullCredentials("default");
+  void hasAuthConfig_falseForScopesOnlyAndEmpty() {
+    OauthCredentials empty = new OauthCredentials();
+    assertFalse(empty.hasAuthConfig());
 
-    OauthCredentials merged = consumer.withDefaults(base);
+    OauthCredentials scopesOnly = new OauthCredentials();
+    scopesOnly.setScopes("scope");
+    assertFalse(scopesOnly.hasAuthConfig());
 
-    assertEquals("default-clientId", merged.getClientId());
-    assertEquals("default-clientSecret", merged.getClientSecret());
-    assertEquals("default-clientKey", merged.getClientKey());
-    assertEquals("default-username", merged.getUsername());
-    assertEquals("default-password", merged.getPassword());
-    assertEquals("default-refreshToken", merged.getRefreshToken());
-    assertEquals("default-grantType", merged.getGrantType());
-    assertEquals("default-tokenRequest", merged.getTokenRequest());
+    OauthCredentials blanks = new OauthCredentials();
+    blanks.setClientId("");
+    blanks.setClientSecret("   ");
+    blanks.setScopes("scope");
+    assertFalse(blanks.hasAuthConfig());
   }
 
   @Test
-  void withDefaults_scopeIsReplacedNotCombined() {
-    OauthCredentials consumer = new OauthCredentials();
-    consumer.setScopes("consumer-scope");
-    OauthCredentials base = new OauthCredentials();
-    base.setScopes("default-scope another-default-scope");
+  void withScopes_replacesScopesAndCopiesEverythingElse() {
+    OauthCredentials original = fullCredentials("default");
 
-    OauthCredentials merged = consumer.withDefaults(base);
+    OauthCredentials copy = original.withScopes("consumer-scope");
 
-    assertEquals("consumer-scope", merged.getScopes());
-  }
-
-  @Test
-  void withDefaults_blankConsumerFieldInherits() {
-    OauthCredentials consumer = new OauthCredentials();
-    consumer.setClientId("");
-    consumer.setClientSecret("   ");
-    OauthCredentials base = fullCredentials("default");
-
-    OauthCredentials merged = consumer.withDefaults(base);
-
-    assertEquals("default-clientId", merged.getClientId());
-    assertEquals("default-clientSecret", merged.getClientSecret());
-  }
-
-  @Test
-  void withDefaults_nullBaseReturnsSameInstance() {
-    OauthCredentials consumer = fullCredentials("consumer");
-
-    assertSame(consumer, consumer.withDefaults(null));
-  }
-
-  @Test
-  void withDefaults_fieldMissingInBothStaysNull() {
-    OauthCredentials consumer = new OauthCredentials();
-    consumer.setClientId("consumer-clientId");
-    OauthCredentials base = new OauthCredentials();
-    base.setClientSecret("default-clientSecret");
-
-    OauthCredentials merged = consumer.withDefaults(base);
-
-    assertEquals("consumer-clientId", merged.getClientId());
-    assertEquals("default-clientSecret", merged.getClientSecret());
-    assertNull(merged.getScopes());
-    assertNull(merged.getGrantType());
+    assertEquals("consumer-scope", copy.getScopes());
+    assertEquals("default-clientId", copy.getClientId());
+    assertEquals("default-clientSecret", copy.getClientSecret());
+    assertEquals("default-clientKey", copy.getClientKey());
+    assertEquals("default-username", copy.getUsername());
+    assertEquals("default-password", copy.getPassword());
+    assertEquals("default-refreshToken", copy.getRefreshToken());
+    assertEquals("default-grantType", copy.getGrantType());
+    assertEquals("default-tokenRequest", copy.getTokenRequest());
+    // the original entry stays untouched
+    assertEquals("default-scopes", original.getScopes());
   }
 
   private static OauthCredentials fullCredentials(String prefix) {
