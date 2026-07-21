@@ -4,6 +4,7 @@
 
 package jumper.filter;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Objects;
 import java.util.Optional;
 import jumper.Constants;
@@ -42,6 +43,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   private final TokenGeneratorService tokenGeneratorService;
   private final JumperConfigService jumperConfigService;
   private final TokenCacheService tokenCacheService;
+  private final MeterRegistry meterRegistry;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -50,12 +52,14 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       TokenFetchService tokenFetchService,
       TokenGeneratorService tokenGeneratorService,
       JumperConfigService jumperConfigService,
-      TokenCacheService tokenCacheService) {
+      TokenCacheService tokenCacheService,
+      MeterRegistry meterRegistry) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
     this.tokenGeneratorService = tokenGeneratorService;
     this.jumperConfigService = jumperConfigService;
     this.tokenCacheService = tokenCacheService;
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -149,6 +153,13 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
         // Use OAuth credentials with explicit grant type (modern approach)
         log.debug("fetching token with OauthCredentials");
+        // This path uses only the (merged) credentials object — no header fallback. Fail loud on
+        // an incomplete config instead of sending a credential-less token request.
+        if (!hasResolvableClientAuth(oauthCredentials.get())) {
+          return missingClientAuthError(
+              jumperConfig,
+              "need clientId+clientSecret, clientKey, username+password, or refreshToken");
+        }
         // Store token cache key in exchange for 4xx-based eviction
         String tokenCacheKey =
             tokenCacheService.generateTokenCacheKey(
@@ -197,12 +208,46 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       return tokenFetchService.getAccessTokenWithClientCredentials(
           tokenEndpoint, clientId, clientSecret, clientScope);
     } else {
-      log.warn("not specified oauth config credentials for consumer: {}", consumer);
-      return Mono.error(
-          new ResponseStatusException(
-              HttpStatus.UNAUTHORIZED,
-              "Missing oauth config credentials for consumer " + consumer));
+      // The legacy path authenticates exclusively with clientId+clientSecret — don't advertise
+      // mechanisms it ignores; they only work on the grantType-based path.
+      return missingClientAuthError(
+          jc,
+          "need clientId+clientSecret; to authenticate with clientKey, username+password, or"
+              + " refreshToken, set oauth.grantType");
     }
+  }
+
+  /**
+   * A token request needs at least one client authentication mechanism the modern path can actually
+   * use: clientId+clientSecret, a clientKey (JWT client assertion), username+password, or a refresh
+   * token.
+   */
+  static boolean hasResolvableClientAuth(OauthCredentials credentials) {
+    return (StringUtils.isNotBlank(credentials.getClientId())
+            && StringUtils.isNotBlank(credentials.getClientSecret()))
+        || StringUtils.isNotBlank(credentials.getClientKey())
+        || (StringUtils.isNotBlank(credentials.getUsername())
+            && StringUtils.isNotBlank(credentials.getPassword()))
+        || StringUtils.isNotBlank(credentials.getRefreshToken());
+  }
+
+  private Mono<TokenInfo> missingClientAuthError(JumperConfig jumperConfig, String requirement) {
+    log.error(
+        "External IdP OAuth config incomplete for consumer '{}', tokenEndpoint '{}': no client"
+            + " authentication resolvable",
+        jumperConfig.getConsumer(),
+        jumperConfig.getExternalTokenEndpoint());
+    meterRegistry
+        .counter("jumper.external.oauth.config.error", "reason", "missing_client_auth")
+        .increment();
+    return Mono.error(
+        new ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            "External IdP OAuth config incomplete for consumer '"
+                + jumperConfig.getConsumer()
+                + "': no client authentication resolvable ("
+                + requirement
+                + ")"));
   }
 
   private static String determineClientScope(

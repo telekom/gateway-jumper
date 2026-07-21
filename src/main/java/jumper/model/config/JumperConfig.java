@@ -16,6 +16,7 @@ import jumper.util.LoadBalancingUtil;
 import jumper.util.OauthTokenUtil;
 import jumper.util.ObjectMapperUtil;
 import lombok.Data;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -40,14 +41,16 @@ public class JumperConfig {
   String consumer;
   String consumerOriginStargate;
   String consumerOriginZone;
-  String authorizationToken;
+
+  @ToString.Exclude String authorizationToken;
   String externalTokenEndpoint;
 
   @JsonProperty("issuer")
   String internalTokenEndpoint;
 
   String clientId;
-  String clientSecret;
+
+  @ToString.Exclude String clientSecret;
   Boolean accessTokenForwarding;
 
   // Mesh-route discriminator set by the control plane in the jumper_config / routing_config blob.
@@ -62,7 +65,8 @@ public class JumperConfig {
   String envName;
 
   String xSpacegateClientId;
-  String xSpacegateClientSecret;
+
+  @ToString.Exclude String xSpacegateClientSecret;
   String xSpacegateScope;
 
   // calculated routing stuff within requestFilter
@@ -267,17 +271,27 @@ public class JumperConfig {
   }
 
   public Optional<OauthCredentials> getOauthCredentials() {
-    if (Objects.nonNull(getOauth())) {
-      if (getOauth().containsKey(getConsumer())) {
-        return Optional.of(getOauth().get(getConsumer()));
-      }
-
-      if (getOauth().containsKey(Constants.OAUTH_PROVIDER_KEY)) {
-        return Optional.of(getOauth().get(Constants.OAUTH_PROVIDER_KEY));
-      }
+    if (Objects.isNull(getOauth())) {
+      return Optional.empty();
     }
 
-    return Optional.empty();
+    OauthCredentials providerDefault = getOauth().get(Constants.OAUTH_PROVIDER_KEY);
+    OauthCredentials consumerEntry = getOauth().get(getConsumer());
+
+    if (Objects.isNull(consumerEntry)) {
+      return Optional.ofNullable(providerDefault);
+    }
+
+    // Authentication configuration is atomic: a consumer entry carrying any of it is used as-is,
+    // never completed from the provider "default" entry. The one supported partial shape is a
+    // scopes-only entry, which rides on the default's authentication bundle.
+    if (consumerEntry.hasAuthConfig() || Objects.isNull(providerDefault)) {
+      return Optional.of(consumerEntry);
+    }
+    if (StringUtils.isNotBlank(consumerEntry.getScopes())) {
+      return Optional.of(providerDefault.withScopes(consumerEntry.getScopes()));
+    }
+    return Optional.of(providerDefault);
   }
 
   public String getSecurityScopes() {

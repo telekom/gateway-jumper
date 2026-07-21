@@ -327,6 +327,10 @@ If credentials differ per consumer, the following `jumper_config` can be used in
 }
 ```
 
+**Resolution semantics:** Authentication configuration is atomic. A consumer entry carrying any authentication-related field (`clientId`, `clientSecret`, `clientKey`, `username`, `password`, `refreshToken`, `grantType`, `tokenRequest`) is used as-is — missing fields are never filled in from the provider `default` entry. The one supported partial shape is a **scopes-only** consumer entry: it uses the `default` entry's authentication configuration as a whole with only `scopes` replaced (never combined with the default scopes). Without a consumer entry, the `default` entry applies unchanged.
+
+**Validation:** If the resolved configuration contains no usable client authentication (neither `clientId`+`clientSecret`, `clientKey`, `username`+`password`, nor `refreshToken`), Jumper rejects the request with `400 Bad Request` and a descriptive message instead of sending a credential-less token request to the external IdP (which would surface as an opaque 401). Configurations without a `grantType` use the legacy header-based flow, which supports `clientId`+`clientSecret` only — the alternative mechanisms require a `grantType` to be set, and the error message says so. Such rejections are counted in the `jumper_external_oauth_config_error_total` metric.
+
 #### Basic Auth Token
 
 Supports legacy systems requiring Basic Authorization (Spacegate only). Authorization can be defined globally for a provider, or on a per consumer basis.

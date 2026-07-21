@@ -6,6 +6,7 @@ package jumper.model.config;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 
 @Getter
 @Setter
@@ -28,5 +29,36 @@ public class OauthCredentials {
     } else {
       return this.username;
     }
+  }
+
+  /**
+   * True if this entry carries any authentication-related configuration — everything except {@code
+   * scopes}. Authentication configuration is atomic: an entry carrying any of it is used as-is and
+   * never completed from another entry.
+   */
+  public boolean hasAuthConfig() {
+    return StringUtils.isNotBlank(clientId)
+        || StringUtils.isNotBlank(clientSecret)
+        || StringUtils.isNotBlank(clientKey)
+        || StringUtils.isNotBlank(username)
+        || StringUtils.isNotBlank(password)
+        || StringUtils.isNotBlank(refreshToken)
+        || StringUtils.isNotBlank(grantType)
+        || StringUtils.isNotBlank(tokenRequest);
+  }
+
+  /** Returns a copy of this entry with {@code scopes} replaced. */
+  public OauthCredentials withScopes(String newScopes) {
+    OauthCredentials copy = new OauthCredentials();
+    copy.setClientId(this.clientId);
+    copy.setClientSecret(this.clientSecret);
+    copy.setClientKey(this.clientKey);
+    copy.setScopes(newScopes);
+    copy.setUsername(this.username);
+    copy.setPassword(this.password);
+    copy.setRefreshToken(this.refreshToken);
+    copy.setGrantType(this.grantType);
+    copy.setTokenRequest(this.tokenRequest);
+    return copy;
   }
 }
