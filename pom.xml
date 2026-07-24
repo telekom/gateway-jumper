@@ -26,7 +26,7 @@ SPDX-License-Identifier: Apache-2.0
 		<java.version>25</java.version>
 		<spring-cloud.version>2025.1.2</spring-cloud.version>
 
-		<cucumber.version>7.34.4</cucumber.version>
+		<cucumber.version>7.34.5</cucumber.version>
 		<junit-platform.version>1.14.3</junit-platform.version>
 		<wiremock.version>3.13.2</wiremock.version>
 		<wiremock-jetty.version>12.1.11</wiremock-jetty.version>
