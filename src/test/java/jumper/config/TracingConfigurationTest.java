@@ -6,11 +6,19 @@ package jumper.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.micrometer.observation.ObservationFilter;
 import java.util.List;
 import java.util.regex.Pattern;
+import jumper.util.ExchangeStateManager;
 import org.junit.jupiter.api.Test;
+import org.springframework.cloud.gateway.filter.headers.observation.GatewayContext;
+import org.springframework.http.HttpHeaders;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import org.springframework.mock.web.server.MockServerWebExchange;
 
 public class TracingConfigurationTest {
+
+  private static final String OBSERVATION_GATEWAY = "spring.cloud.gateway.http.client.requests";
 
   @Test
   void filterQueryParams() {
@@ -71,5 +79,45 @@ public class TracingConfigurationTest {
 
     // Should strip all query params when parsing fails due to invalid characters
     assertEquals("http://localhost:8080/foobar", filteredEncoded);
+  }
+
+  @Test
+  void gatewayObservationUsesProviderSpanNameForNonMeshRoute() {
+    // arrange
+    MockServerHttpRequest request = MockServerHttpRequest.get("/proxy/test").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    ExchangeStateManager.setMeshRoute(exchange, false);
+    GatewayContext context = new GatewayContext(new HttpHeaders(), request, exchange);
+    context.setName(OBSERVATION_GATEWAY);
+
+    TracingConfiguration tracingConfiguration = new TracingConfiguration();
+    tracingConfiguration.queryFilterList = List.of();
+    ObservationFilter filter = tracingConfiguration.customSpanNameFilter();
+
+    // act
+    filter.map(context);
+
+    // assert
+    assertEquals("outgoing request: provider", context.getContextualName());
+  }
+
+  @Test
+  void gatewayObservationUsesGatewaySpanNameForMeshRoute() {
+    // arrange
+    MockServerHttpRequest request = MockServerHttpRequest.get("/proxy/test").build();
+    MockServerWebExchange exchange = MockServerWebExchange.from(request);
+    ExchangeStateManager.setMeshRoute(exchange, true);
+    GatewayContext context = new GatewayContext(new HttpHeaders(), request, exchange);
+    context.setName(OBSERVATION_GATEWAY);
+
+    TracingConfiguration tracingConfiguration = new TracingConfiguration();
+    tracingConfiguration.queryFilterList = List.of();
+    ObservationFilter filter = tracingConfiguration.customSpanNameFilter();
+
+    // act
+    filter.map(context);
+
+    // assert
+    assertEquals("outgoing request: gateway", context.getContextualName());
   }
 }

@@ -12,7 +12,6 @@ Feature: expected request content reaches provider upstream
     When consumer calls the proxy route
     Then API Provider receives documented standard and consumer headers
     And API consumer receives a 200 status code
-
   Scenario: Consumer (technical) headers are removed for provider
     Given RealRoute headers are set
     And technical headers added
@@ -29,4 +28,3 @@ Feature: expected request content reaches provider upstream
     When consumer calls the proxy route
     Then API Provider receives no technical headers
     And API consumer receives a 200 status code
-
