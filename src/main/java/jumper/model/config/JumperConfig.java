@@ -4,7 +4,6 @@
 
 package jumper.model.config;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.jsonwebtoken.Claims;
@@ -40,7 +39,7 @@ public class JumperConfig {
   String consumer;
   String consumerOriginStargate;
   String consumerOriginZone;
-  String authorizationToken;
+  String consumerToken;
   String externalTokenEndpoint;
 
   @JsonProperty("issuer")
@@ -49,9 +48,6 @@ public class JumperConfig {
   String clientId;
   String clientSecret;
   Boolean accessTokenForwarding;
-
-  // Mesh-route discriminator set by the control plane in the jumper_config / routing_config blob.
-  Boolean mesh;
 
   @JsonProperty("realm")
   String realmName;
@@ -132,7 +128,10 @@ public class JumperConfig {
               HeaderUtil.getLastValueFromHeaderField(
                   request, Constants.HEADER_ACCESS_TOKEN_FORWARDING)));
     }
-    setRealmName(determineRealm(request));
+    setRealmName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM));
+    if (StringUtils.isBlank(getRealmName())) {
+      setRealmName(Constants.DEFAULT_REALM);
+    }
     setEnvName(HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_ENVIRONMENT));
 
     // external oauth
@@ -148,33 +147,25 @@ public class JumperConfig {
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_X_SPACEGATE_SCOPE));
 
     // processing
-    setAuthorizationToken(
+    setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> authorizationTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(authorizationToken);
-    setConsumer(
-        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
+    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        authorizationTokenClaims
-            .getBody()
-            .get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
   }
 
   public void fillProcessingInfo(ServerHttpRequest request) {
-    setAuthorizationToken(
+    setConsumerToken(
         HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_AUTHORIZATION));
-    Jwt<?, Claims> authorizationTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(authorizationToken);
-    setConsumer(
-        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
+    Jwt<?, Claims> consumerTokenClaims = OauthTokenUtil.getAllClaimsFromToken(consumerToken);
+    setConsumer(consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_CLIENT_ID, String.class));
     setConsumerOriginStargate(
-        authorizationTokenClaims
-            .getBody()
-            .get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, String.class));
     setConsumerOriginZone(
-        authorizationTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
+        consumerTokenClaims.getBody().get(Constants.TOKEN_CLAIM_ORIGIN_ZONE, String.class));
 
     // Spectre stuff
     JumperConfig jc =
@@ -182,7 +173,6 @@ public class JumperConfig {
             HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
     this.setRouteListener(jc.getRouteListener());
     this.setGatewayClient(jc.getGatewayClient());
-    setRealmName(determineRealm(request));
 
     // check loadBalancing
     if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
@@ -219,36 +209,6 @@ public class JumperConfig {
   public boolean isListenerMatched() {
     return Objects.nonNull(getRouteListener())
         && Objects.nonNull(getRouteListener().get(getConsumer()));
-  }
-
-  String determineRealm(ServerHttpRequest request) {
-    String realmHeader = HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM);
-    if (StringUtils.isNotBlank(realmHeader)) {
-      return realmHeader;
-    }
-
-    // TODO: remove the legacy issuer fallback after the control-plane migration completes.
-    if (StringUtils.isNotBlank(getInternalTokenEndpoint())) {
-      return getInternalTokenEndpoint().replaceFirst(".*realms/", "");
-    }
-
-    return Constants.DEFAULT_REALM;
-  }
-
-  /**
-   * Whether this route is a cross-zone mesh (proxy) route and should generate a mesh LMS token
-   * instead of a provider LMS token.
-   *
-   * <p>{@code mesh} is the canonical signal set by the control plane in the jumper_config /
-   * routing_config blob. The {@code internalTokenEndpoint} (issuer header) clause is a transitional
-   * fallback for pre-migration proxy routes that still carry {@code issuer} but no {@code mesh}.
-   *
-   * <p>TODO: drop the {@code internalTokenEndpoint} clause once the control-plane migration for the
-   * mesh LMS feature is fully complete.
-   */
-  @JsonIgnore
-  public boolean isMeshRoute() {
-    return Boolean.TRUE.equals(mesh) || Objects.nonNull(internalTokenEndpoint);
   }
 
   public Optional<BasicAuthCredentials> getBasicAuthCredentials() {

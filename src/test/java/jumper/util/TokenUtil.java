@@ -64,32 +64,6 @@ public class TokenUtil {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
-      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
-    };
-  }
-
-  public static Consumer<HttpHeaders> getProxyRouteHeadersWithRealmHeader(BaseSteps baseSteps) {
-    return httpHeaders -> {
-      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
-      httpHeaders.set(Constants.HEADER_REALM, NON_DEFAULT_REALM);
-      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
-    };
-  }
-
-  public static Consumer<HttpHeaders> getProxyRouteHeadersWithXtokenExchange(BaseSteps baseSteps) {
-    return httpHeaders -> {
-      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
-      httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, JumperConfigUtil.getJcMesh());
-      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "Bearer XTokenExchangeHeader");
-    };
-  }
-
-  public static Consumer<HttpHeaders> getProxyRouteHeadersLegacyIssuer(BaseSteps baseSteps) {
-    return httpHeaders -> {
-      httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
       httpHeaders.set(Constants.HEADER_ISSUER, "http://localhost:1081/auth/realms/default");
       httpHeaders.set(Constants.HEADER_CLIENT_ID, addIdSuffix("stargate", baseSteps.getId()));
       httpHeaders.set(Constants.HEADER_CLIENT_SECRET, "secret");
@@ -97,16 +71,15 @@ public class TokenUtil {
     };
   }
 
-  public static Consumer<HttpHeaders> getProxyRouteHeadersLegacyIssuerWithNonDefaultRealm(
-      BaseSteps baseSteps) {
+  public static Consumer<HttpHeaders> getProxyRouteHeadersWithXtokenExchange(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
       httpHeaders.set(Constants.HEADER_REMOTE_API_URL, "http://localhost:1080");
-      httpHeaders.set(
-          Constants.HEADER_ISSUER, "http://localhost:1081/auth/realms/" + NON_DEFAULT_REALM);
+      httpHeaders.set(Constants.HEADER_ISSUER, "http://localhost:1081/auth/realms/default");
       httpHeaders.set(Constants.HEADER_CLIENT_ID, addIdSuffix("stargate", baseSteps.getId()));
       httpHeaders.set(Constants.HEADER_CLIENT_SECRET, "secret");
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
+      httpHeaders.set(Constants.HEADER_X_TOKEN_EXCHANGE, "Bearer XTokenExchangeHeader");
     };
   }
 

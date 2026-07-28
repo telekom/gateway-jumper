@@ -173,14 +173,7 @@ public class VerificationSteps {
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkMeshToken)
           .expectHeader()
-          .doesNotExist(Constants.HEADER_CONSUMER_TOKEN);
-    } else if (tokenType.equalsIgnoreCase("MeshTokenWithNonDefaultRealm")) {
-      this.baseSteps
-          .getRequestExchange()
-          .expectHeader()
-          .value(HttpHeaders.AUTHORIZATION, this::checkMeshTokenWithNonDefaultRealm)
-          .expectHeader()
-          .doesNotExist(Constants.HEADER_CONSUMER_TOKEN);
+          .valueMatches(Constants.HEADER_CONSUMER_TOKEN, "Bearer " + baseSteps.authHeader);
     } else if (tokenType.equalsIgnoreCase("ExternalConfigured")) {
       this.baseSteps
           .getRequestExchange()
@@ -298,31 +291,16 @@ public class VerificationSteps {
   }
 
   private void checkMeshToken(String meshLmsToken) {
-    checkMeshToken(meshLmsToken, Constants.DEFAULT_REALM);
-  }
-
-  private void checkMeshTokenWithNonDefaultRealm(String meshLmsToken) {
-    checkMeshToken(meshLmsToken, NON_DEFAULT_REALM);
-  }
-
-  private void checkMeshToken(String meshLmsToken, String expectedRealm) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(meshLmsToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
-    // Mesh LMS token carries the real consumer identity, not the "gateway" client
-    assertEquals(CONSUMER, claimsFromToken.getBody().get("clientId", String.class));
-    // azp is "gateway" so the provider-zone ACL group check passes
+    assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("clientId", String.class));
     assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("azp", String.class));
-    // env is absent: proxy route headers (TokenUtil.getProxyRouteHeaders) do not include
-    // `environment`. The null-guard in generateLmsToken ensures the claim is omitted rather
-    // than written as null.
-    assertNull(claimsFromToken.getBody().get("env", String.class));
-    assertEquals("GET", claimsFromToken.getBody().get("operation", String.class));
-    // originZone and originStargate come from the consumer token, not the remote zone
-    assertEquals(ORIGIN_ZONE, claimsFromToken.getBody().get("originZone", String.class));
-    assertEquals(ORIGIN_STARGATE, claimsFromToken.getBody().get("originStargate", String.class));
-    // iss is the local StarGate issuer URL — the provider zone validates against its JWKS
-    assertEquals(localIssuerUrl + "/" + expectedRealm, claimsFromToken.getBody().getIssuer());
+    assertEquals(ENVIRONMENT_REMOTE, claimsFromToken.getBody().get("env", String.class));
+    assertEquals(ORIGIN_ZONE_REMOTE, claimsFromToken.getBody().get("originZone", String.class));
+    assertEquals(
+        ORIGIN_STARGATE_REMOTE, claimsFromToken.getBody().get("originStargate", String.class));
+    assertEquals(REMOTE_ISSUER, claimsFromToken.getBody().getIssuer());
     assertNotNull(claimsFromToken.getBody().getExpiration());
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }

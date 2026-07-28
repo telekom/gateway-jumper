@@ -79,7 +79,6 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           enrichTracingWithDataFrom(readOnlyRequest);
 
           JumperConfig jumperConfig = jumperConfigService.resolveJumperConfig(readOnlyRequest);
-          ExchangeStateManager.setMeshRoute(exchange, jumperConfig.isMeshRoute());
 
           // calculate routing stuff and add it to exchange and JumperConfig
           URI finalApiUri =
@@ -106,16 +105,21 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
 
           if (!jumperConfig.getRemoteApiUrl().startsWith(Constants.LOCALHOST_ISSUER_SERVICE)) {
 
-            if (jumperConfig.isMeshRoute()) {
+            if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
               // GW-2-GW MESH TOKEN GENERATION
               log.debug("----------------GATEWAY MESH-------------");
               jumperInfoRequest.ifPresent(
                   i -> i.setInfoScenario(false, false, true, false, false, false));
 
+              HeaderUtil.addHeader(
+                  requestMutationBuilder,
+                  Constants.HEADER_CONSUMER_TOKEN,
+                  jumperConfig.getConsumerToken());
+
               checkForInternetFacingZone(
                   requestMutationBuilder,
                   jumperConfig.getConsumerOriginZone(),
-                  jumperConfig.getAuthorizationToken());
+                  jumperConfig.getConsumerToken());
 
               ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
@@ -163,7 +167,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        tokenGeneratorService.generateProviderLmsToken(
+                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),

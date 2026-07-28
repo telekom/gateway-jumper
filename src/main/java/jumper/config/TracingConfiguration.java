@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import jumper.Constants;
-import jumper.util.ExchangeStateManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.headers.observation.DefaultGatewayObservationConvention;
@@ -81,7 +80,7 @@ public class TracingConfiguration {
       GatewayContext gatewayContext, List<Pattern> compiledQueryFilterPatterns) {
     ServerHttpRequest request = gatewayContext.getRequest();
 
-    gatewayContext.setContextualName("outgoing request: " + getGatewaySpanName(gatewayContext));
+    gatewayContext.setContextualName("outgoing request: provider");
     gatewayContext.addHighCardinalityKeyValue(
         KeyValue.of(
             "http.uri",
@@ -105,12 +104,6 @@ public class TracingConfiguration {
     }
   }
 
-  private static String getGatewaySpanName(GatewayContext gatewayContext) {
-    return ExchangeStateManager.isMeshRoute(gatewayContext.getServerWebExchange())
-        ? "gateway"
-        : "provider";
-  }
-
   private void handleClientRequestContext(ClientRequestObservationContext clientRequestContext) {
     ClientRequest request = clientRequestContext.getRequest();
     if (request == null) {
@@ -120,6 +113,8 @@ public class TracingConfiguration {
     String spanName = "unknown";
     if (request.url().getPath().contains("token")) {
       spanName = "idp";
+    } else if (request.headers().getFirst(Constants.HEADER_CONSUMER_TOKEN) != null) {
+      spanName = "gateway";
     }
 
     clientRequestContext.setContextualName("outgoing request: " + spanName);
