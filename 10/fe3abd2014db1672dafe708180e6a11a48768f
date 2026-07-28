@@ -1,0 +1,19 @@
+.fork-release-validation
+  s_87ab34ff31c2d8::t_2903672786574c 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "10fe3abd2014db1672dafe708180e6a11a48768f",
+  "prompts": {},
+  "sessions": {
+    "s_87ab34ff31c2d8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_056e7bdb3ffeqhknquuiwdDprJ",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
