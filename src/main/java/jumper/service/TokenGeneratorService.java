@@ -85,66 +85,71 @@ public class TokenGeneratorService {
   }
 
   public String generateEnhancedLastMileGatewayToken(
-      JumperConfig jc,
-      String operation,
-      String issuer,
-      String publisherId,
-      String subscriberId,
-      boolean legacy) {
+      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
 
-    Jwt<?, Claims> consumerTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(jc.getConsumerToken());
+    Jwt<?, Claims> authorizationTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
 
-    Date issuedAt = consumerTokenClaims.getPayload().getIssuedAt();
-    Date expiration = consumerTokenClaims.getPayload().getExpiration();
-    String sub = consumerTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    Set<String> consumerAudiences = consumerTokenClaims.getPayload().getAudience();
+    Date issuedAt = authorizationTokenClaims.getPayload().getIssuedAt();
+    Date expiration = authorizationTokenClaims.getPayload().getExpiration();
+    String sub = authorizationTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
+    Set<String> audiences = authorizationTokenClaims.getPayload().getAudience();
 
     ClaimsBuilder claims =
         Jwts.claims()
             .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
             .add(Constants.TOKEN_CLAIM_AZP, "stargate")
             .subject(sub)
-            .add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath())
             .add(Constants.TOKEN_CLAIM_OPERATION, operation)
             .add(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer())
             .add(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone())
             .add(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
-    if (legacy) {
-      String consumerTokenSignature = OauthTokenUtil.getSignature(jc.getConsumerToken());
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
+    if (Objects.nonNull(jc.getRequestPath())) {
+      claims.add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
+    }
 
-    } else {
+    if (Objects.nonNull(jc.getEnvName())) {
       claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
+    }
 
-      if (Objects.nonNull(jc.getSecurityScopes())) {
-        claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
-      }
+    if (Objects.nonNull(jc.getSecurityScopes())) {
+      claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
+    }
 
-      if (Objects.nonNull(publisherId)) {
-        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
-      }
+    if (Objects.nonNull(publisherId)) {
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+    }
 
-      if (Objects.nonNull(subscriberId)) {
-        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
-      }
+    if (Objects.nonNull(subscriberId)) {
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
     }
 
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
     // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
     // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(consumerAudiences) && !consumerAudiences.isEmpty()) {
-      if (consumerAudiences.size() == 1) {
-        claims.audience().single(consumerAudiences.iterator().next());
+    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
+      if (audiences.size() == 1) {
+        claims.audience().single(audiences.iterator().next());
       } else {
-        claims.audience().add(consumerAudiences).and();
+        claims.audience().add(audiences).and();
       }
-    } else if (!legacy && Objects.nonNull(subscriberId)) {
+    } else if (Objects.nonNull(subscriberId)) {
       claims.audience().single(subscriberId);
     }
 
     return fromRealm(claims.build(), issuer, expiration, issuedAt);
+  }
+
+  /**
+   * Generates a provider-facing LMS token with {@code azp: "stargate"}.
+   *
+   * <p>Used on real routes to replace the consumer's Iris token before forwarding to the upstream
+   * API.
+   */
+  public String generateProviderLmsToken(
+      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
+    return generateEnhancedLastMileGatewayToken(jc, operation, issuer, publisherId, subscriberId);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

@@ -79,6 +79,8 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           enrichTracingWithDataFrom(readOnlyRequest);
 
           JumperConfig jumperConfig = jumperConfigService.resolveJumperConfig(readOnlyRequest);
+          ExchangeStateManager.setMeshRoute(
+              exchange, Objects.nonNull(jumperConfig.getInternalTokenEndpoint()));
 
           // calculate routing stuff and add it to exchange and JumperConfig
           URI finalApiUri =
@@ -111,15 +113,16 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
               jumperInfoRequest.ifPresent(
                   i -> i.setInfoScenario(false, false, true, false, false, false));
 
+              HeaderUtil.removeHeader(requestMutationBuilder, Constants.HEADER_CONSUMER_TOKEN);
               HeaderUtil.addHeader(
                   requestMutationBuilder,
                   Constants.HEADER_CONSUMER_TOKEN,
-                  jumperConfig.getConsumerToken());
+                  jumperConfig.getAuthorizationToken());
 
               checkForInternetFacingZone(
                   requestMutationBuilder,
                   jumperConfig.getConsumerOriginZone(),
-                  jumperConfig.getConsumerToken());
+                  jumperConfig.getAuthorizationToken());
 
               ExchangeStateManager.setOAuthFilterRequired(exchange, true);
 
@@ -167,7 +170,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
                         i -> i.setInfoScenario(true, true, false, false, false, false));
 
                     String enhancedLastmileSecurityToken =
-                        tokenGeneratorService.generateEnhancedLastMileGatewayToken(
+                        tokenGeneratorService.generateProviderLmsToken(
                             jumperConfig,
                             String.valueOf(readOnlyRequest.getMethod()),
                             localIssuerUrl + "/" + jumperConfig.getRealmName(),

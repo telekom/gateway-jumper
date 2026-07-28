@@ -24,6 +24,7 @@ public class ExchangeStateManager {
   // Private constants - encapsulated implementation details
   private static final String ATTR_OAUTH_FILTER_NEEDED = "oauth_filter_needed";
   private static final String ATTR_JUMPER_CONFIG = "jumper_config";
+  private static final String ATTR_MESH_ROUTE = "meshRoute";
   private static final String ATTR_CACHED_REQUEST_BODY = "cachedRequestBodyObject";
   private static final String ATTR_CACHED_RESPONSE_BODY = "cachedResponseBodyObject";
 
@@ -46,6 +47,29 @@ public class ExchangeStateManager {
    */
   public static boolean isOAuthFilterRequired(ServerWebExchange exchange) {
     return Optional.ofNullable(exchange.getAttributes().get(ATTR_OAUTH_FILTER_NEEDED))
+        .map(val -> (Boolean) val)
+        .orElse(false);
+  }
+
+  /**
+   * Sets whether the selected route is a mesh route.
+   *
+   * @param exchange the server web exchange
+   * @param meshRoute true if the selected route targets another gateway
+   */
+  public static void setMeshRoute(ServerWebExchange exchange, boolean meshRoute) {
+    log.debug("Setting mesh route: {}", meshRoute);
+    exchange.getAttributes().put(ATTR_MESH_ROUTE, meshRoute);
+  }
+
+  /**
+   * Checks whether the selected route is a mesh route.
+   *
+   * @param exchange the server web exchange
+   * @return true if the selected route targets another gateway, false otherwise
+   */
+  public static boolean isMeshRoute(ServerWebExchange exchange) {
+    return Optional.ofNullable(exchange.getAttributes().get(ATTR_MESH_ROUTE))
         .map(val -> (Boolean) val)
         .orElse(false);
   }
@@ -133,6 +157,7 @@ public class ExchangeStateManager {
     log.debug("Clearing all custom exchange state");
     exchange.getAttributes().remove(ATTR_OAUTH_FILTER_NEEDED);
     exchange.getAttributes().remove(ATTR_JUMPER_CONFIG);
+    exchange.getAttributes().remove(ATTR_MESH_ROUTE);
     exchange.getAttributes().remove(ATTR_CACHED_REQUEST_BODY);
     exchange.getAttributes().remove(ATTR_CACHED_RESPONSE_BODY);
   }

@@ -64,6 +64,26 @@ class ExchangeStateManagerTest {
 
   // arrange
   @Test
+  void shouldSetAndGetMeshRoute() {
+    // act
+    ExchangeStateManager.setMeshRoute(exchange, true);
+
+    // assert
+    assertThat(ExchangeStateManager.isMeshRoute(exchange)).isTrue();
+  }
+
+  // arrange
+  @Test
+  void shouldReturnFalseWhenMeshRouteNotSet() {
+    // act
+    boolean result = ExchangeStateManager.isMeshRoute(exchange);
+
+    // assert
+    assertThat(result).isFalse();
+  }
+
+  // arrange
+  @Test
   void shouldSetAndGetJumperConfig() {
     // arrange
     JumperConfig config = new JumperConfig();
@@ -145,6 +165,7 @@ class ExchangeStateManagerTest {
   void shouldClearAllCustomState() {
     // arrange
     ExchangeStateManager.setOAuthFilterRequired(exchange, true);
+    ExchangeStateManager.setMeshRoute(exchange, true);
     JumperConfig config = new JumperConfig();
     config.setConsumer("test-consumer");
     ExchangeStateManager.setJumperConfig(exchange, config);
@@ -165,6 +186,7 @@ class ExchangeStateManagerTest {
 
     // assert
     assertThat(ExchangeStateManager.isOAuthFilterRequired(exchange)).isFalse();
+    assertThat(ExchangeStateManager.isMeshRoute(exchange)).isFalse();
     assertThat(ExchangeStateManager.getJumperConfig(exchange)).isEmpty();
     assertThat(ExchangeStateManager.getCachedRequestBody(exchange)).isEmpty();
     assertThat(ExchangeStateManager.getCachedResponseBody(exchange)).isEmpty();

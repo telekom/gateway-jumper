@@ -15,7 +15,7 @@ Feature: proper error message returned based on conditions
     Given RealRoute headers without Authorization are set
     When consumer calls the proxy route
     Then API consumer receives a 500 status code
-    And error response contains msg "Consumer token not provided, but expected" error "Internal Server Error" status 500
+    And error response contains msg "Token not provided, but expected" error "Internal Server Error" status 500
 
   Scenario: mesh IDP drops connection
     Given ProxyRoute headers are set

@@ -101,8 +101,13 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   private Mono<TokenInfo> resolveTokenSource(
       ServerWebExchange exchange, JumperConfig jumperConfig, ServerHttpRequest.Builder builder) {
     if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
-      // Gateway-to-Gateway mesh token: JWT generated internally for inter-gateway communication
+      // Gateway-to-Gateway mesh token fetched from the provider-zone identity provider
       log.debug("----------------GATEWAY MESH-------------");
+      String tokenEndpoint = jumperConfig.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX;
+      String tokenCacheKey =
+          tokenCacheService.generateTokenCacheKey(
+              tokenEndpoint, jumperConfig.getClientId(), jumperConfig.getClientSecret(), null);
+      exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY, tokenCacheKey);
       return tokenFetchService.getInternalMeshAccessToken(jumperConfig);
 
     } else if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {

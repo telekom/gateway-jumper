@@ -171,7 +171,7 @@ public class VerificationSteps {
       this.baseSteps
           .getRequestExchange()
           .expectHeader()
-          .value(HttpHeaders.AUTHORIZATION, this::checkMeshToken)
+          .value(HttpHeaders.AUTHORIZATION, this::checkProviderIdpMeshToken)
           .expectHeader()
           .valueMatches(Constants.HEADER_CONSUMER_TOKEN, "Bearer " + baseSteps.authHeader);
     } else if (tokenType.equalsIgnoreCase("ExternalConfigured")) {
@@ -290,8 +290,8 @@ public class VerificationSteps {
     assertEquals(Set.of("testAudience1", "testAudience2"), claimsFromToken.getBody().getAudience());
   }
 
-  private void checkMeshToken(String meshLmsToken) {
-    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(meshLmsToken);
+  private void checkProviderIdpMeshToken(String providerIdpToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerIdpToken);
 
     assertEquals("Bearer", claimsFromToken.getBody().get("typ", String.class));
     assertEquals(CONSUMER_GATEWAY, claimsFromToken.getBody().get("clientId", String.class));
