@@ -1,0 +1,56 @@
+src/main/java/jumper/config/TracingConfiguration.java
+  s_a7595a711c136f::t_e588423cad6344 83,116-117
+src/main/java/jumper/model/config/JumperConfig.java
+  s_a7595a711c136f::t_e588423cad6344 42,131-134,150,152-153,155,157,161,163-164,166,168
+src/main/java/jumper/filter/RequestFilter.java
+  s_a7595a711c136f::t_e588423cad6344 114-118,122
+  s_a7595a711c136f::t_eee83b8c62fb95 108,170
+src/main/java/jumper/service/TokenGeneratorService.java
+  s_a7595a711c136f::t_e588423cad6344 95-96,98-101,106,108,114-116,118,121-123,125-127,129-131,137-139,141,143
+  s_a7595a711c136f::t_fc7d504ac1287b 87,92-93
+src/test/resources/features/errorResponse.feature
+  s_a7595a711c136f::t_e588423cad6344 18-26,190
+src/main/java/jumper/service/SpectreService.java
+  s_a7595a711c136f::t_e588423cad6344 87-88
+  s_a7595a711c136f::t_262cf55942f230 137-138,152-162
+src/test/java/jumper/service/TokenGeneratorServiceTest.java
+  s_a7595a711c136f::t_e588423cad6344 109,116-119,135-138,145,152-155,163,170-172,178,191-193,196,202,209-211,214,259,262
+  s_a7595a711c136f::t_181d65f57c7aac 33-36,66-93,96-97
+src/test/java/jumper/VerificationSteps.java
+  s_a7595a711c136f::t_e588423cad6344 176
+  s_a7595a711c136f::t_a050ae300a9cf9 297,299-303
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  s_a7595a711c136f::t_e9afdfaba9bf6c 73,102-106
+src/main/java/jumper/service/TokenFetchService.java
+  s_a7595a711c136f::t_ae330ba536bb50 21,60-67
+src/test/java/jumper/util/JumperConfigUtil.java
+  s_a7595a711c136f::t_d580132b0688fb 243-245
+src/test/java/jumper/util/RoutingConfigUtil.java
+  s_a7595a711c136f::t_2df5e38b9872e6 22,30-31,38,42,44,47,49,52,56,59,75
+src/test/java/jumper/util/TokenUtil.java
+  s_a7595a711c136f::t_3e62ab13e3cd79 74,78,82
+src/test/resources/features/authorizationHeader.feature
+  s_a7595a711c136f::t_94d90a6f26cb63 77,79,271
+src/test/resources/features/failover.feature
+  s_a7595a711c136f::t_0900139511fae4 11,36,45,54,63
+src/test/resources/features/upstreamContent.feature
+  s_a7595a711c136f::t_562ee0c0508a3b 26,32
+src/test/resources/features/xTokenExchange.feature
+  s_a7595a711c136f::t_1ebc1c9926f4af 33,36,75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1a640b4606e59c8db6b665303579411349ac16a1",
+  "prompts": {},
+  "sessions": {
+    "s_a7595a711c136f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_057531cc2ffeutU8jqS5a2xM0C",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
