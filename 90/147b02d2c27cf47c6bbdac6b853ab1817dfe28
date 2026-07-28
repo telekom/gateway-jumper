@@ -1,0 +1,19 @@
+.github/workflows/promote-pr-image.yml
+  s_7e52c0e5439db3::t_7ce62e19ca39ab 53-58,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "90147b02d2c27cf47c6bbdac6b853ab1817dfe28",
+  "prompts": {},
+  "sessions": {
+    "s_7e52c0e5439db3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05d1297c1ffeajiI6EN2ObzJ3L",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}
