@@ -235,17 +235,41 @@ public class JumperConfig {
   }
 
   public Optional<OauthCredentials> getOauthCredentials() {
-    if (Objects.nonNull(getOauth())) {
-      if (getOauth().containsKey(getConsumer())) {
-        return Optional.of(getOauth().get(getConsumer()));
-      }
-
-      if (getOauth().containsKey(Constants.OAUTH_PROVIDER_KEY)) {
-        return Optional.of(getOauth().get(Constants.OAUTH_PROVIDER_KEY));
-      }
+    if (Objects.isNull(getOauth())) {
+      return Optional.empty();
     }
 
-    return Optional.empty();
+    OauthCredentials consumerEntry = getOauth().get(getConsumer());
+    OauthCredentials providerDefault = getOauth().get(Constants.OAUTH_PROVIDER_KEY);
+
+    if (Objects.isNull(consumerEntry)) {
+      return Optional.ofNullable(providerDefault);
+    }
+
+    return Optional.of(applyScopeOnlyOverride(consumerEntry, providerDefault));
+  }
+
+  /**
+   * A consumer entry that carries nothing but scopes cannot request a token on its own. In that
+   * case the provider's credentials are used together with the consumer's scopes, so that a
+   * subscription can narrow the scopes of the provider's external identity provider configuration.
+   *
+   * <p>The override is only applied when consumer and provider entry agree on whether a grantType
+   * is present, because that flag decides which token path {@code UpstreamOAuthFilter} takes. Never
+   * switching the path keeps the {@code X-Spacegate-*} header precedence of the legacy path intact.
+   */
+  private OauthCredentials applyScopeOnlyOverride(
+      OauthCredentials consumerEntry, OauthCredentials providerDefault) {
+
+    if (consumerEntry.hasAnyCredentialField()
+        || StringUtils.isBlank(consumerEntry.getScopes())
+        || Objects.isNull(providerDefault)
+        || StringUtils.isBlank(consumerEntry.getGrantType())
+        || StringUtils.isBlank(providerDefault.getGrantType())) {
+      return consumerEntry;
+    }
+
+    return providerDefault.copyWithScopes(consumerEntry.getScopes());
   }
 
   public String getSecurityScopes() {

@@ -108,6 +108,11 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       JcOauthConfig.PROVIDER.getJcOauthGrantTypeWithKey(baseSteps.getId()));
                   break;
+                case "provider with consumer scope only":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG,
+                      getJcOauthProviderWithConsumerScopeOnly(baseSteps.getId()));
+                  break;
                 default:
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,
