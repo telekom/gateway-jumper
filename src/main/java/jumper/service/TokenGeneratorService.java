@@ -84,99 +84,67 @@ public class TokenGeneratorService {
     }
   }
 
-  /**
-   * Core LMS token generation method. Builds a signed JWT from the consumer token claims and
-   * request context. The {@code azp} value distinguishes the token's purpose:
-   *
-   * <ul>
-   *   <li>{@code "stargate"} — Provider-facing OneToken (Last Mile Security towards the upstream)
-   *   <li>{@code "gateway"} — Mesh LMS token (cross-zone gateway-to-gateway authentication)
-   * </ul>
-   */
-  private String generateLmsToken(
+  public String generateEnhancedLastMileGatewayToken(
       JumperConfig jc,
-      String azp,
       String operation,
       String issuer,
       String publisherId,
-      String subscriberId) {
+      String subscriberId,
+      boolean legacy) {
 
-    Jwt<?, Claims> authorizationTokenClaims =
-        OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
+    Jwt<?, Claims> consumerTokenClaims =
+        OauthTokenUtil.getAllClaimsFromToken(jc.getConsumerToken());
 
-    Date issuedAt = authorizationTokenClaims.getPayload().getIssuedAt();
-    Date expiration = authorizationTokenClaims.getPayload().getExpiration();
-    String sub = authorizationTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
-    Set<String> audiences = authorizationTokenClaims.getPayload().getAudience();
+    Date issuedAt = consumerTokenClaims.getPayload().getIssuedAt();
+    Date expiration = consumerTokenClaims.getPayload().getExpiration();
+    String sub = consumerTokenClaims.getPayload().get(Constants.TOKEN_CLAIM_SUB, String.class);
+    Set<String> consumerAudiences = consumerTokenClaims.getPayload().getAudience();
 
     ClaimsBuilder claims =
         Jwts.claims()
             .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
-            .add(Constants.TOKEN_CLAIM_AZP, azp)
+            .add(Constants.TOKEN_CLAIM_AZP, "stargate")
             .subject(sub)
+            .add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath())
             .add(Constants.TOKEN_CLAIM_OPERATION, operation)
             .add(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer())
             .add(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone())
             .add(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
-    // requestPath is not strictly required for mesh LMS validation.
-    if (Objects.nonNull(jc.getRequestPath())) {
-      claims.add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
-    }
+    if (legacy) {
+      String consumerTokenSignature = OauthTokenUtil.getSignature(jc.getConsumerToken());
+      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SIGNATURE, consumerTokenSignature);
 
-    // env is only set on provider LMS tokens, not on mesh LMS tokens, because
-    // consumer-side proxy routes do not inject the `environment` header.
-    if (Objects.nonNull(jc.getEnvName())) {
+    } else {
       claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
-    }
 
-    if (Objects.nonNull(jc.getSecurityScopes())) {
-      claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
-    }
+      if (Objects.nonNull(jc.getSecurityScopes())) {
+        claims.add(Constants.TOKEN_CLAIM_SCOPE, jc.getSecurityScopes());
+      }
 
-    if (Objects.nonNull(publisherId)) {
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
-    }
+      if (Objects.nonNull(publisherId)) {
+        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_PUBLISHER_ID, publisherId);
+      }
 
-    if (Objects.nonNull(subscriberId)) {
-      claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
+      if (Objects.nonNull(subscriberId)) {
+        claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_SUBSCRIBER_ID, subscriberId);
+      }
     }
 
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
     // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
     // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
-      if (audiences.size() == 1) {
-        claims.audience().single(audiences.iterator().next());
+    if (Objects.nonNull(consumerAudiences) && !consumerAudiences.isEmpty()) {
+      if (consumerAudiences.size() == 1) {
+        claims.audience().single(consumerAudiences.iterator().next());
       } else {
-        claims.audience().add(audiences).and();
+        claims.audience().add(consumerAudiences).and();
       }
-    } else if (Objects.nonNull(subscriberId)) {
+    } else if (!legacy && Objects.nonNull(subscriberId)) {
       claims.audience().single(subscriberId);
     }
 
     return fromRealm(claims.build(), issuer, expiration, issuedAt);
-  }
-
-  /**
-   * Generates a provider-facing LMS token with {@code azp: "stargate"}.
-   *
-   * <p>Used on real routes to replace the consumer's Iris token before forwarding to the upstream
-   * API.
-   */
-  public String generateProviderLmsToken(
-      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
-    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
-  }
-
-  /**
-   * Generates a mesh LMS token with {@code azp: "gateway"}.
-   *
-   * <p>Used on proxy routes for cross-zone gateway-to-gateway authentication. The provider zone
-   * validates this token against the consumer zone's StarGate JWKS.
-   */
-  public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
-    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {
