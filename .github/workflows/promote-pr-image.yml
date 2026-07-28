@@ -50,13 +50,16 @@ jobs:
           [[ "${PR_NUMBERS[0]}" =~ ^[0-9]+$ ]]
           echo "number=${PR_NUMBERS[0]}" >> "${GITHUB_OUTPUT}"
       - name: Create a slug from the PR branch
-        uses: rlespinasse/github-slug-action@ef93b2ea4b6405d06fd8684fc3ff795d262ecae8 #v5.7.0
-        env:
-          GITHUB_HEAD_REF: ${{ github.event.workflow_run.head_branch }}
+        id: branch
+        uses: rlespinasse/slugify-value@a4879db1eb3db9bbee01dca36f98a8236c2b8239 #v1.4.0
+        with:
+          key: PR_HEAD_BRANCH
+          value: ${{ github.event.workflow_run.head_branch }}
+          publish-env: "false"
       - name: Determine image tag
         id: tag
         run: |
-          TAG="pr-${{ steps.pull-request.outputs.number }}-${GITHUB_HEAD_REF_SLUG}"
+          TAG="pr-${{ steps.pull-request.outputs.number }}-${{ steps.branch.outputs.slug }}"
           [[ "${TAG}" =~ ^[a-z0-9][a-z0-9._-]{0,127}$ ]]
           echo "image-tag=${TAG}" >> "${GITHUB_OUTPUT}"
       - name: Download the PR image archive
