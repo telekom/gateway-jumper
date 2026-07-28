@@ -1,0 +1,48 @@
+src/test/java/jumper/VerificationSteps.java
+  s_a7595a711c136f::t_0d4a08aa1e61f3 174,293-294
+src/test/java/jumper/service/TokenFetchServiceTest.java
+  s_a7595a711c136f::t_07327760851d94 94,96-97,108
+  s_a7595a711c136f::t_5d9193cf69587e 98
+  s_a7595a711c136f::t_0d4a08aa1e61f3 87,95,101-107,114-115
+  s_a7595a711c136f::t_2fd344c382f5b2 17,84-86,88-93,99-100,109-113
+README.md
+  s_a7595a711c136f::t_eb845a059840eb 228,230-233,239,260-262,270,275-277,280-281
+src/main/java/jumper/config/TracingConfiguration.java
+  s_a7595a711c136f::t_69b0d5fcff28e9 14,84,108-113
+src/main/java/jumper/filter/RequestFilter.java
+  s_a7595a711c136f::t_6fe35e981dd140 82-83,116,120,125,173
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  s_a7595a711c136f::t_2dcb3b3ba20ec7 104,106-110
+src/main/java/jumper/model/config/JumperConfig.java
+  s_a7595a711c136f::t_a469feb055d8ae 42,150,152-155,157-159,161,165,167-170,172-174,176
+src/main/java/jumper/service/SpectreService.java
+  s_a7595a711c136f::t_7c4a51922ab2a7 87,97,137
+src/main/java/jumper/service/TokenGeneratorService.java
+  s_a7595a711c136f::t_d5a7848f6ff974 88,90-91,93-96,108-110,112,114,116-118,120-122,124-125,131-133,135,137,144-154
+src/main/java/jumper/util/ExchangeStateManager.java
+  s_a7595a711c136f::t_13ea3312e47450 27,54-76,160
+src/test/java/jumper/config/TracingConfigurationTest.java
+  s_a7595a711c136f::t_246a955ce3eb7c 9,12,14-17,21-22,83-122
+src/test/java/jumper/service/TokenGeneratorServiceTest.java
+  s_a7595a711c136f::t_7cff2bc45a90d0 33-35,65,68-70,89-92,108-110,124-126,141-142,148,161-162,165,178-179,182,230
+src/test/java/jumper/util/ExchangeStateManagerTest.java
+  s_a7595a711c136f::t_f065e646049eac 65-84,168,189
+src/test/resources/features/errorResponse.feature
+  s_a7595a711c136f::t_77c15959ed8ea6 18,190
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "6dbba5cf368bb107ddcc9d9c4273f48474eb8edd",
+  "prompts": {},
+  "sessions": {
+    "s_a7595a711c136f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_057531cc2ffeutU8jqS5a2xM0C",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
