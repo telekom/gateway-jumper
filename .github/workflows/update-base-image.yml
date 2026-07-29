@@ -1,0 +1,150 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Update base image
+
+# Keeps the digest-pinned base image in pom.xml current.
+#
+# Dependabot cannot do this. Its `docker` ecosystem only parses Dockerfiles,
+# Containerfiles, and Kubernetes-style YAML, and its `maven` ecosystem has no notion of
+# container images, so the `jib.base-image` property is invisible to it. The Dockerfiles
+# in this repository are deprecated and are not what CI builds, so they are not a
+# suitable pin either. This workflow therefore re-resolves the floating tag recorded in
+# the property and raises a pull request whenever it points at a new digest.
+#
+# It runs against every release branch, because each line pins its base independently.
+#
+# GitHub deliberately does not run workflows on pull requests opened with the default
+# GITHUB_TOKEN, so the pull request this raises arrives without checks. The update is
+# therefore verified in this workflow instead, before the pull request is opened, and the
+# pull request links to the job that did it.
+#
+# Required configuration:
+# - "Allow GitHub Actions to create and approve pull requests" (Settings > Actions >
+#   General) must be enabled, otherwise the pull request step fails outright.
+
+on:
+  schedule:
+    - cron: "17 5 * * 1" # weekly, Monday morning
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  update-base-image:
+    name: Update base image digest
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # to resolve this job's own URL for the pull request body
+      contents: write
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: [main, next]
+    steps:
+      - name: Check whether the branch exists
+        # `next` only exists while a prerelease line is open, so skip what is absent
+        # instead of failing the run.
+        id: branch
+        env:
+          REPOSITORY_URL: ${{ github.server_url }}/${{ github.repository }}.git
+          BRANCH: ${{ matrix.branch }}
+        run: |
+          if git ls-remote --exit-code --heads "${REPOSITORY_URL}" "${BRANCH}" >/dev/null 2>&1; then
+            echo "exists=true" >> "${GITHUB_OUTPUT}"
+          else
+            printf 'update-base-image: branch %s does not exist; skipping\n' "${BRANCH}"
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Checkout
+        if: steps.branch.outputs.exists == 'true'
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ matrix.branch }}
+      - name: Install crane
+        if: steps.branch.outputs.exists == 'true'
+        uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b #v0.7
+      - name: Resolve base image digest
+        if: steps.branch.outputs.exists == 'true'
+        id: resolve
+        run: |
+          current="$(sed -n 's|.*<jib.base-image>\(.*\)</jib.base-image>.*|\1|p' pom.xml)"
+          if [ -z "${current}" ]; then
+            printf 'update-base-image: no jib.base-image property in pom.xml\n' >&2
+            exit 1
+          fi
+          # The property is `<repository>:<tag>@sha256:<digest>`. The tag is what gets
+          # re-resolved; the digest is what Jib actually pulls.
+          reference="${current%%@*}"
+          digest="$(crane digest "${reference}")"
+          updated="${reference}@${digest}"
+          {
+            echo "reference=${reference}"
+            echo "digest=${digest}"
+          } >> "${GITHUB_OUTPUT}"
+          if [ "${updated}" = "${current}" ]; then
+            printf 'update-base-image: %s is already current\n' "${current}"
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          printf 'update-base-image: %s -> %s\n' "${current}" "${updated}"
+          sed -i "s|<jib.base-image>.*</jib.base-image>|<jib.base-image>${updated}</jib.base-image>|" pom.xml
+          echo "changed=true" >> "${GITHUB_OUTPUT}"
+      - name: Set up JDK
+        if: steps.resolve.outputs.changed == 'true'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
+        with:
+          distribution: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
+          java-version: ${{ vars.JAVA_VERSION || '25' }}
+          cache: "maven"
+      - name: Verify the image still builds on the new base
+        if: steps.resolve.outputs.changed == 'true'
+        run: mvn -B -U package -DskipTests jib:buildTar
+      - name: Look up this job's URL
+        # The verification above is invisible from the pull request, so link to it. The
+        # jobs API is the only way to resolve a matrix job's own URL from inside itself.
+        id: verification
+        if: steps.resolve.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ matrix.branch }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          url="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs" \
+            --jq ".jobs[] | select(.name | endswith(\"(${BRANCH})\")) | .html_url")"
+          # Fall back to the run itself rather than failing the release of a valid update.
+          printf 'url=%s\n' "${url:-${RUN_URL}}" >> "${GITHUB_OUTPUT}"
+      - name: Raise pull request
+        if: steps.resolve.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 #v8.1.1
+        with:
+          base: ${{ matrix.branch }}
+          branch: chore/base-image/${{ matrix.branch }}
+          delete-branch: true
+          commit-message: |
+            build(deps): update base image digest
+
+            ${{ steps.resolve.outputs.reference }} now resolves to
+            ${{ steps.resolve.outputs.digest }}.
+
+            Verified to still build: ${{ steps.verification.outputs.url }}
+          title: "build(deps): update base image digest on ${{ matrix.branch }}"
+          body: |
+            `${{ steps.resolve.outputs.reference }}` now resolves to
+            `${{ steps.resolve.outputs.digest }}`.
+
+            The image was built onto the new base before this pull request was opened:
+            [see the verification job](${{ steps.verification.outputs.url }}). That evidence
+            is not visible as a check here, because GitHub does not run workflows on pull
+            requests opened by a workflow.
+
+            Merging this raises a patch release that rebuilds the image on the new base.
+          labels: dependencies
