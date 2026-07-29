@@ -132,7 +132,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
         // This path builds the token request solely from the resolved credentials, there is no
         // header fallback left. Reject an unusable config here instead of sending a token request
         // without any client authentication, which the IdP answers with an opaque 401.
-        if (!hasResolvableClientAuth(oauthCredentials.get())) {
+        if (!canBuildTokenRequest(oauthCredentials.get())) {
           return missingClientAuthError(
               jumperConfig,
               "need clientId plus one of clientSecret or clientKey, username+password, or"
@@ -196,17 +196,22 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   /**
-   * Reports whether the credentials carry at least one client authentication mechanism that {@code
-   * TokenFetchService#getAccessTokenWithOauthCredentialsObject} can actually put on the wire: a
-   * client secret, a client key (JWT client assertion), a resource owner password, or a refresh
-   * token. If none of them applies, the token request body would consist of nothing but {@code
-   * scope} and {@code grant_type}.
+   * Reports whether the credentials carry at least one authentication mechanism that {@code
+   * TokenFetchService#getAccessTokenWithOauthCredentialsObject} can actually put on the wire:
+   * client authentication via client secret or client key (JWT client assertion), resource owner
+   * credentials, or a refresh token. If none of them applies, the token request body would consist
+   * of nothing but {@code scope} and {@code grant_type}.
+   *
+   * <p>Resource owner credentials and a refresh token are accepted without any client
+   * authentication because public clients are an established configuration here. Such a request can
+   * still be rejected by the identity provider - this predicate only rules out the requests that
+   * cannot possibly succeed.
    *
    * <p>Deliberately not the same predicate as {@link OauthCredentials#hasAnyCredentialField()}:
    * that one asks whether an entry claims an identity at all (to decide whether it may be completed
    * from the provider default), this one asks whether a complete request can be built from it.
    */
-  static boolean hasResolvableClientAuth(OauthCredentials credentials) {
+  static boolean canBuildTokenRequest(OauthCredentials credentials) {
     // clientId is required for both secret and key: the JWT client assertion uses it as iss, sub
     // and client_id, so a key without an id cannot identify the client either.
     boolean hasClientAuth =

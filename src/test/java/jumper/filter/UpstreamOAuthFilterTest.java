@@ -18,8 +18,8 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /**
- * Covers {@link UpstreamOAuthFilter#hasResolvableClientAuth(OauthCredentials)}, the guard that
- * keeps Jumper from sending a token request that carries no client authentication at all.
+ * Covers {@link UpstreamOAuthFilter#canBuildTokenRequest(OauthCredentials)}, the guard that keeps
+ * Jumper from sending a token request that carries no credentials at all.
  *
  * <p>The predicate has to stay in sync with the request built by {@code
  * TokenFetchService#getAccessTokenWithOauthCredentialsObject}: it must be true exactly when that
@@ -32,7 +32,7 @@ class UpstreamOAuthFilterTest {
   @Test
   @DisplayName("an entirely empty config cannot authenticate")
   void emptyConfigIsRejected() {
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(new OauthCredentials())).isFalse();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(new OauthCredentials())).isFalse();
   }
 
   @Test
@@ -43,14 +43,14 @@ class UpstreamOAuthFilterTest {
     credentials.setTokenRequest("HEADER");
     credentials.setScopes("some_scope");
 
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isFalse();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isFalse();
   }
 
   @ParameterizedTest(name = "{0}")
   @MethodSource("completeMechanisms")
   @DisplayName("a complete authentication mechanism is accepted")
   void completeMechanismIsAccepted(String description, OauthCredentials credentials) {
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isTrue();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isTrue();
   }
 
   static Stream<Arguments> completeMechanisms() {
@@ -65,7 +65,7 @@ class UpstreamOAuthFilterTest {
   @MethodSource("incompleteMechanisms")
   @DisplayName("half of a mechanism is not a mechanism")
   void incompleteMechanismIsRejected(String description, OauthCredentials credentials) {
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isFalse();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isFalse();
   }
 
   static Stream<Arguments> incompleteMechanisms() {
@@ -103,7 +103,7 @@ class UpstreamOAuthFilterTest {
     credentials.setClientId(CLIENT_ID);
     credentials.setClientSecret(clientSecret);
 
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isFalse();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isFalse();
   }
 
   @ParameterizedTest
@@ -115,7 +115,7 @@ class UpstreamOAuthFilterTest {
     credentials.setClientId(CLIENT_ID);
     credentials.setClientKey(clientKey);
 
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isFalse();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isFalse();
   }
 
   @ParameterizedTest
@@ -126,7 +126,7 @@ class UpstreamOAuthFilterTest {
     OauthCredentials credentials = new OauthCredentials();
     credentials.setRefreshToken(refreshToken);
 
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isFalse();
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isFalse();
   }
 
   @ParameterizedTest(name = "{0}")
@@ -137,7 +137,7 @@ class UpstreamOAuthFilterTest {
     setter.accept(credentials, "value");
 
     boolean expected = "refreshToken".equals(field);
-    assertThat(UpstreamOAuthFilter.hasResolvableClientAuth(credentials)).isEqualTo(expected);
+    assertThat(UpstreamOAuthFilter.canBuildTokenRequest(credentials)).isEqualTo(expected);
   }
 
   static Stream<Arguments> credentialFieldSetters() {

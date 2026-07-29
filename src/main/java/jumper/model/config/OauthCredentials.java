@@ -6,18 +6,24 @@ package jumper.model.config;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.apache.commons.lang3.StringUtils;
 
 @Getter
 @Setter
+@ToString
 public class OauthCredentials {
   private String clientId;
-  private String clientSecret;
-  private String clientKey;
+
+  @ToString.Exclude private String clientSecret;
+
+  @ToString.Exclude private String clientKey;
   private String scopes;
   private String username;
-  private String password;
-  private String refreshToken;
+
+  @ToString.Exclude private String password;
+
+  @ToString.Exclude private String refreshToken;
   private String grantType;
   private String tokenRequest;
 
