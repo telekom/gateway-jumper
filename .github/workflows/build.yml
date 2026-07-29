@@ -4,42 +4,58 @@
 
 name: Build
 
+# Validates every change and, on a push to a release branch, publishes a release for the
+# commit that has just passed validation.
+#
+# Release order of operations (image before tag):
+#   1. compute-version  - semantic-release dry run decides whether a release is due
+#   2. build-image      - assert the version tag is unpublished, build the image tagged
+#                         directly with that version, scan the digest, then sign it
+#   3. publish-release  - semantic-release creates the Git tag and GitHub release, and
+#                         points the floating alias (`latest` or `next`) at the digest
+#
+# A Git tag therefore never exists without a verified image. An interrupted release is
+# finished by re-running this workflow: if the version tag already exists, was built from
+# this same commit, and its digest still verifies, the build and sign steps are skipped
+# and the run completes the tagging.
+#
 # Required environment setup:
 # Variables:
-# - REGISTRY_HOST: Container registry host (e.g. artifactory.devops.telekom.de)
-# - REGISTRY_REPO: Repository path (e.g. /tardis-oci-local/tardis/components/gateway/jumper)
 # - JAVA_VERSION: Java version to use (defaults to '25' if not specified)
-# - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'temurin' if not specified)
-# - BASE_IMAGE: The base image used for the container build (defaults to gcr.io/distroless/java25-debian13:nonroot)
+# - JAVA_DISTRIBUTION: Java distribution to use (defaults to 'zulu' if not specified)
+# - REGISTRY_HOST: Container registry host (e.g. registry.example.com)
+# - REGISTRY_REPO: Repository path (e.g. /my-repo/gateway/jumper)
 #
 # Required secrets:
 # - ARTIFACTORY_O28M_PUSH_USER: Container registry username
 # - ARTIFACTORY_O28M_PUSH_TOKEN: Container registry token/password
-# - OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY: Token for accessing ORT repository
+# - COSIGN_PRIVATE_KEY / COSIGN_PUBLIC_KEY / COSIGN_PASSWORD: Image signing key material
 
 on:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "The next release version"
-        type: string
   push:
     branches:
       - main
-    tags:
-      - "*"
+      - next
 
 permissions:
   contents: read
 
+# Serialise runs per ref. Releases for a given branch therefore never overlap, which is
+# what makes the "version tag is unpublished" check in build-image race-free. Superseded
+# pull request runs are cancelled; release runs never are.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION || '25' }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
+  IMAGE_REPOSITORY: ${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}
 
 jobs:
-  lint-maven:
-    name: Check Java code style
+  lint-java:
+    name: Lint Java
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,11 +69,9 @@ jobs:
       - name: Check code formatting with Spotless
         run: mvn com.diffplug.spotless:spotless-maven-plugin:check
 
-  build-maven:
-    name: Build Maven project
+  build-test-java:
+    name: Build and test Java
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.extract-version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
@@ -67,44 +81,8 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
           cache: "maven"
-      - name: Cache maven target dir
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
-      - name: Build with Maven
-        run: |
-          mvn -B package -DskipTests -U
-      - name: Extract version
-        id: extract-version
-        run: |
-          VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-  test-maven:
-    name: Run unit tests
-    runs-on: ubuntu-latest
-    needs: [build-maven]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
-      - name: Set up JDK
-        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
-        with:
-          distribution: ${{ env.JAVA_DISTRIBUTION }}
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: "maven"
-      - name: Cache maven target dir
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
-      - name: Run tests
-        run: mvn -B test
+      - name: Build and test with Maven
+        run: mvn -B -U package
       - name: Upload test results
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
         if: always()
@@ -113,13 +91,18 @@ jobs:
           path: |
             **/target/surefire-reports/
 
-  build-push-image:
-    name: Build & push container image
+  publish-preview-image:
+    # Preview image created on PR builds. It is tagged using a floating `pr-<number>-<branch-slug>`
+    # tag, rather than a permanent SemVer tag.
+    name: Build and push preview image
     runs-on: ubuntu-latest
-    needs: [build-maven, test-maven]
-    outputs:
-      image-digest: ${{ steps.build-push.outputs.digest }}
-      image-tag: ${{ steps.tag.outputs.image-tag }}
+    needs: [lint-java, build-test-java]
+    # Pull requests from forks are skipped. GitHub withholds secrets and variables from
+    # them, so there are no registry credentials to push or sign with. Review a fork's
+    # change on a release candidate after merge instead.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
@@ -129,118 +112,249 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
           cache: "maven"
-      - name: Cache maven target dir
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
-        with:
-          path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
       - name: Inject slug vars
         uses: rlespinasse/github-slug-action@ef93b2ea4b6405d06fd8684fc3ff795d262ecae8 #v5.7.0
-      - name: Determine tag
-        id: tag
-        run: | # TODO: metadata-action
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "This workflow was triggered by workflow_dispatch."
-            export TAG=${{ github.event.inputs.tag }}
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "This workflow was triggered by a tag push ${GITHUB_REF}"
-            export TAG=$(echo ${GITHUB_REF} | sed 's|^refs/tags/||')
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "This workflow was triggered by a pull request."
-            export TAG=pr-${{ github.event.pull_request.number }}-${GITHUB_HEAD_REF_SLUG}
-          elif [[ "${GITHUB_REF_POINT_SLUG}" == "main" ]]; then
-            export TAG="latest"
-          else
-            export TAG=${GITHUB_REF_POINT_SLUG}
-          fi
-          echo "Image tag will be: ${TAG}"
-          echo "image-tag=${TAG}" >> "${GITHUB_OUTPUT}"
-      - name: Determine image labels
-        # Apply Quay expiry only to branch builds that are not main; tags stay permanent.
-        id: image-labels
-        run: |
-          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            echo "labels=" >> "${GITHUB_OUTPUT}"
-          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "labels=" >> "${GITHUB_OUTPUT}"
-          else
-            echo "labels=quay.expires-after=60d" >> "${GITHUB_OUTPUT}"
-          fi
-      - name: Build and push
-        id: build-push
-        run: |
-          LABELS_ARG=""
-          if [[ -n "${{ steps.image-labels.outputs.labels }}" ]]; then
-            LABELS_ARG="-Djib.container.labels=${{ steps.image-labels.outputs.labels }}"
-          fi
-
-          BASE_IMAGE_ARG=""
-          if [[ -n "${{ vars.BASE_IMAGE }}" ]]; then
-            BASE_IMAGE_ARG="-Djib.from.image=${{ vars.BASE_IMAGE }}"
-          fi
-
-          mvn -B jib:build -DskipTests \
-            -Djib.to.image=${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }} \
-            -Djib.to.tags=${{ steps.tag.outputs.image-tag }} \
-            -Djib.to.auth.username=${{ secrets.ARTIFACTORY_O28M_PUSH_USER }} \
-            -Djib.to.auth.password=${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }} \
-            ${BASE_IMAGE_ARG} \
-            ${LABELS_ARG}
-
-          # Extract the image digest from Jib's output
-          DIGEST=$(cat target/jib-image.digest)
-          echo "digest=${DIGEST}" >> "${GITHUB_OUTPUT}"
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 #v4.1.2
+      - name: Log in to the container registry
+        uses: ./.github/actions/registry-login
         with:
-          cosign-release: "v2.5.3"
-      - name: Sign image using cosign
-        id: cosign-sign
-        run: |
-          echo "TAGS=${TAGS}"
-          echo "DIGEST=${DIGEST}"
-          images=""
-          for tag in ${TAGS}; do
-            images+="${{ env.REGISTRY}}${{ env.REGISTRY_REPO }}:${tag}@${DIGEST} "
-          done
-          echo "images=${images}" >> $GITHUB_OUTPUT
-          cosign login -u ${{ env.REGISTRY_USER }} -p ${{ env.REGISTRY_PASSWORD }} ${{ env.REGISTRY }}
-          cosign sign --key env://COSIGN_PRIVATE_KEY --tlog-upload=false ${images}
+          registry: ${{ vars.REGISTRY_HOST }}
+          username: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          password: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+      - name: Build and push preview image
+        id: build
         env:
-          TAGS: ${{ steps.tag.outputs.image-tag }}
-          DIGEST: ${{ steps.build-push.outputs.digest }}
-          REGISTRY: ${{ vars.REGISTRY_HOST }}
-          REGISTRY_REPO: ${{ vars.REGISTRY_REPO }}
-          REGISTRY_USER: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
-          REGISTRY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
-          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
-      - name: Verify signature
+          IMAGE_TAG: pr-${{ github.event.pull_request.number }}-${{ env.GITHUB_HEAD_REF_SLUG }}
         run: |
-          cosign verify --insecure-ignore-tlog=true --key env://COSIGN_PUBLIC_KEY ${IMAGES}
-        env:
-          IMAGES: ${{ steps.cosign-sign.outputs.images }}
-          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
-
-  scan-image:
-    name: Scan image
-    runs-on: ubuntu-latest
-    needs: [build-push-image]
-    permissions:
-      contents: write
-    steps:
-      - name: Run Trivy vulnerability scanner
+          # No credentials are passed: Jib reads the Docker config written by the registry
+          # login step above, which this job also needs for cosign.
+          mvn -B -U package -DskipTests jib:build \
+            -Djib.to.image="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+          echo "digest=$(cat target/jib-image.digest)" >> "${GITHUB_OUTPUT}"
+      - name: Scan preview image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
         env:
           TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
           TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
         with:
-          image-ref: "${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}@${{ needs.build-push-image.outputs.image-digest }}"
+          image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.build.outputs.digest }}"
           exit-code: "0"
           vuln-type: os # library findings are handled by ort and github auto submission
-          # Only push results to dependency graph if running on main
-          format: ${{ github.event_name == 'pull_request' && 'table' || 'github' }}
-          output: ${{ github.event_name == 'pull_request' && '' || 'dependency-results.sbom.json' }}
+          format: table
+      - name: Sign image
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          cosign sign --key env://COSIGN_PRIVATE_KEY --tlog-upload=false --yes \
+            "${IMAGE_REPOSITORY}@${DIGEST}"
+      - name: Verify signature
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+        run: |
+          cosign verify --insecure-ignore-tlog=true --key env://COSIGN_PUBLIC_KEY \
+            "${IMAGE_REPOSITORY}@${DIGEST}"
+
+  compute-version:
+    name: Compute release version
+    runs-on: ubuntu-latest
+    needs: [lint-java, build-test-java]
+    # Only a push to a protected release branch may publish, PR runs never reach this job.
+    # The two jobs below depend on this one, so they are skipped along with it.
+    if: github.event_name == 'push'
+    permissions:
+      # semantic-release verifies push access with `git push --dry-run` even in dry-run
+      # mode, so this job needs write permission although it writes nothing.
+      contents: write
+    outputs:
+      new-release-published: ${{ steps.compute.outputs.new-release-published }}
+      new-release-version: ${{ steps.compute.outputs.new-release-version }}
+    steps:
+      - name: Check out the validated commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          fetch-tags: "true"
+      - name: Restore the branch reference
+        # Checking out a SHA leaves a detached HEAD. semantic-release compares the local
+        # branch against its remote, so put HEAD back on the branch name without moving
+        # it off the validated commit.
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: git checkout -B "${BRANCH}"
+      - name: Compute version
+        # Dry run only: this decides the version for the image tag before anything is
+        # built. It has no side effects, so it is safe to repeat on a re-run.
+        id: compute
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 #v6.0.0
+        with:
+          dry_run: true
+          extra_plugins: |
+            semantic-release-export-data
+            conventional-changelog-conventionalcommits@9.3.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-image:
+    name: Build, scan, and sign image
+    runs-on: ubuntu-latest
+    needs: [compute-version]
+    if: needs.compute-version.outputs.new-release-published == 'true'
+    permissions:
+      contents: write # Trivy submits its findings to the dependency graph
+    outputs:
+      image-digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - name: Check out the validated commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up JDK
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
+        with:
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: "maven"
+      - name: Log in to the container registry
+        uses: ./.github/actions/registry-login
+        with:
+          registry: ${{ vars.REGISTRY_HOST }}
+          username: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          password: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+      - name: Look up the version tag
+        id: version-tag
+        env:
+          VERSION: ${{ needs.compute-version.outputs.new-release-version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          # SemVer image tags are immutable. The registry does not enforce that, so CI does.
+          # An existing tag is only acceptable when this run is completing an interrupted
+          # release of the very same commit: the scan and signature-verification steps below
+          # then run against the existing digest and the run finishes tagging instead of
+          # rebuilding.
+          if ! digest="$(crane digest "${IMAGE_REPOSITORY}:${VERSION}" 2>/dev/null)"; then
+            echo "exists=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          # The version alone does not prove the existing image belongs to this release. An
+          # interrupted release can be followed by further commits, and the next run then
+          # computes the same version from a different source.
+          # This is why we assert revision here.
+          revision="$(crane config "${IMAGE_REPOSITORY}@${digest}" |
+            jq -r '.config.Labels["org.opencontainers.image.revision"] // ""')"
+          if [ "${revision}" != "${SOURCE_SHA}" ]; then
+            printf 'release: %s:%s already exists (%s) and was built from %s, not from %s\n' \
+              "${IMAGE_REPOSITORY}" "${VERSION}" "${digest}" "${revision:-an unknown commit}" \
+              "${SOURCE_SHA}" >&2
+            exit 1
+          fi
+          printf 'release: %s:%s already exists (%s); completing the interrupted release\n' \
+            "${IMAGE_REPOSITORY}" "${VERSION}" "${digest}"
+          {
+            echo "exists=true"
+            echo "digest=${digest}"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Build and push image
+        if: steps.version-tag.outputs.exists == 'false'
+        env:
+          VERSION: ${{ needs.compute-version.outputs.new-release-version }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          mvn -B -U package -DskipTests jib:build \
+            -Djib.to.image="${IMAGE_REPOSITORY}:${VERSION}" \
+            -Djib.container.labels=org.opencontainers.image.revision="${SOURCE_SHA}"
+      - name: Determine image digest
+        id: image
+        env:
+          EXISTING_DIGEST: ${{ steps.version-tag.outputs.digest }}
+        run: |
+          if [ -n "${EXISTING_DIGEST}" ]; then
+            digest="${EXISTING_DIGEST}"
+          else
+            digest="$(cat target/jib-image.digest)"
+          fi
+          printf 'release: releasing digest %s\n' "${digest}"
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+      - name: Scan image
+        # Always runs against the digest
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+        with:
+          image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.image.outputs.digest }}"
+          exit-code: "0"
+          vuln-type: os # library findings are handled by ort and github auto submission
+          format: github
+          output: dependency-results.sbom.json
           github-pat: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sign image
+        if: steps.version-tag.outputs.exists == 'false'
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+        run: |
+          cosign sign --key env://COSIGN_PRIVATE_KEY --tlog-upload=false --yes \
+            "${IMAGE_REPOSITORY}@${DIGEST}"
+      - name: Verify signature
+        env:
+          DIGEST: ${{ steps.image.outputs.digest }}
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+        run: |
+          cosign verify --insecure-ignore-tlog=true --key env://COSIGN_PUBLIC_KEY \
+            "${IMAGE_REPOSITORY}@${DIGEST}"
+
+  publish-release:
+    name: Tag and publish release
+    runs-on: ubuntu-latest
+    needs: [compute-version, build-image]
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Check out the validated commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          fetch-tags: "true"
+      - name: Restore the branch reference
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: git checkout -B "${BRANCH}"
+      - name: Tag and publish release
+        # The image already exists and has been verified, so this is the last step that
+        # can fail: a Git tag never appears without a released image behind it.
+        id: publish
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 #v6.0.0
+        with:
+          extra_plugins: |
+            semantic-release-export-data
+            conventional-changelog-conventionalcommits@9.3.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to the container registry
+        if: steps.publish.outputs.new-release-published == 'true'
+        uses: ./.github/actions/registry-login
+        with:
+          registry: ${{ vars.REGISTRY_HOST }}
+          username: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          password: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+      - name: Update floating alias
+        if: steps.publish.outputs.new-release-published == 'true'
+        env:
+          DIGEST: ${{ needs.build-image.outputs.image-digest }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          # `latest` tracks the newest stable release and `next` the newest release
+          # candidate.
+          if [ "${BRANCH}" = "next" ]; then
+            alias="next"
+          else
+            alias="latest"
+          fi
+          crane tag "${IMAGE_REPOSITORY}@${DIGEST}" "${alias}"

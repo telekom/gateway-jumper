@@ -3,7 +3,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 module.exports = {
-  branch: ['main'],
+  // `main` publishes stable versions; `next` publishes `-rc.N` prereleases on the
+  // `next` distribution channel. Both are protected release branches, and a push to
+  // either one may publish automatically.
+  branches: [
+    { name: 'main', channel: false },
+    { name: 'next', prerelease: 'rc', channel: 'next' },
+  ],
   tagFormat: '${version}',
   plugins: [
     [
