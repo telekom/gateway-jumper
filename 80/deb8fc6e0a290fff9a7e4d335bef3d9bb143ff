@@ -1,0 +1,44 @@
+src/test/java/jumper/filter/UpstreamOAuthFilterTest.java
+  h_aba7680b01ede6 1-20,23-188
+  s_d48df882d39611::t_238aa0bfe8cdae 21-22
+src/main/java/jumper/model/config/GatewayClient.java
+  s_d48df882d39611::t_6bd751ffc00f78 8,13-14
+src/test/resources/features/authorizationHeader.feature
+  h_aba7680b01ede6 131,136-138
+src/test/resources/features/errorResponse.feature
+  s_d48df882d39611::t_997a67eebe9c84 188-200
+src/test/java/jumper/util/JumperConfigUtil.java
+  h_aba7680b01ede6 245-258
+  s_d48df882d39611::t_d9c31f06f1f211 241-244
+src/main/java/jumper/model/config/JumperConfig.java
+  s_d48df882d39611::t_6bd751ffc00f78 18,43-44,51-52,64-65
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  s_d48df882d39611::t_238aa0bfe8cdae 205-207
+  h_aba7680b01ede6 7,39-41,45,50-51,56,132-140,189-194,198-204,208-239
+  s_d48df882d39611::t_293908b4725386 240-241
+src/test/java/jumper/JumperConfigSteps.java
+  h_aba7680b01ede6 116-119
+README.md
+  s_d48df882d39611::t_6252b546ce377f 334-348
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "80deb8fc6e0a290fff9a7e4d335bef3d9bb143ff",
+  "prompts": {},
+  "humans": {
+    "h_aba7680b01ede6": {
+      "author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_d48df882d39611": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "41294e95-77de-4e2e-9216-aab6b5d2f071",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  }
+}
