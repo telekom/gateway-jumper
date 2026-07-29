@@ -18,7 +18,7 @@ name: Build
 # - OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY: Token for accessing ORT repository
 
 on:
-  pull_request:
+  pull_request_target:
   workflow_dispatch:
     inputs:
       tag:
@@ -36,14 +36,31 @@ permissions:
 env:
   JAVA_VERSION: ${{ vars.JAVA_VERSION || '25' }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'zulu' }}
+  SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
+  authorize-image-publish:
+    name: Authorize image publish for ${{ github.event.pull_request.head.sha || github.sha }}
+    runs-on: ubuntu-latest
+    environment: >-
+      ${{
+        github.event_name == 'pull_request_target' &&
+        github.event.pull_request.head.repo.full_name != github.repository &&
+        'external' || ''
+      }}
+    steps:
+      - name: Authorize workflow
+        run: "true"
+
   lint-maven:
     name: Check Java code style
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
       - name: Set up JDK
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
         with:
@@ -61,6 +78,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
       - name: Set up JDK
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
         with:
@@ -71,9 +91,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
         with:
           path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
+          key: ${{ runner.os }}-maven-target-${{ env.SOURCE_SHA }}
           restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
+            ${{ runner.os }}-maven-target-${{ env.SOURCE_SHA }}
       - name: Build with Maven
         run: |
           mvn -B package -DskipTests -U
@@ -90,6 +110,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
       - name: Set up JDK
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
         with:
@@ -100,9 +123,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
         with:
           path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
+          key: ${{ runner.os }}-maven-target-${{ env.SOURCE_SHA }}
           restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
+            ${{ runner.os }}-maven-target-${{ env.SOURCE_SHA }}
       - name: Run tests
         run: mvn -B test
       - name: Upload test results
@@ -116,13 +139,16 @@ jobs:
   build-push-image:
     name: Build & push container image
     runs-on: ubuntu-latest
-    needs: [build-maven, test-maven]
+    needs: [authorize-image-publish, build-maven, test-maven]
     outputs:
       image-digest: ${{ steps.build-push.outputs.digest }}
       image-tag: ${{ steps.tag.outputs.image-tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
       - name: Set up JDK
         uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 #v5.6.0
         with:
@@ -133,9 +159,9 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 #v6.1.0
         with:
           path: target
-          key: ${{ runner.os }}-maven-target-${{ github.sha }}
+          key: ${{ runner.os }}-maven-target-${{ env.SOURCE_SHA }}
           restore-keys: |
-            ${{ runner.os }}-maven-target-${{ github.sha }}
+            ${{ runner.os }}-maven-target-${{ env.SOURCE_SHA }}
       - name: Inject slug vars
         uses: rlespinasse/github-slug-action@ef93b2ea4b6405d06fd8684fc3ff795d262ecae8 #v5.7.0
       - name: Determine tag
@@ -147,7 +173,7 @@ jobs:
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             echo "This workflow was triggered by a tag push ${GITHUB_REF}"
             export TAG=$(echo ${GITHUB_REF} | sed 's|^refs/tags/||')
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          elif [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
             echo "This workflow was triggered by a pull request."
             export TAG=pr-${{ github.event.pull_request.number }}-${GITHUB_HEAD_REF_SLUG}
           elif [[ "${GITHUB_REF_POINT_SLUG}" == "main" ]]; then
@@ -241,6 +267,6 @@ jobs:
           exit-code: "0"
           vuln-type: os # library findings are handled by ort and github auto submission
           # Only push results to dependency graph if running on main
-          format: ${{ github.event_name == 'pull_request' && 'table' || 'github' }}
-          output: ${{ github.event_name == 'pull_request' && '' || 'dependency-results.sbom.json' }}
+          format: ${{ github.event_name == 'pull_request_target' && 'table' || 'github' }}
+          output: ${{ github.event_name == 'pull_request_target' && '' || 'dependency-results.sbom.json' }}
           github-pat: ${{ secrets.GITHUB_TOKEN }}
