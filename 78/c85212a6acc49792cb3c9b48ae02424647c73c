@@ -1,0 +1,55 @@
+.github/workflows/ort.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 7-11,24-25,48,51
+README.md
+  s_69421a9572ef01::t_2e3e5aade0031e 68-112,144-146
+release.config.js
+  s_9edc7158335626::t_dfee8dd047b7c4 12-14
+  s_69421a9572ef01::t_2e3e5aade0031e 6-11,15-18
+.github/actions/registry-login/action.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 1-28,30-40
+  s_9edc7158335626::t_5eb63e68f890f1 29
+.github/workflows/reuse.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 14
+.github/workflows/build.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 10,25,30-36,42-43,57-58,69-70,79-82,84-85,97-98,100-101,105-111,117,120-136
+  s_9edc7158335626::t_992b324d715fae 11-12,17-18
+.github/workflows/update-base-image.yml
+  s_9edc7158335626::t_98c949f01a8f40 24
+  s_9edc7158335626::t_ad4530a064525a 149-150,155-159
+  s_9edc7158335626::t_84b9dbbd2abdeb 67
+  s_9edc7158335626::t_393a30746fc9fa 106-136
+  s_69421a9572ef01::t_2e3e5aade0031e 1-17,26-66,68-105,137-148,151-154,160-162
+  s_9edc7158335626::t_a80ca3d2dd0a9a 23,25
+  s_9edc7158335626::t_78c9231aa0a171 18-22
+pom.xml
+  s_69421a9572ef01::t_2e3e5aade0031e 36-46
+.github/workflows/release.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 7-16,20-32,34,36-37,39-47,50-51,54-55,58-59,61,64,67-86,89,96-138,140-141,143-145,147-148,150-175,177-179,184,186,206-209,211-215,218-220,223-307,310-332,335,337-338,342,344-346,355
+  s_9edc7158335626::t_e9c73e0b7a9bca 17-19
+  s_9edc7158335626::t_12b0f36c0bba59 176,180-183,185,187-205
+  s_9edc7158335626::t_b006eebccc0302 210,216-217,221-222
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "78c85212a6acc49792cb3c9b48ae02424647c73c",
+  "prompts": {},
+  "sessions": {
+    "s_69421a9572ef01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052c63c7affeuGT1OoWoOlpfH5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    },
+    "s_9edc7158335626": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052576e52ffeT6mN81VXjkZCIS",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}
