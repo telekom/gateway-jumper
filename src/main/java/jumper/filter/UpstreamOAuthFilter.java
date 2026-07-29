@@ -132,7 +132,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
         // This path builds the token request solely from the resolved credentials, there is no
         // header fallback left. Reject an unusable config here instead of sending a token request
         // without any client authentication, which the IdP answers with an opaque 401.
-        if (!canBuildTokenRequest(oauthCredentials.get())) {
+        if (!oauthCredentials.get().canBuildTokenRequest()) {
           return missingClientAuthError(
               jumperConfig,
               "need clientId plus one of clientSecret or clientKey, username+password, or"
@@ -177,7 +177,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     String clientScope = determineClientScope(builder, jc, oauthCredentials);
 
     log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
-    if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
+    if (StringUtils.isNotBlank(clientId) && StringUtils.isNotBlank(clientSecret)) {
       // Store token cache key in exchange for 4xx-based eviction
       String tokenCacheKey =
           tokenCacheService.generateTokenCacheKey(
@@ -195,41 +195,11 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     }
   }
 
-  /**
-   * Reports whether the credentials carry at least one authentication mechanism that {@code
-   * TokenFetchService#getAccessTokenWithOauthCredentialsObject} can actually put on the wire:
-   * client authentication via client secret or client key (JWT client assertion), resource owner
-   * credentials, or a refresh token. If none of them applies, the token request body would consist
-   * of nothing but {@code scope} and {@code grant_type}.
-   *
-   * <p>Resource owner credentials and a refresh token are accepted without any client
-   * authentication because public clients are an established configuration here. Such a request can
-   * still be rejected by the identity provider - this predicate only rules out the requests that
-   * cannot possibly succeed.
-   *
-   * <p>Deliberately not the same predicate as {@link OauthCredentials#hasAnyCredentialField()}:
-   * that one asks whether an entry claims an identity at all (to decide whether it may be completed
-   * from the provider default), this one asks whether a complete request can be built from it.
-   */
-  static boolean canBuildTokenRequest(OauthCredentials credentials) {
-    // clientId is required for both secret and key: the JWT client assertion uses it as iss, sub
-    // and client_id, so a key without an id cannot identify the client either.
-    boolean hasClientAuth =
-        StringUtils.isNotBlank(credentials.getClientId())
-            && (StringUtils.isNotBlank(credentials.getClientSecret())
-                || StringUtils.isNotBlank(credentials.getClientKey()));
-
-    return hasClientAuth
-        || (StringUtils.isNotBlank(credentials.getUsername())
-            && StringUtils.isNotBlank(credentials.getPassword()))
-        || StringUtils.isNotBlank(credentials.getRefreshToken());
-  }
-
   private Mono<TokenInfo> missingClientAuthError(JumperConfig jc, String requirement) {
     log.error(
         "External IdP OAuth config incomplete for consumer '{}', tokenEndpoint '{}': no client"
             + " authentication resolvable",
-        jc.getConsumer(),
+        StringUtils.defaultIfBlank(jc.getConsumer(), "<none>"),
         jc.getExternalTokenEndpoint());
     meterRegistry
         .counter(METRIC_EXTERNAL_OAUTH_CONFIG_ERROR, "reason", "missing_client_auth")
@@ -237,9 +207,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     return Mono.error(
         new ResponseStatusException(
             HttpStatus.BAD_REQUEST,
-            "External IdP OAuth config incomplete for consumer '"
-                + jc.getConsumer()
-                + "': no client authentication resolvable ("
+            "External IdP OAuth config incomplete: no client authentication resolvable ("
                 + requirement
                 + ")"));
   }
@@ -252,10 +220,13 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     String clientScope = "";
     String xSpacegateScope = jc.getXSpacegateScope();
 
-    if (Objects.nonNull(xSpacegateScope)) {
+    // Jumper consumes this header, it must never reach the upstream - not even when it is blank
+    // and therefore ignored below.
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
+
+    if (StringUtils.isNotBlank(xSpacegateScope)) {
       log.debug("Using Scope from xSpacegateScope-Header");
       clientScope = xSpacegateScope;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
 
     } else if (oauthCredentials.isPresent()
         && StringUtils.isNotBlank(oauthCredentials.get().getScopes())) {
@@ -278,10 +249,15 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     String clientSecret = jc.getClientSecret();
     String xSpacegateClientSecret = jc.getXSpacegateClientSecret();
 
-    if (Objects.nonNull(xSpacegateClientSecret)) {
+    // Jumper consumes this header, it must never reach the upstream - not even when it is blank
+    // and therefore ignored below.
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+
+    // A blank header counts as absent, in line with determineClientId. Letting it shadow the
+    // provider secret would produce a token request with an empty client_secret and an opaque 401.
+    if (StringUtils.isNotBlank(xSpacegateClientSecret)) {
       log.debug("Using SubscriberClientSecret from xSpacegateClientSecret-Header");
       clientSecret = xSpacegateClientSecret;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
 
     } else if (oauthCredentials.isPresent()
         && StringUtils.isNotBlank(oauthCredentials.get().getClientSecret())) {
@@ -302,10 +278,13 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     String clientId = jc.getClientId();
     String xSpacegateClientId = jc.getXSpacegateClientId();
 
+    // Jumper consumes this header, it must never reach the upstream - not even when it is blank
+    // and therefore ignored below.
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+
     if (StringUtils.isNotBlank(xSpacegateClientId)) {
       log.debug("Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
       clientId = xSpacegateClientId;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
 
     } else if (oauthCredentials.isPresent()
         && StringUtils.isNotBlank(oauthCredentials.get().getClientId())) {

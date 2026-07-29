@@ -51,6 +51,34 @@ public class OauthCredentials {
         || StringUtils.isNotBlank(refreshToken);
   }
 
+  /**
+   * Reports whether these credentials carry at least one authentication mechanism that {@code
+   * TokenFetchService#getAccessTokenWithOauthCredentialsObject} can actually put on the wire:
+   * client authentication via client secret or client key (JWT client assertion), resource owner
+   * credentials, or a refresh token. If none of them applies, the token request body would consist
+   * of nothing but {@code scope} and {@code grant_type}.
+   *
+   * <p>Resource owner credentials and a refresh token are accepted without any client
+   * authentication because public clients are an established configuration here. Such a request can
+   * still be rejected by the identity provider - this predicate only rules out the requests that
+   * cannot possibly succeed.
+   *
+   * <p>Deliberately not the same predicate as {@link #hasAnyCredentialField()}: that one asks
+   * whether an entry claims an identity at all (to decide whether it may be completed from the
+   * provider default), this one asks whether a complete request can be built from it.
+   */
+  public boolean canBuildTokenRequest() {
+    // clientId is required for both secret and key: the JWT client assertion uses it as iss, sub
+    // and client_id, so a key without an id cannot identify the client either.
+    boolean hasClientAuth =
+        StringUtils.isNotBlank(clientId)
+            && (StringUtils.isNotBlank(clientSecret) || StringUtils.isNotBlank(clientKey));
+
+    return hasClientAuth
+        || (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password))
+        || StringUtils.isNotBlank(refreshToken);
+  }
+
   /** Returns a copy of this entry with the scopes replaced. The receiver is left untouched. */
   public OauthCredentials copyWithScopes(String scopes) {
     OauthCredentials copy = new OauthCredentials();

@@ -224,18 +224,16 @@ public class JumperConfig {
   }
 
   public Optional<BasicAuthCredentials> getBasicAuthCredentials() {
-    if (Objects.nonNull(getBasicAuth())) {
-
-      if (getBasicAuth().containsKey(getConsumer())) {
-        return Optional.of(getBasicAuth().get(getConsumer()));
-      }
-
-      if (getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY)) {
-        return Optional.of(getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY));
-      }
+    if (Objects.isNull(getBasicAuth())) {
+      return Optional.empty();
     }
 
-    return Optional.empty();
+    BasicAuthCredentials consumerEntry = getBasicAuth().get(getConsumer());
+    if (Objects.nonNull(consumerEntry)) {
+      return Optional.of(consumerEntry);
+    }
+
+    return Optional.ofNullable(getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY));
   }
 
   public Optional<OauthCredentials> getOauthCredentials() {

@@ -344,7 +344,9 @@ credential-less token request to the external IdP, which would surface as an opa
 Configurations without a `grantType` use the legacy header-based flow, which supports
 `clientId` + `clientSecret` only — the other mechanisms require a `grantType` to be set, and the
 error message says so. Rejections are counted in the `jumper_external_oauth_config_error_total`
-metric with tag `reason="missing_client_auth"`.
+metric with tag `reason="missing_client_auth"`. In the legacy flow, a blank `X-Spacegate-Client-Id`,
+`X-Spacegate-Client-Secret` or `X-Spacegate-Scope` header counts as absent and falls back to the
+configured value instead of overriding it with an empty string.
 
 #### Basic Auth Token
 

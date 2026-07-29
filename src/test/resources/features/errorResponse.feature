@@ -186,7 +186,7 @@ Feature: proper error message returned based on conditions
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     And API consumer receives a 400 status code
-    And error response contains msg "External IdP OAuth config incomplete for consumer 'eni--local-team--local-app': no client authentication resolvable (need clientId plus one of clientSecret or clientKey, username+password, or refreshToken)" error "Bad Request" status 400
+    And error response contains msg "External IdP OAuth config incomplete: no client authentication resolvable (need clientId plus one of clientSecret or clientKey, username+password, or refreshToken)" error "Bad Request" status 400
     And IDP token endpoint was called exactly 0 times
 
   Scenario: external IDP oauth config with a grant type but no client authentication at all
@@ -196,5 +196,5 @@ Feature: proper error message returned based on conditions
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     And API consumer receives a 400 status code
-    And error response contains msg "External IdP OAuth config incomplete for consumer 'eni--local-team--local-app': no client authentication resolvable (need clientId plus one of clientSecret or clientKey, username+password, or refreshToken)" error "Bad Request" status 400
+    And error response contains msg "External IdP OAuth config incomplete: no client authentication resolvable (need clientId plus one of clientSecret or clientKey, username+password, or refreshToken)" error "Bad Request" status 400
     And IDP token endpoint was called exactly 0 times

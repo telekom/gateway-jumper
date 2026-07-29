@@ -12,9 +12,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+/**
+ * Covers the two credential predicates. {@link OauthCredentials#canBuildTokenRequest()} has to stay
+ * in sync with the request built by {@code
+ * TokenFetchService#getAccessTokenWithOauthCredentialsObject}: it must be true exactly when that
+ * method adds at least one authentication parameter.
+ */
 class OauthCredentialsTest {
+
+  private static final String CLIENT_ID = "external_configured";
+  private static final String PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----";
 
   private static Stream<Arguments> credentialFields() {
     return Stream.of(
@@ -131,5 +141,125 @@ class OauthCredentialsTest {
     assertNotSame(source, copy);
     assertEquals("original_scope", source.getScopes());
     assertEquals("narrowed_scope", copy.getScopes());
+  }
+
+  @Test
+  void canBuildTokenRequest_falseForEmptyEntry() {
+    // arrange
+    OauthCredentials oc = new OauthCredentials();
+
+    // act & assert
+    assertFalse(oc.canBuildTokenRequest());
+  }
+
+  @Test
+  void canBuildTokenRequest_falseForNonCredentialFieldsOnly() {
+    // arrange
+    OauthCredentials oc = new OauthCredentials();
+    oc.setGrantType("client_credentials");
+    oc.setTokenRequest("HEADER");
+    oc.setScopes("some_scope");
+
+    // act & assert
+    assertFalse(oc.canBuildTokenRequest());
+  }
+
+  @ParameterizedTest(name = "{0} is a complete mechanism")
+  @MethodSource("completeMechanisms")
+  void canBuildTokenRequest_trueForCompleteMechanism(String name, OauthCredentials oc) {
+    // act & assert
+    assertTrue(oc.canBuildTokenRequest(), name + " should be accepted");
+  }
+
+  private static Stream<Arguments> completeMechanisms() {
+    return Stream.of(
+        Arguments.of("clientId + clientSecret", credentials(CLIENT_ID, "secret", null, null, null)),
+        Arguments.of("clientId + clientKey", credentials(CLIENT_ID, null, PRIVATE_KEY, null, null)),
+        Arguments.of("username + password", credentials(null, null, null, "user", "pass")),
+        Arguments.of("refreshToken", refreshTokenCredentials("refresh")));
+  }
+
+  @ParameterizedTest(name = "{0} is not a complete mechanism")
+  @MethodSource("incompleteMechanisms")
+  void canBuildTokenRequest_falseForIncompleteMechanism(String name, OauthCredentials oc) {
+    // act & assert
+    assertFalse(oc.canBuildTokenRequest(), name + " should be rejected");
+  }
+
+  private static Stream<Arguments> incompleteMechanisms() {
+    return Stream.of(
+        Arguments.of(
+            "clientId without secret or key", credentials(CLIENT_ID, null, null, null, null)),
+        Arguments.of(
+            "clientSecret without clientId", credentials(null, "secret", null, null, null)),
+        // The JWT client assertion uses clientId as iss, sub and client_id, so a key on its own
+        // cannot identify the client.
+        Arguments.of(
+            "clientKey without clientId", credentials(null, null, PRIVATE_KEY, null, null)),
+        Arguments.of("username without password", credentials(null, null, null, "user", null)),
+        Arguments.of("password without username", credentials(null, null, null, null, "pass")));
+  }
+
+  @ParameterizedTest(name = "blank clientSecret \"{0}\" is treated as absent")
+  @NullSource
+  @ValueSource(strings = {"", " ", "\t"})
+  void canBuildTokenRequest_blankClientSecretIsAbsent(String blank) {
+    // arrange
+    OauthCredentials oc = credentials(CLIENT_ID, blank, null, null, null);
+
+    // act & assert
+    assertFalse(oc.canBuildTokenRequest());
+  }
+
+  @ParameterizedTest(name = "blank clientKey \"{0}\" is treated as absent")
+  @NullSource
+  @ValueSource(strings = {"", " ", "\t"})
+  void canBuildTokenRequest_blankClientKeyIsAbsent(String blank) {
+    // arrange
+    OauthCredentials oc = credentials(CLIENT_ID, null, blank, null, null);
+
+    // act & assert
+    assertFalse(oc.canBuildTokenRequest());
+  }
+
+  @ParameterizedTest(name = "blank refreshToken \"{0}\" is treated as absent")
+  @NullSource
+  @ValueSource(strings = {"", " ", "\t"})
+  void canBuildTokenRequest_blankRefreshTokenIsAbsent(String blank) {
+    // arrange
+    OauthCredentials oc = refreshTokenCredentials(blank);
+
+    // act & assert
+    assertFalse(oc.canBuildTokenRequest());
+  }
+
+  @ParameterizedTest(name = "{0} alone cannot build a token request unless it is the refreshToken")
+  @MethodSource("credentialFields")
+  void canBuildTokenRequest_singleCredentialFieldIsNotSufficient(
+      String name, BiConsumer<OauthCredentials, String> setter) {
+    // arrange
+    OauthCredentials oc = new OauthCredentials();
+    setter.accept(oc, "value");
+
+    // act & assert
+    // The refresh token is the only mechanism that authenticates on its own.
+    assertEquals("refreshToken".equals(name), oc.canBuildTokenRequest(), name);
+  }
+
+  private static OauthCredentials credentials(
+      String clientId, String clientSecret, String clientKey, String username, String password) {
+    OauthCredentials oc = new OauthCredentials();
+    oc.setClientId(clientId);
+    oc.setClientSecret(clientSecret);
+    oc.setClientKey(clientKey);
+    oc.setUsername(username);
+    oc.setPassword(password);
+    return oc;
+  }
+
+  private static OauthCredentials refreshTokenCredentials(String refreshToken) {
+    OauthCredentials oc = new OauthCredentials();
+    oc.setRefreshToken(refreshToken);
+    return oc;
   }
 }
