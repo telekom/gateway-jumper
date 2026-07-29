@@ -1,0 +1,32 @@
+.github/workflows/build.yml
+  s_dfeec42a6c3d1c::t_0d39d2f2e0cd48 171,175-184,188-193
+  s_dfeec42a6c3d1c::t_cbc650d87aa00a 172-174,185-187,196-198,222-224,230-232,253-255,266-268
+.github/workflows/promote-pr-image.yml
+  s_7e52c0e5439db3::t_407a661a375e23 27
+  s_dfeec42a6c3d1c::t_0d39d2f2e0cd48 1-11,14-23,26,28-106
+  s_dfeec42a6c3d1c::t_cbc650d87aa00a 12-13,24-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "b9cf8d0a22268ea4dc04918e51ab527bc269dfa3",
+  "prompts": {},
+  "sessions": {
+    "s_7e52c0e5439db3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05d1297c1ffeajiI6EN2ObzJ3L",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_dfeec42a6c3d1c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_06c8c6673ffeL9tbpwl4bE4vdr",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}
