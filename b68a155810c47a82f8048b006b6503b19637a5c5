@@ -1,0 +1,47 @@
+src/main/java/jumper/model/config/OauthCredentials.java
+  h_aba7680b01ede6 9,33-60
+  s_d48df882d39611::t_4e95ecd8dce7df 61
+src/main/java/jumper/model/config/JumperConfig.java
+  h_aba7680b01ede6 238-239,242-246,249-272
+  s_d48df882d39611::t_52cca24368ead0 240
+src/test/java/jumper/util/JumperConfigUtil.java
+  h_aba7680b01ede6 219-244
+src/test/java/jumper/BaseSteps.java
+  h_aba7680b01ede6 196-198
+src/test/java/jumper/model/config/OauthCredentialsTest.java
+  h_aba7680b01ede6 1-21,23,35-39,42,45-135
+  s_d48df882d39611::t_a77dc0735bb6aa 22,24-34,40-41,43-44
+src/test/java/jumper/JumperConfigSteps.java
+  h_aba7680b01ede6 111-115
+src/test/java/jumper/model/config/JumperConfigTest.java
+  h_aba7680b01ede6 1-22,25-231
+  s_d48df882d39611::t_40cf60e859242b 23-24
+src/test/java/jumper/mocks/MockIrisServer.java
+  h_aba7680b01ede6 188-194
+  s_d48df882d39611::t_37cdf35165e31d 195-211
+src/test/resources/features/authorizationHeader.feature
+  s_d48df882d39611::t_538afc97bbf5cd 178-187
+src/test/java/jumper/config/Config.java
+  h_aba7680b01ede6 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "b68a155810c47a82f8048b006b6503b19637a5c5",
+  "prompts": {},
+  "humans": {
+    "h_aba7680b01ede6": {
+      "author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_d48df882d39611": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "41294e95-77de-4e2e-9216-aab6b5d2f071",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  }
+}
