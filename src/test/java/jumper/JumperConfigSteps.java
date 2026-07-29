@@ -113,6 +113,10 @@ public class JumperConfigSteps {
                       Constants.HEADER_JUMPER_CONFIG,
                       getJcOauthProviderWithConsumerScopeOnly(baseSteps.getId()));
                   break;
+                case "consumer grant_type without client auth":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getJcOauthConsumerWithoutClientAuth());
+                  break;
                 default:
                   httpHeaders.set(
                       Constants.HEADER_JUMPER_CONFIG,

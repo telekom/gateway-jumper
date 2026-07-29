@@ -242,6 +242,24 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  /**
+   * Misconfiguration: the consumer entry selects the grantType based token path but carries no
+   * client authentication at all, so no token request can be built from it.
+   */
+  public static String getJcOauthConsumerWithoutClientAuth() {
+    HashMap<String, OauthCredentials> oauth = new HashMap<>();
+
+    OauthCredentials consumer = new OauthCredentials();
+    consumer.setGrantType("client_credentials");
+    consumer.setTokenRequest("HEADER");
+    consumer.setScopes(OAUTH_SCOPE_CONFIGURED);
+    oauth.put(CONSUMER, consumer);
+
+    JumperConfig jc = new JumperConfig();
+    jc.setOauth(oauth);
+    return toJsonBase64(jc);
+  }
+
   public enum KeyType {
     WEAK,
     SECURE,

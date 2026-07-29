@@ -15,6 +15,7 @@ import jumper.util.LoadBalancingUtil;
 import jumper.util.OauthTokenUtil;
 import jumper.util.ObjectMapperUtil;
 import lombok.Data;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -39,14 +40,16 @@ public class JumperConfig {
   String consumer;
   String consumerOriginStargate;
   String consumerOriginZone;
-  String authorizationToken;
+
+  @ToString.Exclude String authorizationToken;
   String externalTokenEndpoint;
 
   @JsonProperty("issuer")
   String internalTokenEndpoint;
 
   String clientId;
-  String clientSecret;
+
+  @ToString.Exclude String clientSecret;
   Boolean accessTokenForwarding;
 
   @JsonProperty("realm")
@@ -58,7 +61,8 @@ public class JumperConfig {
   String envName;
 
   String xSpacegateClientId;
-  String xSpacegateClientSecret;
+
+  @ToString.Exclude String xSpacegateClientSecret;
   String xSpacegateScope;
 
   // calculated routing stuff within requestFilter
