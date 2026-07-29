@@ -1,0 +1,55 @@
+.github/workflows/reuse.yml
+  s_69421a9572ef01::t_0e79a71fd9152e 14
+.github/workflows/release.yml
+  s_69421a9572ef01::t_2e697496a089e2 251,257-258,261,263-272
+  s_69421a9572ef01::t_f26f8ce59fb567 14
+  s_69421a9572ef01::t_536cce5290aa45 53-54
+  s_69421a9572ef01::t_cdcbc7621a480b 7-13,15-31,33,35-36,38-46,49-50,57-58,60,63,66-85,88,95-96,98-99,101-103,105-106,108-247,250,252-256,259-260,262,275,277-278,282,284-286,295
+release.config.js
+  s_69421a9572ef01::t_e2f6f545e68ef1 9-13
+  s_69421a9572ef01::t_abf78bc995ea43 6-8,14-17
+.github/actions/registry-login/action.yml
+  s_69421a9572ef01::t_6863864232bfbc 1-44
+.github/workflows/ort.yml
+  s_69421a9572ef01::t_0e79a71fd9152e 17,23-24,47,50
+.github/workflows/update-base-image.yml
+  s_69421a9572ef01::t_d71a252920fac1 18-20
+  s_69421a9572ef01::t_0b865bce456830 21-25
+  s_69421a9572ef01::t_ce33bd18919f04 1-17,26-104,114-117,119-133
+  s_69421a9572ef01::t_d26f0ecf2ffd9e 105-113,118
+.github/workflows/build.yml
+  s_87ab34ff31c2d8::t_3bce7bc779e2d7 122
+  s_69421a9572ef01::t_6c9d55fa6afcf5 10,12,19,24-30,36-37,51-52,63-64,116-117,119-121,123,125-130
+  s_69421a9572ef01::t_61df5104821aa6 73-76,78-79,91-92,94-95,99-105,111,114-115,118
+  s_69421a9572ef01::t_0c71fdf1515641 124
+README.md
+  s_69421a9572ef01::t_a6911647d2f6b0 105-107
+  s_69421a9572ef01::t_31966bf124ba76 68-104,108-112
+  s_69421a9572ef01::t_44ba6179535ad1 144-146
+pom.xml
+  s_69421a9572ef01::t_7faf5608ec0a6c 36-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "d1c7b279cd6705639c4659e10d29ff0f7f849805",
+  "prompts": {},
+  "sessions": {
+    "s_69421a9572ef01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052c63c7affeuGT1OoWoOlpfH5",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    },
+    "s_87ab34ff31c2d8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_056e7bdb3ffeqhknquuiwdDprJ",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": null
+    }
+  }
+}
