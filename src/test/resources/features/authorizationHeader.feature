@@ -64,10 +64,38 @@ Feature: proper authorization token reaches provider endpoint
 
   Scenario: ConsumerClientId configured as audience resolves to the calling application
     Given RealRoute headers are set
-    And jumperConfig with ConsumerClientId audience set
+    And jumperConfig with "ConsumerClientId audience" claim set
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     Then API Provider receives authorization OneTokenWithConfiguredConsumerAudience
+    And API consumer receives a 200 status code
+
+  Scenario: Configured audience wins when an incoming token audience and pub/sub subscriber are both present
+    Given RealRoute headers are set
+    And authorization token with aud set
+    And pub sub contained in the header
+    And jumperConfig with "literal audience" claim set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithConfiguredAudienceOverridingFallbacks
+    And API consumer receives a 200 status code
+
+  Scenario: Configured audience wins over the pub/sub subscriber fallback when no incoming token audience is present
+    Given RealRoute headers are set
+    And pub sub contained in the header
+    And jumperConfig with "literal audience" claim set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithConfiguredAudienceOverridingFallbacks
+    And API consumer receives a 200 status code
+
+  Scenario: Configured claim with a non-aud key is ignored and cannot forge azp
+    Given RealRoute headers are set
+    And authorization token with aud set
+    And jumperConfig with "forged azp" claim set
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization OneTokenWithAud
     And API consumer receives a 200 status code
 
   Scenario: Consumer calls proxy route and realm header contains several values, correct issuer set in OneToken

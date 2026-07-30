@@ -145,7 +145,9 @@ public class VerificationSteps {
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
           .expectHeader()
-          .value(HttpHeaders.AUTHORIZATION, this::checkPubSub);
+          .value(HttpHeaders.AUTHORIZATION, this::checkPubSubIds)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkSubscriberAudience);
     } else if (tokenType.equalsIgnoreCase("OneTokenWithScopes")) {
       this.baseSteps
           .getRequestExchange()
@@ -179,6 +181,15 @@ public class VerificationSteps {
           .getRequestExchange()
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkOneTokenSimple)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredAudience);
+    } else if (tokenType.equalsIgnoreCase("OneTokenWithConfiguredAudienceOverridingFallbacks")) {
+      this.baseSteps
+          .getRequestExchange()
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkOneToken)
+          .expectHeader()
+          .value(HttpHeaders.AUTHORIZATION, this::checkPubSubIds)
           .expectHeader()
           .value(HttpHeaders.AUTHORIZATION, this::checkConfiguredAudience);
     } else if (tokenType.equalsIgnoreCase("MeshToken")) {
@@ -278,11 +289,16 @@ public class VerificationSteps {
     assertNotNull(claimsFromToken.getBody().getIssuedAt());
   }
 
-  private void checkPubSub(String providerLmsToken) {
+  private void checkPubSubIds(String providerLmsToken) {
     Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
 
     assertEquals(PUBSUB_PUBLISHER, claimsFromToken.getBody().get("publisherId", String.class));
     assertEquals(PUBSUB_SUBSCRIBER, claimsFromToken.getBody().get("subscriberId", String.class));
+  }
+
+  private void checkSubscriberAudience(String providerLmsToken) {
+    Jwt<?, Claims> claimsFromToken = OauthTokenUtil.getAllClaimsFromToken(providerLmsToken);
+
     assertEquals(Set.of(PUBSUB_SUBSCRIBER), claimsFromToken.getBody().getAudience());
   }
 

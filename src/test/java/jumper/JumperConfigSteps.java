@@ -47,12 +47,29 @@ public class JumperConfigSteps {
             httpHeaders -> httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcSecurity())));
   }
 
-  @And("jumperConfig with ConsumerClientId audience set")
-  public void setJumperConfigConsumerClientIdAudience() {
+  @And("jumperConfig with {string} claim set")
+  public void setJumperConfigClaim(String jc_case) {
     baseSteps.setHttpHeadersOfRequest(
         baseSteps.httpHeadersOfRequest.andThen(
-            httpHeaders ->
-                httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcConsumerClientIdAudience())));
+            httpHeaders -> {
+              switch (jc_case) {
+                case "ConsumerClientId audience":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcConsumerClientIdAudience());
+                  break;
+                case "literal audience":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcLiteralAudience());
+                  break;
+                case "unsupported valueFrom audience":
+                  httpHeaders.set(
+                      Constants.HEADER_JUMPER_CONFIG, getJcUnsupportedValueFromAudience());
+                  break;
+                case "forged azp":
+                  httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, getJcForgedAzpClaim());
+                  break;
+                default:
+                  assert false : "not defined";
+              }
+            }));
   }
 
   @And("jumperConfig oauth {string} set")

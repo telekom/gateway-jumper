@@ -17,6 +17,13 @@ Feature: proper error message returned based on conditions
     Then API consumer receives a 500 status code
     And error response contains msg "Token not provided, but expected" error "Internal Server Error" status 500
 
+  Scenario: Provider configures an unsupported valueFrom for the audience claim
+    Given RealRoute headers are set
+    And jumperConfig with "unsupported valueFrom audience" claim set
+    When consumer calls the proxy route
+    Then API consumer receives a 500 status code
+    And error response contains msg "Invalid aud claim configuration: unsupported valueFrom" error "Internal Server Error" status 500
+
   Scenario: mesh IDP drops connection
     Given ProxyRoute headers are set
     And IDP set to drop connection

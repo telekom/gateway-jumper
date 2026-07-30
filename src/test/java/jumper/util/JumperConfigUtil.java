@@ -32,6 +32,26 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  public static String getJcLiteralAudience() {
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(audienceClaim(CONFIGURED_AUDIENCE, null)));
+    return toJsonBase64(jc);
+  }
+
+  /** ConsumerClientId is the only supported valueFrom, so this value is rejected. */
+  public static String getJcUnsupportedValueFromAudience() {
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(audienceClaim(null, "UnsupportedSource")));
+    return toJsonBase64(jc);
+  }
+
+  /** Only the {@code aud} key is consumed, so this entry must never reach the generated token. */
+  public static String getJcForgedAzpClaim() {
+    JumperConfig jc = new JumperConfig();
+    jc.setClaims(defaultClaims(configuredClaim(Constants.TOKEN_CLAIM_AZP, "forged", null)));
+    return toJsonBase64(jc);
+  }
+
   public static HashMap<String, List<JumperConfig.ConfiguredClaim>> defaultClaims(
       JumperConfig.ConfiguredClaim claim) {
     HashMap<String, List<JumperConfig.ConfiguredClaim>> claims = new HashMap<>();
@@ -40,8 +60,13 @@ public class JumperConfigUtil {
   }
 
   public static JumperConfig.ConfiguredClaim audienceClaim(String value, String valueFrom) {
+    return configuredClaim(Constants.TOKEN_CLAIM_AUD, value, valueFrom);
+  }
+
+  public static JumperConfig.ConfiguredClaim configuredClaim(
+      String key, String value, String valueFrom) {
     JumperConfig.ConfiguredClaim claim = new JumperConfig.ConfiguredClaim();
-    claim.setKey(Constants.TOKEN_CLAIM_AUD);
+    claim.setKey(key);
     claim.setValue(value);
     claim.setValueFrom(valueFrom);
     return claim;

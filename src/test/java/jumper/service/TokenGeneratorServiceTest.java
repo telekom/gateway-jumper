@@ -238,6 +238,32 @@ class TokenGeneratorServiceTest {
   }
 
   @Test
+  @DisplayName("a configured audience survives fillProcessingInfo and wins over a header audience")
+  void configuredAudience_winsOverConflictingHeaderAudience() {
+    // arrange: model the failover path, where the JumperConfig comes from the selected
+    // routing_config entry while the jumper_config header carries a competing audience
+    String consumerToken = consumerTokenWithAudiences(List.of());
+    JumperConfig routingEntry = new JumperConfig();
+    routingEntry.setRemoteApiUrl("http://localhost:1080/provider");
+    setConfiguredAudience(routingEntry, configuredAudience("routing-entry-audience", null));
+
+    JumperConfig headerConfig = new JumperConfig();
+    setConfiguredAudience(headerConfig, configuredAudience("header-audience", null));
+
+    // act
+    routingEntry.fillProcessingInfo(
+        MockServerHttpRequest.get("/provider")
+            .header(Constants.HEADER_AUTHORIZATION, "Bearer " + consumerToken)
+            .header(Constants.HEADER_JUMPER_CONFIG, JumperConfig.toJsonBase64(headerConfig))
+            .build());
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(routingEntry, "GET", ISSUER, null, null);
+
+    // assert: fillProcessingInfo does not re-source claims, so the routing entry keeps its own
+    assertThat(parse(providerLmsToken).getAudience()).containsExactly("routing-entry-audience");
+  }
+
+  @Test
   @DisplayName("a configured non-aud claim key is ignored")
   void configuredNonAudClaimKey_isIgnored() {
     // arrange
@@ -255,6 +281,24 @@ class TokenGeneratorServiceTest {
     // assert: neither the audience nor azp is influenced by a non-aud entry
     assertThat(claims.getAudience()).containsExactly("consumerAud");
     assertThat(claims.get(Constants.TOKEN_CLAIM_AZP, String.class)).isEqualTo("stargate");
+  }
+
+  @Test
+  @DisplayName("only the first of several configured aud entries is applied")
+  void multipleConfiguredAudiences_firstWins() {
+    // arrange: the control plane schema allows one aud claim, so this models config drift
+    JumperConfig jc = jumperConfig(consumerTokenWithAudiences(List.of("consumerAud")));
+    setConfiguredAudience(
+        jc,
+        configuredAudience("first-audience", null),
+        configuredAudience("second-audience", null));
+
+    // act
+    String providerLmsToken =
+        tokenGeneratorService.generateProviderLmsToken(jc, "GET", ISSUER, null, null);
+
+    // assert
+    assertThat(parse(providerLmsToken).getAudience()).containsExactly("first-audience");
   }
 
   @Test
@@ -347,10 +391,10 @@ class TokenGeneratorServiceTest {
     return jc;
   }
 
-  private static void setConfiguredAudience(JumperConfig jc, ConfiguredClaim claim) {
-    HashMap<String, List<ConfiguredClaim>> claims = new HashMap<>();
-    claims.put(Constants.CLAIMS_DEFAULT_KEY, List.of(claim));
-    jc.setClaims(claims);
+  private static void setConfiguredAudience(JumperConfig jc, ConfiguredClaim... claims) {
+    HashMap<String, List<ConfiguredClaim>> claimsMap = new HashMap<>();
+    claimsMap.put(Constants.CLAIMS_DEFAULT_KEY, List.of(claims));
+    jc.setClaims(claimsMap);
   }
 
   private static ConfiguredClaim configuredAudience(String value, String valueFrom) {
@@ -377,7 +421,7 @@ class TokenGeneratorServiceTest {
             "blank value", configuredAudience(" ", null), "consumer", "value must not be blank"),
         Arguments.of(
             "unsupported valueFrom",
-            configuredAudience(null, "ProviderClientId"),
+            configuredAudience(null, "UnsupportedSource"),
             "consumer",
             "unsupported valueFrom"),
         Arguments.of(
