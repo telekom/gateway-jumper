@@ -1,0 +1,49 @@
+src/main/java/jumper/Constants.java
+  s_76df8c62a43cf6::t_cbc806f36f68ee 111-112
+src/test/java/jumper/util/RoutingConfigUtil.java
+  s_76df8c62a43cf6::t_815956d7ad6928 26-28,31-33,57-58,61
+  s_76df8c62a43cf6::t_35b29beb8d3f8b 59
+  s_76df8c62a43cf6::t_6f4d6bff6a5080 62
+src/test/java/jumper/service/TokenGeneratorServiceTest.java
+  s_76df8c62a43cf6::t_35b29beb8d3f8b 205,237,377
+  s_76df8c62a43cf6::t_815956d7ad6928 9,18,20-21,23,33-35,196-204,206-211,213,221-224,230-234,238-239,277-297,350-376,378-388
+  s_76df8c62a43cf6::t_9c69e626a80309 389
+src/main/java/jumper/service/TokenGeneratorService.java
+  s_76df8c62a43cf6::t_cbc806f36f68ee 13,19,135-139,174-204
+src/test/java/jumper/util/JumperConfigUtil.java
+  s_76df8c62a43cf6::t_815956d7ad6928 29-49
+src/test/java/jumper/JumperConfigSteps.java
+  s_76df8c62a43cf6::t_35b29beb8d3f8b 55
+  s_76df8c62a43cf6::t_815956d7ad6928 50-54,56-57
+src/test/java/jumper/VerificationSteps.java
+  s_76df8c62a43cf6::t_815956d7ad6928 170-183,307-317
+  s_76df8c62a43cf6::t_083d7e648a9f8a 318
+src/test/java/jumper/config/Config.java
+  s_76df8c62a43cf6::t_815956d7ad6928 13
+src/test/resources/features/authorizationHeader.feature
+  s_76df8c62a43cf6::t_815956d7ad6928 65-72
+src/test/resources/features/failover.feature
+  s_76df8c62a43cf6::t_815956d7ad6928 25-32
+README.md
+  s_76df8c62a43cf6::t_e22773cbe81c70 191-214,220
+src/main/java/jumper/model/config/JumperConfig.java
+  s_76df8c62a43cf6::t_cbc806f36f68ee 32,257-281
+src/test/java/jumper/HeaderSteps.java
+  s_76df8c62a43cf6::t_815956d7ad6928 86-92
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "dc00808628e55d1029291469260e60f2d32dc613",
+  "prompts": {},
+  "sessions": {
+    "s_76df8c62a43cf6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_07fbf8889ffeVcYT7NYH2kkQP7",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
