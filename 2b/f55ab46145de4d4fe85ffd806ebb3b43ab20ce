@@ -1,0 +1,24 @@
+.github/workflows/build.yml
+  s_6bf3d2b9d1b25e::t_73038eec11c9be 119-144
+  s_6bf3d2b9d1b25e::t_72235c3d3b64ee 146,223,231-233,242
+  s_6bf3d2b9d1b25e::t_cc8341e29a578b 149-151
+  s_6bf3d2b9d1b25e::t_e14df59970aaa4 87,178,181,184,186,188
+.github/workflows/push-external-image.yml
+  s_6bf3d2b9d1b25e::t_01c53ad469c7a4 1-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "2bf55ab46145de4d4fe85ffd806ebb3b43ab20ce",
+  "prompts": {},
+  "sessions": {
+    "s_6bf3d2b9d1b25e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_080a571cffferFrJmiJrVeC5Cl",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}

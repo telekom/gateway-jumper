@@ -1,0 +1,38 @@
+README.md
+  h_aba7680b01ede6 347-349
+src/main/java/jumper/model/config/OauthCredentials.java
+  h_aba7680b01ede6 54-81
+src/test/java/jumper/model/config/OauthCredentialsTest.java
+  h_aba7680b01ede6 15,18-23,26-27
+  s_d48df882d39611::t_8110291854be4c 145-264
+src/test/resources/features/authorizationHeader.feature
+  h_aba7680b01ede6 137
+src/test/resources/features/errorResponse.feature
+  h_aba7680b01ede6 189,199
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  h_aba7680b01ede6 135,180,202,210,223-227,252-258,281-283
+src/main/java/jumper/model/config/JumperConfig.java
+  h_aba7680b01ede6 227-228,231-233,236
+  s_d48df882d39611::t_54183ac07b95c5 229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d24b4703cb92cae089e9915d0e1477e656e20f0d",
+  "prompts": {},
+  "humans": {
+    "h_aba7680b01ede6": {
+      "author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_d48df882d39611": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "41294e95-77de-4e2e-9216-aab6b5d2f071",
+        "model": "gpt-5.3-codex"
+      },
+      "human_author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  }
+}
