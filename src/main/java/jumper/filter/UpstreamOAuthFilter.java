@@ -172,9 +172,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
     Optional<OauthCredentials> oauthCredentials = jc.getOauthCredentials();
 
-    String clientId = determineClientId(builder, jc, oauthCredentials);
-    String clientSecret = determineClientSecret(builder, jc, oauthCredentials);
-    String clientScope = determineClientScope(builder, jc, oauthCredentials);
+    // Dropped for the whole legacy path, blank ones included: a blank header is ignored as an
+    // override below but still has to leave the request. Other paths must pass these on - in a mesh
+    // the proxy zone forwards them to the provider zone, which is where they are consumed.
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
+
+    String clientId = determineClientId(jc, oauthCredentials);
+    String clientSecret = determineClientSecret(jc, oauthCredentials);
+    String clientScope = determineClientScope(jc, oauthCredentials);
 
     log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
     if (StringUtils.isNotBlank(clientId) && StringUtils.isNotBlank(clientSecret)) {
@@ -213,16 +220,10 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private static String determineClientScope(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
+      JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
 
     String clientScope = "";
     String xSpacegateScope = jc.getXSpacegateScope();
-
-    // Jumper consumes this header, it must never reach the upstream - not even when it is blank
-    // and therefore ignored below.
-    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
 
     if (StringUtils.isNotBlank(xSpacegateScope)) {
       log.debug("Using Scope from xSpacegateScope-Header");
@@ -242,16 +243,10 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private static String determineClientSecret(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
+      JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
 
     String clientSecret = jc.getClientSecret();
     String xSpacegateClientSecret = jc.getXSpacegateClientSecret();
-
-    // Jumper consumes this header, it must never reach the upstream - not even when it is blank
-    // and therefore ignored below.
-    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
 
     // A blank header counts as absent, in line with determineClientId. Letting it shadow the
     // provider secret would produce a token request with an empty client_secret and an opaque 401.
@@ -271,16 +266,10 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private static String determineClientId(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
+      JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
 
     String clientId = jc.getClientId();
     String xSpacegateClientId = jc.getXSpacegateClientId();
-
-    // Jumper consumes this header, it must never reach the upstream - not even when it is blank
-    // and therefore ignored below.
-    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
 
     if (StringUtils.isNotBlank(xSpacegateClientId)) {
       log.debug("Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
