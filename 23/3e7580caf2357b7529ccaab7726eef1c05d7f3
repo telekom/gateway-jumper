@@ -1,0 +1,19 @@
+src/main/java/jumper/model/config/JumperConfig.java
+  s_411e2a85e2f16d::t_5a8532da345e1c 269-283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "233e7580caf2357b7529ccaab7726eef1c05d7f3",
+  "prompts": {},
+  "sessions": {
+    "s_411e2a85e2f16d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0513a80ecffeJRqc7P4qz90KU4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
