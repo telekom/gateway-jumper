@@ -1,0 +1,14 @@
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  h_aba7680b01ede6 175-180,182-184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "2bc4e93a2d00a3c9e469dcdc96b17cd793dba474",
+  "prompts": {},
+  "humans": {
+    "h_aba7680b01ede6": {
+      "author": "Elmar Meuthen <elmar.meuthen@telekom.de>"
+    }
+  }
+}
