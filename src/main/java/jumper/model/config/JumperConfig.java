@@ -292,10 +292,21 @@ public class JumperConfig {
       return Optional.empty();
     }
 
-    return defaultClaims.stream()
-        .filter(Objects::nonNull)
-        .filter(claim -> Constants.TOKEN_CLAIM_AUD.equals(claim.getKey()))
-        .findFirst();
+    List<ConfiguredClaim> audienceClaims =
+        defaultClaims.stream()
+            .filter(Objects::nonNull)
+            .filter(claim -> Constants.TOKEN_CLAIM_AUD.equals(claim.getKey()))
+            .toList();
+
+    // The control plane schema allows a single aud claim, so additional entries indicate config
+    // drift. The first entry still wins, so warn instead of failing an otherwise valid request.
+    if (audienceClaims.size() > 1) {
+      log.warn(
+          "Configured claims contain {} aud entries, only the first one is applied",
+          audienceClaims.size());
+    }
+
+    return audienceClaims.stream().findFirst();
   }
 
   @Data
