@@ -4,6 +4,7 @@
 
 package jumper.filter;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Objects;
 import java.util.Optional;
 import jumper.Constants;
@@ -35,18 +36,24 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   public static final int UPSTREAM_OAUTH_FILTER_ORDER = RequestFilter.REQUEST_FILTER_ORDER + 1;
 
+  private static final String METRIC_EXTERNAL_OAUTH_CONFIG_ERROR =
+      "jumper.external.oauth.config.error";
+
   private final TokenFetchService tokenFetchService;
   private final JumperConfigService jumperConfigService;
   private final TokenCacheService tokenCacheService;
+  private final MeterRegistry meterRegistry;
 
   public UpstreamOAuthFilter(
       TokenFetchService tokenFetchService,
       JumperConfigService jumperConfigService,
-      TokenCacheService tokenCacheService) {
+      TokenCacheService tokenCacheService,
+      MeterRegistry meterRegistry) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
     this.jumperConfigService = jumperConfigService;
     this.tokenCacheService = tokenCacheService;
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -122,6 +129,15 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           && StringUtils.isNotBlank(oauthCredentials.get().getGrantType())) {
         // Use OAuth credentials with explicit grant type (modern approach)
         log.debug("fetching token with OauthCredentials");
+        // This path builds the token request solely from the resolved credentials, there is no
+        // header fallback left. Reject an unusable config here instead of sending a token request
+        // without any client authentication, which the IdP answers with an opaque 401.
+        if (!oauthCredentials.get().canBuildTokenRequest()) {
+          return missingClientAuthError(
+              jumperConfig,
+              "need clientId plus one of clientSecret or clientKey, username+password, or"
+                  + " refreshToken");
+        }
         // Store token cache key in exchange for 4xx-based eviction
         String tokenCacheKey =
             tokenCacheService.generateTokenCacheKey(
@@ -156,12 +172,19 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
     Optional<OauthCredentials> oauthCredentials = jc.getOauthCredentials();
 
-    String clientId = determineClientId(builder, jc, oauthCredentials);
-    String clientSecret = determineClientSecret(builder, jc, oauthCredentials);
-    String clientScope = determineClientScope(builder, jc, oauthCredentials);
+    // Dropped for the whole legacy path, blank ones included: a blank header is ignored as an
+    // override below but still has to leave the request. Other paths must pass these on - in a mesh
+    // the proxy zone forwards them to the provider zone, which is where they are consumed.
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
+    HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
+
+    String clientId = determineClientId(jc, oauthCredentials);
+    String clientSecret = determineClientSecret(jc, oauthCredentials);
+    String clientScope = determineClientScope(jc, oauthCredentials);
 
     log.debug("Get token for consumer: {} with clientId: {}", consumer, clientId);
-    if (Objects.nonNull(clientId) && Objects.nonNull(clientSecret)) {
+    if (StringUtils.isNotBlank(clientId) && StringUtils.isNotBlank(clientSecret)) {
       // Store token cache key in exchange for 4xx-based eviction
       String tokenCacheKey =
           tokenCacheService.generateTokenCacheKey(
@@ -170,26 +193,41 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       return tokenFetchService.getAccessTokenWithClientCredentials(
           tokenEndpoint, clientId, clientSecret, clientScope);
     } else {
-      log.warn("not specified oauth config credentials for consumer: {}", consumer);
-      return Mono.error(
-          new ResponseStatusException(
-              HttpStatus.UNAUTHORIZED,
-              "Missing oauth config credentials for consumer " + consumer));
+      // The legacy path authenticates exclusively with clientId+clientSecret. Do not advertise
+      // mechanisms it ignores - those only work once a grantType selects the modern path.
+      return missingClientAuthError(
+          jc,
+          "need clientId+clientSecret; to authenticate with clientKey, username+password or"
+              + " refreshToken, set oauth.grantType");
     }
   }
 
+  private Mono<TokenInfo> missingClientAuthError(JumperConfig jc, String requirement) {
+    log.error(
+        "External IdP OAuth config incomplete for consumer '{}', tokenEndpoint '{}': no client"
+            + " authentication resolvable",
+        StringUtils.defaultIfBlank(jc.getConsumer(), "<none>"),
+        jc.getExternalTokenEndpoint());
+    meterRegistry
+        .counter(METRIC_EXTERNAL_OAUTH_CONFIG_ERROR, "reason", "missing_client_auth")
+        .increment();
+    return Mono.error(
+        new ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            "External IdP OAuth config incomplete: no client authentication resolvable ("
+                + requirement
+                + ")"));
+  }
+
   private static String determineClientScope(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
+      JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
 
     String clientScope = "";
     String xSpacegateScope = jc.getXSpacegateScope();
 
-    if (Objects.nonNull(xSpacegateScope)) {
+    if (StringUtils.isNotBlank(xSpacegateScope)) {
       log.debug("Using Scope from xSpacegateScope-Header");
       clientScope = xSpacegateScope;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_SCOPE);
 
     } else if (oauthCredentials.isPresent()
         && StringUtils.isNotBlank(oauthCredentials.get().getScopes())) {
@@ -205,17 +243,16 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private static String determineClientSecret(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
+      JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
 
     String clientSecret = jc.getClientSecret();
     String xSpacegateClientSecret = jc.getXSpacegateClientSecret();
 
-    if (Objects.nonNull(xSpacegateClientSecret)) {
+    // A blank header counts as absent, in line with determineClientId. Letting it shadow the
+    // provider secret would produce a token request with an empty client_secret and an opaque 401.
+    if (StringUtils.isNotBlank(xSpacegateClientSecret)) {
       log.debug("Using SubscriberClientSecret from xSpacegateClientSecret-Header");
       clientSecret = xSpacegateClientSecret;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_SECRET);
 
     } else if (oauthCredentials.isPresent()
         && StringUtils.isNotBlank(oauthCredentials.get().getClientSecret())) {
@@ -229,9 +266,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
   }
 
   private static String determineClientId(
-      ServerHttpRequest.Builder builder,
-      JumperConfig jc,
-      Optional<OauthCredentials> oauthCredentials) {
+      JumperConfig jc, Optional<OauthCredentials> oauthCredentials) {
 
     String clientId = jc.getClientId();
     String xSpacegateClientId = jc.getXSpacegateClientId();
@@ -239,7 +274,6 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
     if (StringUtils.isNotBlank(xSpacegateClientId)) {
       log.debug("Using SubscriberClientId {} from xSpacegateClientId-Header", xSpacegateClientId);
       clientId = xSpacegateClientId;
-      HeaderUtil.removeHeader(builder, Constants.HEADER_X_SPACEGATE_CLIENT_ID);
 
     } else if (oauthCredentials.isPresent()
         && StringUtils.isNotBlank(oauthCredentials.get().getClientId())) {

@@ -128,12 +128,14 @@ Feature: proper authorization token reaches provider endpoint
     And API consumer receives a 200 status code
 
   ################ external ################
-  Scenario: Consumer calls proxy route with jc with oauth, but client credentials not defined, consumer receives 401
+  Scenario: Consumer calls proxy route with jc with oauth, but client credentials not defined, consumer receives 400
     Given RealRoute headers are set
     And oauth tokenEndpoint set
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
-    And API consumer receives a 401 status code
+    And API consumer receives a 400 status code
+    And error response contains msg "External IdP OAuth config incomplete: no client authentication resolvable (need clientId+clientSecret; to authenticate with clientKey, username+password or refreshToken, set oauth.grantType)" error "Bad Request" status 400
+    And IDP token endpoint was called exactly 0 times
 
   Scenario: Consumer calls proxy route with jc with configured client_credentials grant type, external authorization token received with credentials provided via basic auth
     Given RealRoute headers are set
@@ -170,6 +172,16 @@ Feature: proper authorization token reaches provider endpoint
     And oauth tokenEndpoint set
     And jumperConfig oauth "provider grant_type client_credentials" set
     And IDP set to provide externalBasicAuthCredentials token
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+
+  Scenario: Consumer calls proxy route with jc with provider oauth and a scope only consumer entry, external authorization token requested with provider credentials and consumer scope
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "provider with consumer scope only" set
+    And IDP set to provide externalBasicAuthCredentialsConsumerScoped token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     Then API Provider receives authorization ExternalConfigured

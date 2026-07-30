@@ -216,6 +216,50 @@ public class JumperConfigUtil {
     }
   }
 
+  /**
+   * Provider "default" entry with full client credentials plus a consumer entry that carries
+   * nothing but scopes. The consumer scopes are expected to narrow the provider credentials.
+   */
+  public static String getJcOauthProviderWithConsumerScopeOnly(String id) {
+    HashMap<String, OauthCredentials> oauth = new HashMap<>();
+
+    OauthCredentials provider = new OauthCredentials();
+    provider.setClientId(addIdSuffix(CONSUMER_EXTERNAL_CONFIGURED, id));
+    provider.setClientSecret("secret");
+    provider.setScopes(OAUTH_SCOPE_CONFIGURED);
+    provider.setGrantType("client_credentials");
+    provider.setTokenRequest("HEADER");
+    oauth.put(Constants.OAUTH_PROVIDER_KEY, provider);
+
+    OauthCredentials consumer = new OauthCredentials();
+    consumer.setScopes(OAUTH_SCOPE_CONSUMER);
+    consumer.setGrantType("client_credentials");
+    consumer.setTokenRequest("HEADER");
+    oauth.put(CONSUMER, consumer);
+
+    JumperConfig jc = new JumperConfig();
+    jc.setOauth(oauth);
+    return toJsonBase64(jc);
+  }
+
+  /**
+   * Misconfiguration: the consumer entry selects the grantType based token path but carries no
+   * client authentication at all, so no token request can be built from it.
+   */
+  public static String getJcOauthConsumerWithoutClientAuth() {
+    HashMap<String, OauthCredentials> oauth = new HashMap<>();
+
+    OauthCredentials consumer = new OauthCredentials();
+    consumer.setGrantType("client_credentials");
+    consumer.setTokenRequest("HEADER");
+    consumer.setScopes(OAUTH_SCOPE_CONFIGURED);
+    oauth.put(CONSUMER, consumer);
+
+    JumperConfig jc = new JumperConfig();
+    jc.setOauth(oauth);
+    return toJsonBase64(jc);
+  }
+
   public enum KeyType {
     WEAK,
     SECURE,

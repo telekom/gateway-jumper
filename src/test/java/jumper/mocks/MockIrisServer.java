@@ -185,6 +185,30 @@ public class MockIrisServer {
                     .withFixedDelay(1000)));
   }
 
+  public void createExpectationExternalBasicAuthCredentialsConsumerScoped(String id) {
+
+    String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
+
+    server.stubFor(
+        post(urlPathEqualTo("/external"))
+            .withRequestBody(equalTo("scope=scope_consumer&grant_type=client_credentials"))
+            .withHeader(
+                "Authorization",
+                equalTo(
+                    "Basic "
+                        + Base64.getEncoder()
+                            .encodeToString(
+                                (addIdSuffix("external_configured", id) + ":" + "secret")
+                                    .getBytes())))
+            .willReturn(
+                aResponse()
+                    .withStatus(responseCode)
+                    .withHeader("Content-Type", "application/json; charset=utf-8")
+                    .withHeader("Cache-Control", "no-store")
+                    .withBody(tokenInfoJson)
+                    .withFixedDelay(1000)));
+  }
+
   public void createExpectationExternalTokenFromUsernamePassword(String id) {
 
     String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
