@@ -1,0 +1,24 @@
+.github/workflows/update-base-image.yml
+  s_822fa9f8456c81::t_71862215acb403 18-25,44,50,52-65,67,72,75,100-102,104-124,137-138,144-147
+  s_822fa9f8456c81::t_cae8c42bef334c 148
+.github/workflows/build.yml
+  s_822fa9f8456c81::t_71862215acb403 7-21,32,45,54,97-101,105-110,129-131,144,149-152,155,158-316,320-364
+.github/workflows/ort.yml
+  s_822fa9f8456c81::t_71862215acb403 8,12-17,24-25,48,51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "c53816ce62b18f0c2a8b80455387d77a17c0af3d",
+  "prompts": {},
+  "sessions": {
+    "s_822fa9f8456c81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_04d23b05bffeOLviIapZHC3zhW",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}

@@ -1,0 +1,57 @@
+.github/workflows/release.yml
+  s_9edc7158335626::t_b006eebccc0302 210,216-217,221-222
+  s_9edc7158335626::t_e9c73e0b7a9bca 17-19
+  s_69421a9572ef01::t_2e3e5aade0031e 7-16,20-32,34,36-37,39-47,50-51,54-55,58-59,61,64,67-86,89,96-138,140-141,143-145,147-148,150-175,177-179,184,186,206-209,211-215,218-220,223-307,310-332,335,337-338,342,344-346,355
+  s_9edc7158335626::t_12b0f36c0bba59 176,180-183,185,187-205
+.github/workflows/build.yml
+  s_9edc7158335626::t_21e40adf29dcd0 82-86
+  s_69421a9572ef01::t_2e3e5aade0031e 10,25,30-36,42-43,57-58,69-70,79-81,87,89-90,102-103,105-106,110-116,122,125-141
+  s_9edc7158335626::t_992b324d715fae 11-12,17-18
+release.config.js
+  s_9edc7158335626::t_dfee8dd047b7c4 12-14
+  s_69421a9572ef01::t_2e3e5aade0031e 6-11,15-18
+.github/workflows/ort.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 7-11,24-25,48,51
+.github/workflows/update-base-image.yml
+  s_9edc7158335626::t_78c9231aa0a171 18-22
+  s_9edc7158335626::t_ad4530a064525a 149-150,155-159
+  s_9edc7158335626::t_a80ca3d2dd0a9a 23,25
+  s_9edc7158335626::t_98c949f01a8f40 24
+  s_9edc7158335626::t_84b9dbbd2abdeb 67
+  s_69421a9572ef01::t_2e3e5aade0031e 1-17,26-66,68-105,137-148,151-154,160-162
+  s_9edc7158335626::t_393a30746fc9fa 106-136
+.github/actions/registry-login/action.yml
+  s_9edc7158335626::t_5eb63e68f890f1 29
+  s_69421a9572ef01::t_2e3e5aade0031e 1-28,30-40
+.github/workflows/reuse.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 14
+README.md
+  s_69421a9572ef01::t_2e3e5aade0031e 68-106,110-114,146-148
+  s_9edc7158335626::t_a09b535a9e0807 107-109
+pom.xml
+  s_69421a9572ef01::t_2e3e5aade0031e 36-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "0ead6c1a6dcd02fa649d3af93320caf6fcff9fd0",
+  "prompts": {},
+  "sessions": {
+    "s_69421a9572ef01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052c63c7affeuGT1OoWoOlpfH5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    },
+    "s_9edc7158335626": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052576e52ffeT6mN81VXjkZCIS",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}

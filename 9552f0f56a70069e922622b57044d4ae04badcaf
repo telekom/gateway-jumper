@@ -1,0 +1,59 @@
+README.md
+  s_9edc7158335626::t_a09b535a9e0807 107-109
+  s_69421a9572ef01::t_2e3e5aade0031e 68-106,110-114,146-148
+pom.xml
+  s_69421a9572ef01::t_2e3e5aade0031e 36-46
+release.config.js
+  s_69421a9572ef01::t_2e3e5aade0031e 6-11,15-18
+  s_9edc7158335626::t_dfee8dd047b7c4 12-14
+.github/workflows/release.yml
+  s_9edc7158335626::t_12b0f36c0bba59 135,139-142,144,146-164
+  s_9edc7158335626::t_b006eebccc0302 169,175-176,180-181
+  s_9edc7158335626::t_e9c73e0b7a9bca 17-19
+  s_69421a9572ef01::t_2e3e5aade0031e 7-16,20-32,34,36-37,39-47,50-51,54-55,58-59,61,64,67-86,89,96-97,99-100,102-104,106-107,109-110,112-134,136-138,143,145,165-168,170-174,177-179,182-225,227-228,230,232-237,239-262,264-266,269-291
+  s_9edc7158335626::t_89ac1825e41949 292
+.github/workflows/update-base-image.yml
+  s_9edc7158335626::t_84b9dbbd2abdeb 67
+  s_9edc7158335626::t_393a30746fc9fa 106-136
+  s_9edc7158335626::t_ad4530a064525a 149-150,155-159
+  s_69421a9572ef01::t_2e3e5aade0031e 1-17,26-66,68-105,137-148,151-154,160-162
+  s_9edc7158335626::t_78c9231aa0a171 18-22
+  s_9edc7158335626::t_a80ca3d2dd0a9a 23,25
+  s_9edc7158335626::t_98c949f01a8f40 24
+.github/workflows/build.yml
+  s_9edc7158335626::t_992b324d715fae 11-12,17-18
+  s_9edc7158335626::t_21e40adf29dcd0 82-86
+  s_69421a9572ef01::t_2e3e5aade0031e 10,25,30-36,42-43,57-58,69-70,79-81,87,89-90,102-103,105-106,110-116,122,125-140
+.github/workflows/ort.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 7-9
+  s_9edc7158335626::t_a9c323c9eff598 12-17
+.github/actions/registry-login/action.yml
+  s_9edc7158335626::t_5eb63e68f890f1 29
+  s_69421a9572ef01::t_2e3e5aade0031e 1-28,30-40
+.github/workflows/reuse.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "9552f0f56a70069e922622b57044d4ae04badcaf",
+  "prompts": {},
+  "sessions": {
+    "s_69421a9572ef01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052c63c7affeuGT1OoWoOlpfH5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    },
+    "s_9edc7158335626": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052576e52ffeT6mN81VXjkZCIS",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}

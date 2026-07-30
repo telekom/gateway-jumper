@@ -1,0 +1,44 @@
+pom.xml
+  s_69421a9572ef01::t_2e3e5aade0031e 36-46
+.github/workflows/reuse.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 14
+.github/workflows/build.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 10,12,19,24-30,36-37,51-52,63-64,73-76,78-79,91-92,94-95,99-105,111,114-130
+.github/workflows/ort.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 7-11,24-25,48,51
+.github/actions/registry-login/action.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 1-44
+README.md
+  s_69421a9572ef01::t_2e3e5aade0031e 68-112,144-146
+.github/workflows/update-base-image.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 1-17,23-138
+  s_9edc7158335626::t_98c949f01a8f40 18-22
+.github/workflows/release.yml
+  s_69421a9572ef01::t_2e3e5aade0031e 7-31,33,35-36,38-46,49-50,53-54,57-58,60,63,66-85,88,95-137,139-140,142-144,146-147,149-288,291-313,316,318-319,323,325-327,336
+release.config.js
+  s_69421a9572ef01::t_2e3e5aade0031e 6-17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "61054293d8cb644bb634d7f86e2885753220bbb4",
+  "prompts": {},
+  "sessions": {
+    "s_69421a9572ef01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052c63c7affeuGT1OoWoOlpfH5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    },
+    "s_9edc7158335626": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052576e52ffeT6mN81VXjkZCIS",
+        "model": "claude-opus-5"
+      },
+      "human_author": null
+    }
+  }
+}

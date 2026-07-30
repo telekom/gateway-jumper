@@ -1,0 +1,25 @@
+.github/workflows/build.yml
+  s_87ab34ff31c2d8::t_627efec25f492d 174,370
+package.json
+  s_87ab34ff31c2d8::t_a61929972ae435 9
+release.config.js
+  s_87ab34ff31c2d8::t_a61929972ae435 54-60
+package-lock.json
+  s_87ab34ff31c2d8::t_a5565a74b07dc0 10,293-378
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "21377407bcb3adf4891c76f8b51b2f068659565d",
+  "prompts": {},
+  "sessions": {
+    "s_87ab34ff31c2d8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_056e7bdb3ffeqhknquuiwdDprJ",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}

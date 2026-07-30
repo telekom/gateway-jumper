@@ -1,0 +1,19 @@
+README.md
+  s_69421a9572ef01::t_b7afebc17bfc58 619-620
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "1fb5000ce4b8a40eeaa4c33b25cf758acffb5022",
+  "prompts": {},
+  "sessions": {
+    "s_69421a9572ef01": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052c63c7affeuGT1OoWoOlpfH5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}

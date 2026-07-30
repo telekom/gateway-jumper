@@ -1,0 +1,23 @@
+test/release/release-graph.test.js
+  s_87ab34ff31c2d8::t_ecf982e0fc0465 13
+  s_87ab34ff31c2d8::t_842d56800e2a15 14-25
+release.config.js
+  s_87ab34ff31c2d8::t_842d56800e2a15 62-69
+  s_87ab34ff31c2d8::t_ecf982e0fc0465 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "cb067eafb21f597517a6affe2d8f2afb12e438a3",
+  "prompts": {},
+  "sessions": {
+    "s_87ab34ff31c2d8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_056e7bdb3ffeqhknquuiwdDprJ",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
