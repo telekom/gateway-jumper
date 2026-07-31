@@ -19,6 +19,7 @@ public class Config {
   public static final String ENVIRONMENT = "localEnv";
   public static final String ENVIRONMENT_REMOTE = "remoteEnv";
   public static final String REALM = "default";
+  public static final String NON_DEFAULT_REALM = "sit";
   public static final String BASE_PATH = "/eni/test/v1";
   public static final String LOCAL_ISSUER = "https://iris.local:1234/auth/realms/default";
   public static final String REMOTE_ISSUER = "https://iris.remote:1234/auth/realms/default";

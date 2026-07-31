@@ -37,6 +37,25 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithXtokenExchange(baseSteps));
   }
 
+  @Given("ProxyRoute headers are set with legacy issuer")
+  public void proxyRouteHeadersSetWithLegacyIssuer() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersLegacyIssuer(baseSteps));
+  }
+
+  @Given("ProxyRoute headers are set with realm header")
+  public void proxyRouteHeadersSetWithRealmHeader() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeadersWithRealmHeader(baseSteps));
+  }
+
+  @Given("ProxyRoute headers are set with legacy issuer for non-default realm")
+  public void proxyRouteHeadersSetWithLegacyIssuerForNonDefaultRealm() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        TokenUtil.getProxyRouteHeadersLegacyIssuerWithNonDefaultRealm(baseSteps));
+  }
+
   @Given("A header {word} is set with value {word}")
   public void tardisTraceIdSet(String headerName, String headerValue) {
     baseSteps.setHttpHeadersOfRequest(
@@ -94,6 +113,27 @@ public class HeaderSteps {
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getProxyRouteHeaders(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set with legacy issuer")
+  public void proxyRoutingConfigHeaderSetWithLegacyIssuer() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getProxyRouteHeadersLegacyIssuer(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set with realm header")
+  public void proxyRoutingConfigHeaderSetWithRealmHeader() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getProxyRouteHeadersWithRealmHeader(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set with legacy issuer for non-default realm")
+  public void proxyRoutingConfigHeaderSetWithLegacyIssuerForNonDefaultRealm() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getProxyRouteHeadersLegacyIssuerWithNonDefaultRealm(baseSteps));
   }
 
   @Given("RealRoute headers without Authorization are set")
