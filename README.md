@@ -88,7 +88,7 @@ Versions follow the default semantic-release rules with the [Conventional Commit
 A change that belongs in both lines goes into `main` first and is forward-ported to `next` afterwards. This ensures that stable always receives
 all features and fixes and nothing stays only on `next`.
 
-Rebase `next` onto `main` after a stable release rather than letting the branches drift. This will publish a release candidate containing the fix.
+Merge `main` into `next` after a stable release rather than letting the branches drift. This will publish a release candidate containing the fix. Merge rather than rebase: `next` is protected and its release candidates are already published, so its history cannot be rewritten.
 
 ### Image tagging strategy
 
