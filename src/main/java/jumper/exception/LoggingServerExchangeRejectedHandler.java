@@ -40,12 +40,17 @@ public class LoggingServerExchangeRejectedHandler implements ServerExchangeRejec
   /** Span tag holding the (sanitized) firewall rejection reason. */
   public static final String SPAN_TAG_REASON = "firewall.rejection.reason";
 
+  /** Marker appended to values truncated at {@link #MAX_VALUE_LENGTH}. */
+  static final String TRUNCATION_MARKER = "…(truncated)";
+
+  /** Cap for client-controlled values; the firewall message prefix is ~60 characters. */
+  static final int MAX_VALUE_LENGTH = 256;
+
   private final Tracer tracer;
   private final ServerExchangeRejectedHandler delegate;
 
   public LoggingServerExchangeRejectedHandler(Tracer tracer) {
-    // Default status of HttpStatusExchangeRejectedHandler is 400 BAD_REQUEST; delegating keeps the
-    // response contract identical to the Spring Security default.
+    // HttpStatusExchangeRejectedHandler defaults to 400, matching Spring Security's behaviour
     this(tracer, new HttpStatusExchangeRejectedHandler());
   }
 
@@ -86,29 +91,38 @@ public class LoggingServerExchangeRejectedHandler implements ServerExchangeRejec
   }
 
   /**
-   * Escapes ISO control characters so client-controlled content cannot forge log lines or break
-   * span attributes.
+   * Truncates and escapes a client-controlled value for logging and span tagging.
    *
-   * @param value the raw, potentially client-controlled value
-   * @return the value with every control character replaced by its {@code \\uXXXX} escape
+   * <p>The cap matters because the firewall embeds the offending header or parameter verbatim and
+   * Netty accepts up to 8 KB of it. Escaping control characters is defense in depth; the structured
+   * console, OTLP and Zipkin encoders already escape them.
    */
   private static String sanitize(String value) {
     if (Objects.isNull(value)) {
       return "";
     }
 
-    StringBuilder sanitized = new StringBuilder(value.length());
-    value
-        .codePoints()
-        .forEach(
-            codePoint -> {
-              if (Character.isISOControl(codePoint)) {
-                sanitized.append(String.format("\\u%04x", codePoint));
-              } else {
-                sanitized.appendCodePoint(codePoint);
-              }
-            });
+    boolean truncated = value.length() > MAX_VALUE_LENGTH;
+    String capped = truncated ? value.substring(0, MAX_VALUE_LENGTH) : value;
 
-    return sanitized.toString();
+    // a lone surrogate left by the cut is not encodable as UTF-8, which OTLP requires
+    if (truncated
+        && !capped.isEmpty()
+        && Character.isHighSurrogate(capped.charAt(capped.length() - 1))) {
+      capped = capped.substring(0, capped.length() - 1);
+    }
+
+    // isISOControl only matches BMP code points, so iterating chars is sufficient
+    StringBuilder escaped = new StringBuilder(capped.length());
+    for (int i = 0; i < capped.length(); i++) {
+      char character = capped.charAt(i);
+      if (Character.isISOControl(character)) {
+        escaped.append(String.format("\\u%04x", (int) character));
+      } else {
+        escaped.append(character);
+      }
+    }
+
+    return truncated ? escaped.append(TRUNCATION_MARKER).toString() : escaped.toString();
   }
 }
