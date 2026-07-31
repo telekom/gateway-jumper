@@ -32,7 +32,7 @@ SPDX-License-Identifier: Apache-2.0
 		<wiremock-jetty.version>12.1.11</wiremock-jetty.version>
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
-		<jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
+		<jib-maven-plugin.version>3.5.2</jib-maven-plugin.version>
 		<!--
 			Base image, pinned by digest so that every build - including a rebuild of an
 			older commit - resolves to exactly the same base. The floating tag is kept
