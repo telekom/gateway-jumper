@@ -1,0 +1,53 @@
+src/test/java/jumper/util/JumperConfigUtil.java
+  s_9edc7158335626::t_d86630bb6775cc 29-34
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  s_9edc7158335626::t_d86630bb6775cc 16,22,32,42,46-48,51,56,82,111-138
+src/test/java/jumper/VerificationSteps.java
+  s_9edc7158335626::t_d86630bb6775cc 174,176-183,300-309,312-314,316-325
+src/test/java/jumper/HeaderSteps.java
+  s_9edc7158335626::t_d86630bb6775cc 40-58,118-137
+  s_9edc7158335626::t_6937e2ec14a5ae 138
+src/test/java/jumper/util/TokenUtil.java
+  s_9edc7158335626::t_d86630bb6775cc 64-89,100-101,105-106
+src/test/resources/features/failover.feature
+  s_9edc7158335626::t_d86630bb6775cc 56-77
+src/test/resources/features/authorizationHeader.feature
+  s_9edc7158335626::t_d86630bb6775cc 77,87-113,297
+src/test/java/jumper/util/RoutingConfigUtil.java
+  s_9edc7158335626::t_d86630bb6775cc 22-23,31-32,39-57,61-72,74,77,79,82,84-89,92-93,96-112,118-133
+src/main/java/jumper/service/TokenGeneratorService.java
+  s_9edc7158335626::t_d86630bb6775cc 87-102,115,122,127-128,169-179
+src/test/java/jumper/service/TokenGeneratorServiceTest.java
+  s_9edc7158335626::t_d86630bb6775cc 82,117,134,171,227,230
+README.md
+  s_9edc7158335626::t_d86630bb6775cc 228,230-233,259,261,268,273-274,277
+src/test/java/jumper/config/Config.java
+  s_9edc7158335626::t_d86630bb6775cc 22
+src/main/java/jumper/model/config/JumperConfig.java
+  s_9edc7158335626::t_d86630bb6775cc 7,53-55,135,185,224-252
+  s_9edc7158335626::t_e2f5fc4db58f99 253
+src/test/java/jumper/model/config/JumperConfigTest.java
+  s_9edc7158335626::t_d86630bb6775cc 1-108
+src/main/java/jumper/filter/RequestFilter.java
+  s_9edc7158335626::t_d86630bb6775cc 82,109
+src/test/resources/features/xTokenExchange.feature
+  s_9edc7158335626::t_d86630bb6775cc 33,74
+src/test/resources/features/upstreamContent.feature
+  s_9edc7158335626::t_d86630bb6775cc 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "b45081a2f2d40724c93608d627778dc3ea13438c",
+  "prompts": {},
+  "sessions": {
+    "s_9edc7158335626": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052576e52ffeT6mN81VXjkZCIS",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
