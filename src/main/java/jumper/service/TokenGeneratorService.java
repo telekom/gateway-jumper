@@ -10,11 +10,13 @@ import java.security.interfaces.RSAKey;
 import java.util.*;
 import jumper.Constants;
 import jumper.model.config.JumperConfig;
+import jumper.model.config.JumperConfig.ConfiguredClaim;
 import jumper.model.config.KeyInfo;
 import jumper.util.OauthTokenUtil;
 import jumper.util.RsaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -101,6 +103,8 @@ public class TokenGeneratorService {
       String publisherId,
       String subscriberId) {
 
+    String configuredAudience = resolveConfiguredAudience(jc);
+
     Jwt<?, Claims> authorizationTokenClaims =
         OauthTokenUtil.getAllClaimsFromToken(jc.getAuthorizationToken());
 
@@ -145,7 +149,11 @@ public class TokenGeneratorService {
     // A lone audience uses .single(...) rather than .add(...): jjwt only collapses the aud claim
     // to a plain JSON string (matching pre-migration wire format) via .single(...); .add(...)
     // always emits a JSON array, even when adding just one element.
-    if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
+    // Provider audience precedence: configured audience, incoming token audiences, then the
+    // subscriberId fallback used by pub/sub calls.
+    if (Objects.nonNull(configuredAudience)) {
+      claims.audience().single(configuredAudience);
+    } else if (Objects.nonNull(audiences) && !audiences.isEmpty()) {
       if (audiences.size() == 1) {
         claims.audience().single(audiences.iterator().next());
       } else {
@@ -177,6 +185,50 @@ public class TokenGeneratorService {
    */
   public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
     return generateLmsToken(jc, "gateway", operation, issuer, null, null);
+  }
+
+  /**
+   * Resolves the provider-configured {@code aud} claim, if any.
+   *
+   * <p>Returns {@code null} when the provider configured no audience, in which case the incoming
+   * token's audiences and then the pub/sub {@code subscriberId} act as fallbacks.
+   *
+   * <p>{@code valueFrom: ConsumerClientId} resolves from {@link JumperConfig#getConsumer()}, which
+   * is derived from the incoming {@code Authorization} token. This is the original consumer's
+   * client id on every path, including the provider-side hop of a mesh call, where Kong restores
+   * the forwarded {@code consumer-token} into {@code Authorization} before invoking Jumper.
+   */
+  private static String resolveConfiguredAudience(JumperConfig jc) {
+    Optional<ConfiguredClaim> configuredClaim = jc.getConfiguredAudienceClaim();
+    if (configuredClaim.isEmpty()) {
+      return null;
+    }
+
+    ConfiguredClaim claim = configuredClaim.get();
+    boolean hasValue = Objects.nonNull(claim.getValue());
+    boolean hasValueFrom = Objects.nonNull(claim.getValueFrom());
+    if (hasValue == hasValueFrom) {
+      throw invalidAudienceConfiguration("exactly one of value or valueFrom must be set");
+    }
+    if (hasValue) {
+      if (StringUtils.isBlank(claim.getValue())) {
+        throw invalidAudienceConfiguration("value must not be blank");
+      }
+      return claim.getValue();
+    }
+    if (!Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID.equals(claim.getValueFrom())) {
+      throw invalidAudienceConfiguration("unsupported valueFrom");
+    }
+    if (StringUtils.isBlank(jc.getConsumer())) {
+      throw invalidAudienceConfiguration("ConsumerClientId could not be resolved");
+    }
+    return jc.getConsumer();
+  }
+
+  private static ResponseStatusException invalidAudienceConfiguration(String reason) {
+    log.error("Invalid aud claim configuration: {}", reason);
+    return new ResponseStatusException(
+        HttpStatus.INTERNAL_SERVER_ERROR, "Invalid aud claim configuration: " + reason);
   }
 
   public String generateGatewayTokenForPublisher(String issuer, String realm) {

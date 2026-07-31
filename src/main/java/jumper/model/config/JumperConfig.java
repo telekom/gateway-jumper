@@ -16,6 +16,7 @@ import jumper.util.LoadBalancingUtil;
 import jumper.util.OauthTokenUtil;
 import jumper.util.ObjectMapperUtil;
 import lombok.Data;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -29,6 +30,7 @@ public class JumperConfig {
 
   private HashMap<String, OauthCredentials> oauth;
   private HashMap<String, BasicAuthCredentials> basicAuth;
+  private HashMap<String, List<ConfiguredClaim>> claims;
   private HashMap<String, RouteListener> routeListener;
   private List<String> removeHeaders;
   private GatewayClient gatewayClient;
@@ -40,14 +42,16 @@ public class JumperConfig {
   String consumer;
   String consumerOriginStargate;
   String consumerOriginZone;
-  String authorizationToken;
+
+  @ToString.Exclude String authorizationToken;
   String externalTokenEndpoint;
 
   @JsonProperty("issuer")
   String internalTokenEndpoint;
 
   String clientId;
-  String clientSecret;
+
+  @ToString.Exclude String clientSecret;
   Boolean accessTokenForwarding;
 
   // Mesh-route discriminator set by the control plane in the jumper_config / routing_config blob.
@@ -62,7 +66,8 @@ public class JumperConfig {
   String envName;
 
   String xSpacegateClientId;
-  String xSpacegateClientSecret;
+
+  @ToString.Exclude String xSpacegateClientSecret;
   String xSpacegateScope;
 
   // calculated routing stuff within requestFilter
@@ -252,36 +257,94 @@ public class JumperConfig {
   }
 
   public Optional<BasicAuthCredentials> getBasicAuthCredentials() {
-    if (Objects.nonNull(getBasicAuth())) {
-
-      if (getBasicAuth().containsKey(getConsumer())) {
-        return Optional.of(getBasicAuth().get(getConsumer()));
-      }
-
-      if (getBasicAuth().containsKey(Constants.BASIC_AUTH_PROVIDER_KEY)) {
-        return Optional.of(getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY));
-      }
+    if (Objects.isNull(getBasicAuth())) {
+      return Optional.empty();
     }
 
-    return Optional.empty();
+    BasicAuthCredentials consumerEntry = getBasicAuth().get(getConsumer());
+    if (Objects.nonNull(consumerEntry)) {
+      return Optional.of(consumerEntry);
+    }
+
+    return Optional.ofNullable(getBasicAuth().get(Constants.BASIC_AUTH_PROVIDER_KEY));
   }
 
   public Optional<OauthCredentials> getOauthCredentials() {
-    if (Objects.nonNull(getOauth())) {
-      if (getOauth().containsKey(getConsumer())) {
-        return Optional.of(getOauth().get(getConsumer()));
-      }
-
-      if (getOauth().containsKey(Constants.OAUTH_PROVIDER_KEY)) {
-        return Optional.of(getOauth().get(Constants.OAUTH_PROVIDER_KEY));
-      }
+    if (Objects.isNull(getOauth())) {
+      return Optional.empty();
     }
 
-    return Optional.empty();
+    OauthCredentials consumerEntry = getOauth().get(getConsumer());
+    OauthCredentials providerDefault = getOauth().get(Constants.OAUTH_PROVIDER_KEY);
+
+    if (Objects.isNull(consumerEntry)) {
+      return Optional.ofNullable(providerDefault);
+    }
+
+    return Optional.of(applyScopeOnlyOverride(consumerEntry, providerDefault));
+  }
+
+  /**
+   * A consumer entry that carries nothing but scopes cannot request a token on its own. In that
+   * case the provider's credentials are used together with the consumer's scopes, so that a
+   * subscription can narrow the scopes of the provider's external identity provider configuration.
+   *
+   * <p>The override is only applied when consumer and provider entry agree on whether a grantType
+   * is present, because that flag decides which token path {@code UpstreamOAuthFilter} takes. Never
+   * switching the path keeps the {@code X-Spacegate-*} header precedence of the legacy path intact.
+   */
+  private OauthCredentials applyScopeOnlyOverride(
+      OauthCredentials consumerEntry, OauthCredentials providerDefault) {
+
+    if (consumerEntry.hasAnyCredentialField()
+        || StringUtils.isBlank(consumerEntry.getScopes())
+        || Objects.isNull(providerDefault)
+        || StringUtils.isBlank(consumerEntry.getGrantType())
+        || StringUtils.isBlank(providerDefault.getGrantType())) {
+      return consumerEntry;
+    }
+
+    return providerDefault.copyWithScopes(consumerEntry.getScopes());
   }
 
   public String getSecurityScopes() {
     Optional<OauthCredentials> oauthCredentials = getOauthCredentials();
     return oauthCredentials.map(OauthCredentials::getScopes).orElse(null);
+  }
+
+  @JsonIgnore
+  public Optional<ConfiguredClaim> getConfiguredAudienceClaim() {
+    if (Objects.isNull(claims)) {
+      return Optional.empty();
+    }
+
+    List<ConfiguredClaim> defaultClaims = claims.get(Constants.CLAIMS_DEFAULT_KEY);
+    if (Objects.isNull(defaultClaims)) {
+      return Optional.empty();
+    }
+
+    List<ConfiguredClaim> audienceClaims =
+        defaultClaims.stream()
+            .filter(Objects::nonNull)
+            .filter(claim -> Constants.TOKEN_CLAIM_AUD.equals(claim.getKey()))
+            .toList();
+
+    // The control plane schema allows a single aud claim, so additional entries indicate config
+    // drift. The first entry still wins, so warn instead of failing an otherwise valid request.
+    if (audienceClaims.size() > 1) {
+      log.warn(
+          "Configured claims contain {} aud entries, only the first one is applied",
+          audienceClaims.size());
+    }
+
+    return audienceClaims.stream().findFirst();
+  }
+
+  @Data
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public static class ConfiguredClaim {
+    private String key;
+    private String value;
+    private String valueFrom;
   }
 }

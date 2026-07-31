@@ -33,7 +33,17 @@ SPDX-License-Identifier: Apache-2.0
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
 		<jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
-		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot</jib.base-image>
+		<!--
+			Base image, pinned by digest so that every build - including a rebuild of an
+			older commit - resolves to exactly the same base. The floating tag is kept
+			alongside the digest purely so the reference stays readable and so the
+			"Update base image" workflow knows which tag to re-resolve; Jib pulls by digest
+			whenever one is present. Distroless publishes no minor or patch tags, so a
+			digest is the only precise pin available.
+			Do not edit by hand: the .github/workflows/update-base-image.yml workflow
+			raises a pull request whenever the tag resolves to a new digest.
+		-->
+		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot@sha256:9ccf2b8bce700d9f450523e2055afabe4d4ee795e6d69a0647a2dcd6e180e411</jib.base-image>
 	</properties>
 
 	<dependencyManagement>

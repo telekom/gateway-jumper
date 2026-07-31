@@ -65,6 +65,57 @@ This project has adopted the [Contributor Covenant](https://www.contributor-cove
 
 By participating in this project, you agree to abide by its Code of Conduct at all times.
 
+## Releases
+
+> [!NOTE]  
+> This section describes the release flow in this repo. It is only relevant if you are a maintainer of the project.
+
+Releases are automatic. Every push to a release branch is validated, and if the commits since the last release warrant one, a version is published without any manual trigger.
+
+### Branch roles
+
+| Branch | Publishes | Example version |
+| --- | --- | --- |
+| `main` | Stable versions | `4.12.3` |
+| `next` | Release candidates, on the `next` channel | `5.0.0-rc.1` |
+
+`main` is the default branch and produces stable releases. `next` is the release-candidate line: it exists whenever a change requires validation in a customer-facing environment before it is promoted to stable. Once that version is promoted into `main`, `next` is deleted, and it is recreated from `main` when a future prerelease line is needed.
+
+Versions are calculated from [Conventional Commits](https://www.conventionalcommits.org/). Every accepted type releases something, so a docs-only or dependency-only merge still publishes a patch version.
+
+### Which branch a change goes to
+
+A change that belongs in both lines goes into `main` first and is forward-ported to `next` afterwards. This ensures that stable always receives
+all features and fixes and nothing stays only on `next`.
+
+Rebase `next` onto `main` after a stable release rather than letting the branches drift. This will publish a release candidate containing the fix.
+
+### Image tagging strategy
+
+For each released version the pipeline builds an image tagged with that version, scans the image, signs it, then creates the Git tag and GitHub release.
+
+CI ensures that exact version tags such as `4.12.3` and `5.0.0-rc.1` are immutable. The floating `latest` and `next` tags track the newest stable release and the newest release candidate respectively.
+
+Pull requests build a preview image tagged `pr-<number>-<branch>`. It is built and signed the same way a release is.
+
+Pull requests from forks do not build a preview image, because GitHub withholds registry credentials from them. If you need to deploy such a change, merge it to next and deploy the resulting RC image.
+
+### Where each artifact may be deployed
+
+This is a convention, not a hard rule:
+
+| Artifact | Example tag | Signed | Internal environments | Customer-facing environments | Production |
+| --- | --- | --- | --- | --- | --- |
+| Pull request preview | `pr-42-my-branch` | Yes | Yes | No | No |
+| Release candidate | `5.0.0-rc.1` | Yes | Yes | Yes | No |
+| Stable release | `4.12.3` | Yes | Yes | Yes | Yes |
+
+A preview image exists so a change can be tried before it is merged. A release candidate is built from code already merged to `next`, so it can carry customer-facing traffic. Only a stable release should go to production.
+
+### Completing an interrupted release
+
+If a release run fails, re-run it. If it failed before the image was pushed, the re-run builds normally. If it failed after the image was pushed, the re-run verifies the existing digest's signature and scan, skips the build, and finishes creating the Git tag and GitHub release.
+
 ## Licensing
 
 This project follows the [REUSE standard for software licensing](https://reuse.software/).
@@ -96,7 +147,9 @@ This builds the image and loads it into your local Docker daemon as `jumper`.
 
 #### Customizing the Base Image
 
-The default base image is `gcr.io/distroless/java21-debian12:nonroot`. To override it:
+The base image is pinned by digest in the `jib.base-image` property of `pom.xml`, so every build resolves the same base. A scheduled workflow raises a pull request whenever that tag resolves to a new digest, so do not edit the property by hand.
+
+To build against a different base locally:
 
 ```bash
 ./mvnw jib:dockerBuild -Djib.from.image=<your-preferred-base-image>
@@ -187,6 +240,30 @@ The most common scenario where Jumper creates a new OAuth token by combining inf
 
 **Outgoing Headers:**
 * `Authorization` - Contains the newly created token
+
+##### Audience claim
+
+Providers can configure one audience for the provider-facing token through `jumper_config`:
+
+```json
+{
+  "claims": {
+    "default": [
+      { "key": "aud", "value": "checkout-api" }
+    ]
+  }
+}
+```
+
+The audience can be a literal `value` or use `valueFrom: "ConsumerClientId"`, which resolves to
+the incoming token's `clientId`. Exactly one of `value` or `valueFrom` must be set. Invalid `aud`
+configuration fails provider-token generation with an HTTP 500 response.
+
+Provider-token audience precedence is:
+
+1. The configured provider audience.
+2. Audience values from the incoming token.
+3. The `x-pubsub-subscriber-id` fallback for pub/sub calls.
 
 #### Last Mile Security Token (Legacy)
 
@@ -326,6 +403,23 @@ If credentials differ per consumer, the following `jumper_config` can be used in
   }
 }
 ```
+
+**Resolution semantics:** Authentication configuration is atomic. A consumer entry that carries any
+credential field (`clientId`, `clientSecret`, `clientKey`, `username`, `password`, `refreshToken`) is
+used as-is; missing credentials are never filled in from the provider `default` entry. The one
+supported partial shape is a **scopes-only** consumer entry: it uses the `default` entry's
+credentials with only `scopes` replaced. Without a consumer entry, the `default` entry applies
+unchanged.
+
+**Validation:** If the resolved configuration contains no usable client authentication, Jumper
+rejects the request with `400 Bad Request` and a descriptive message instead of sending a
+credential-less token request to the external IdP, which would surface as an opaque `401`.
+Configurations without a `grantType` use the legacy header-based flow, which supports
+`clientId` + `clientSecret` only — the other mechanisms require a `grantType` to be set, and the
+error message says so. Rejections are counted in the `jumper_external_oauth_config_error_total`
+metric with tag `reason="missing_client_auth"`. In the legacy flow, a blank `X-Spacegate-Client-Id`,
+`X-Spacegate-Client-Secret` or `X-Spacegate-Scope` header counts as absent and falls back to the
+configured value instead of overriding it with an empty string.
 
 #### Basic Auth Token
 

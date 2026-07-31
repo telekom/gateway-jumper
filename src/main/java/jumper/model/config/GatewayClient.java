@@ -5,10 +5,12 @@
 package jumper.model.config;
 
 import lombok.Data;
+import lombok.ToString;
 
 @Data
 public class GatewayClient {
   private String id;
-  private String secret;
+
+  @ToString.Exclude private String secret;
   private String issuer;
 }
