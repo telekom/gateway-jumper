@@ -1,0 +1,82 @@
+src/test/java/jumper/model/config/OauthCredentialsTest.java
+  s_9edc7158335626::t_48fcbba21ddf6a 1-265
+src/main/java/jumper/model/config/JumperConfig.java
+  s_9edc7158335626::t_48fcbba21ddf6a 19,33,45-46,53-54,69-70,260-262,264-266,269,273-304,307,314-349
+src/test/java/jumper/model/config/JumperConfigTest.java
+  s_9edc7158335626::t_48fcbba21ddf6a 112-324
+  s_9edc7158335626::t_e61d0e8a4c2aa9 7,9-10,17-18
+src/test/java/jumper/HeaderSteps.java
+  s_9edc7158335626::t_48fcbba21ddf6a 105-111
+src/main/java/jumper/model/config/BasicAuthCredentials.java
+  s_9edc7158335626::t_48fcbba21ddf6a 9,13,16-17
+src/test/resources/features/errorResponse.feature
+  s_9edc7158335626::t_48fcbba21ddf6a 20-26,187-199
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  s_9edc7158335626::t_48fcbba21ddf6a 7,42-44,49,58-59,65,159-167,202-211,214,223-228,232-248,250,255,273,278-280,296
+.github/workflows/build.yml
+  s_9edc7158335626::t_48fcbba21ddf6a 7-21,25-27,32,39,44-50,54,57-58,72-73,84-88,90-92,94-97,99-105,115-118,120-137,139-157,159-160,162-169,171-172,174,176-213,220-221,223-230,232-239,241-251,253-276,278-285,287-294,296,300-302,304,306-308,310-311,313,316-317,319-325,327-333,335-360
+src/main/java/jumper/Constants.java
+  s_9edc7158335626::t_48fcbba21ddf6a 111-112
+src/test/java/jumper/util/RoutingConfigUtil.java
+  s_9edc7158335626::t_48fcbba21ddf6a 27-29,32-34,86-89,91-92
+  s_9edc7158335626::t_a40b5b31342835 30-31,85,90
+src/test/java/jumper/JumperConfigSteps.java
+  s_9edc7158335626::t_48fcbba21ddf6a 50-74,136-144
+release.config.js
+  s_9edc7158335626::t_48fcbba21ddf6a 6-12
+src/test/java/jumper/mocks/MockIrisServer.java
+  s_9edc7158335626::t_48fcbba21ddf6a 188-211
+src/test/java/jumper/BaseSteps.java
+  s_9edc7158335626::t_48fcbba21ddf6a 196-198
+src/test/resources/features/authorizationHeader.feature
+  s_9edc7158335626::t_48fcbba21ddf6a 65-100,193,198-200,242-248,250
+  s_9edc7158335626::t_d6608a64700c95 249,251
+src/main/java/jumper/model/config/GatewayClient.java
+  s_9edc7158335626::t_48fcbba21ddf6a 8,13-14
+src/test/java/jumper/service/TokenGeneratorServiceTest.java
+  s_9edc7158335626::t_48fcbba21ddf6a 9,18,20-21,23,33-36,196-341,394-432
+  s_9edc7158335626::t_c7648b2405af8c 433
+src/main/java/jumper/model/config/OauthCredentials.java
+  s_9edc7158335626::t_48fcbba21ddf6a 9-10,14,17-20,23-26,39-95
+src/test/java/jumper/util/JumperConfigUtil.java
+  s_9edc7158335626::t_48fcbba21ddf6a 35-80,271-313
+  s_9edc7158335626::t_87a69efa5049c9 314
+src/test/java/jumper/VerificationSteps.java
+  s_9edc7158335626::t_48fcbba21ddf6a 148-150,172-194,299,304-308,330-341
+src/test/resources/features/failover.feature
+  s_9edc7158335626::t_48fcbba21ddf6a 24-31
+pom.xml
+  s_9edc7158335626::t_48fcbba21ddf6a 36-46
+.github/workflows/update-base-image.yml
+  s_9edc7158335626::t_48fcbba21ddf6a 1-150
+src/main/java/jumper/service/TokenGeneratorService.java
+  s_9edc7158335626::t_48fcbba21ddf6a 13,19,106-107,152-156,190-232
+  s_9edc7158335626::t_ea0fe32f539f0e 233
+README.md
+  s_9edc7158335626::t_48fcbba21ddf6a 68-118,150-152,244-267,407-422
+  s_9edc7158335626::t_c815d073fc2d37 423
+.github/workflows/ort.yml
+  s_9edc7158335626::t_48fcbba21ddf6a 7-9,15-18
+.github/workflows/reuse.yml
+  s_9edc7158335626::t_48fcbba21ddf6a 14
+.github/actions/registry-login/action.yml
+  s_9edc7158335626::t_48fcbba21ddf6a 1-40
+src/test/java/jumper/config/Config.java
+  s_9edc7158335626::t_48fcbba21ddf6a 13,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.14",
+  "base_commit_sha": "59e0fc85baa276c6aedb7ebf7ce8bb642fb091b3",
+  "prompts": {},
+  "sessions": {
+    "s_9edc7158335626": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_052576e52ffeT6mN81VXjkZCIS",
+        "model": "claude-opus-5"
+      },
+      "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    }
+  }
+}
