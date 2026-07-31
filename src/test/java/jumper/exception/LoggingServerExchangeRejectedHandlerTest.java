@@ -6,6 +6,7 @@ package jumper.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -33,7 +35,8 @@ import org.springframework.security.web.server.firewall.ServerExchangeRejectedEx
 /**
  * Unit tests for {@link LoggingServerExchangeRejectedHandler}. These pin the observability contract
  * that makes firewall rejections diagnosable: a WARN log line, a span event plus reason tag, the
- * rejection recorded on the server observation, and escaping of client-controlled content.
+ * rejection recorded on the server observation, and the truncation plus escaping of
+ * client-controlled content.
  */
 class LoggingServerExchangeRejectedHandlerTest {
 
@@ -167,9 +170,84 @@ class LoggingServerExchangeRejectedHandlerTest {
     verify(span, never()).event(anyString());
   }
 
+  @Test
+  @DisplayName("an oversized client controlled reason is truncated in the log and the span tag")
+  void rejection_truncatesOversizedReason() {
+    // arrange: the firewall embeds header values verbatim and Netty accepts up to 8 KB of them
+    MockServerWebExchange exchange = exchange("/proxy/v1/getItems");
+    String oversized = "x".repeat(8 * 1024);
+
+    // act
+    handler().handle(exchange, new ServerExchangeRejectedException(oversized)).block();
+
+    // assert
+    String expected =
+        "x".repeat(LoggingServerExchangeRejectedHandler.MAX_VALUE_LENGTH)
+            + LoggingServerExchangeRejectedHandler.TRUNCATION_MARKER;
+    assertThat(logAppender.list.getFirst().getFormattedMessage()).contains(expected);
+    verify(span).tag(LoggingServerExchangeRejectedHandler.SPAN_TAG_REASON, expected);
+  }
+
+  @Test
+  @DisplayName("a reason at the truncation limit is left untouched")
+  void rejection_atLimit_isNotTruncated() {
+    // arrange
+    MockServerWebExchange exchange = exchange("/proxy/v1/getItems");
+    String atLimit = "x".repeat(LoggingServerExchangeRejectedHandler.MAX_VALUE_LENGTH);
+
+    // act
+    handler().handle(exchange, new ServerExchangeRejectedException(atLimit)).block();
+
+    // assert
+    verify(span).tag(LoggingServerExchangeRejectedHandler.SPAN_TAG_REASON, atLimit);
+    assertThat(logAppender.list.getFirst().getFormattedMessage())
+        .doesNotContain(LoggingServerExchangeRejectedHandler.TRUNCATION_MARKER);
+  }
+
+  @Test
+  @DisplayName("characters outside the BMP survive escaping intact")
+  void rejection_keepsSupplementaryCharacters() {
+    // arrange: U+1F600 is a surrogate pair and must not be mangled by the char wise escaping
+    MockServerWebExchange exchange = exchange("/proxy/v1/getItems");
+    String withEmoji = "parameter name \"\uD83D\uDE00\" is not allowed.";
+
+    // act
+    handler().handle(exchange, new ServerExchangeRejectedException(withEmoji)).block();
+
+    // assert
+    verify(span).tag(LoggingServerExchangeRejectedHandler.SPAN_TAG_REASON, withEmoji);
+  }
+
+  @Test
+  @DisplayName("truncation never leaves a dangling high surrogate behind")
+  void rejection_truncation_doesNotSplitSurrogatePair() {
+    // arrange: the cut falls exactly between the two halves of the pair
+    MockServerWebExchange exchange = exchange("/proxy/v1/getItems");
+    String reason =
+        "x".repeat(LoggingServerExchangeRejectedHandler.MAX_VALUE_LENGTH - 1) + "\uD83D\uDE00";
+
+    // act
+    handler().handle(exchange, new ServerExchangeRejectedException(reason)).block();
+
+    // assert
+    String tagged = capturedTag();
+    assertThat(tagged)
+        .isEqualTo(
+            "x".repeat(LoggingServerExchangeRejectedHandler.MAX_VALUE_LENGTH - 1)
+                + LoggingServerExchangeRejectedHandler.TRUNCATION_MARKER);
+    assertThat(tagged.chars().anyMatch(character -> Character.isSurrogate((char) character)))
+        .isFalse();
+  }
+
   // ---------------------------------------------------------------------------
   // helpers
   // ---------------------------------------------------------------------------
+
+  private String capturedTag() {
+    ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+    verify(span).tag(eq(LoggingServerExchangeRejectedHandler.SPAN_TAG_REASON), captor.capture());
+    return captor.getValue();
+  }
 
   private LoggingServerExchangeRejectedHandler handler() {
     return new LoggingServerExchangeRejectedHandler(tracer);
