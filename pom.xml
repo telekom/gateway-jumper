@@ -378,7 +378,44 @@ SPDX-License-Identifier: Apache-2.0
         <configuration>
           <excludedGroups>ignore</excludedGroups>
           <argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
+          <!-- The suite is split into two executions below. Running -Dtest=SomeClass only
+               matches one of them, so the other must not fail the build for having no match. -->
+          <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
         </configuration>
+        <executions>
+          <!-- Main run: every test shares a single reused JVM (fast; keeps the Spring
+               context cache warm across classes). The two Netty RFC 9112 flag tests are
+               excluded here and handled by the isolated execution below. -->
+          <execution>
+            <id>default-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <excludes>
+                <exclude>**/UpstreamHeaderValidationEnabledIntegrationTest.java</exclude>
+                <exclude>**/UpstreamHeaderValidationDisabledIntegrationTest.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Netty reads io.netty.handler.codec.http.rfc9112TransferEncoding once per JVM at
+               HttpObjectDecoder class-load. These two tests need opposite values of that flag,
+               so reuseForks=false gives each class its own JVM, isolated from the rest of the
+               suite (which keeps JVM reuse). -->
+          <execution>
+            <id>netty-rfc9112-isolated</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <reuseForks>false</reuseForks>
+              <includes>
+                <include>**/UpstreamHeaderValidationEnabledIntegrationTest.java</include>
+                <include>**/UpstreamHeaderValidationDisabledIntegrationTest.java</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.google.cloud.tools</groupId>
