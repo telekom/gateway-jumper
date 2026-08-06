@@ -14,7 +14,6 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import jumper.model.TokenInfo;
-import jumper.model.config.JumperConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -81,38 +80,6 @@ class TokenFetchServiceTest {
         .verifyComplete();
 
     verify(tokenCacheService, never()).saveToken(anyString(), any(TokenInfo.class));
-  }
-
-  @Test
-  void internalMeshRequest_fetchesFromProviderIdentityProviderAndCachesToken() {
-    // arrange
-    JumperConfig config = new JumperConfig();
-    config.setInternalTokenEndpoint("https://idp.example.com/auth/realms/provider");
-    config.setClientId(CLIENT_ID);
-    config.setClientSecret(CLIENT_SECRET);
-    TokenInfo cachedToken = createTokenInfo(3600);
-    AtomicInteger cacheLookups = new AtomicInteger();
-    when(tokenCacheService.getToken(TOKEN_CACHE_KEY))
-        .thenAnswer(
-            invocation ->
-                cacheLookups.getAndIncrement() == 0 ? Optional.empty() : Optional.of(cachedToken));
-
-    // act
-    TokenInfo fetchedToken = tokenFetchService.getInternalMeshAccessToken(config).block();
-    TokenInfo reusedToken = tokenFetchService.getInternalMeshAccessToken(config).block();
-
-    // assert
-    assertThat(fetchedToken).isNotNull();
-    assertThat(fetchedToken.getAccessToken()).isEqualTo("mocked-access-token");
-    assertThat(reusedToken).isSameAs(cachedToken);
-    verify(tokenCacheService, times(2))
-        .generateTokenCacheKey(
-            "https://idp.example.com/auth/realms/provider/protocol/openid-connect/token",
-            CLIENT_ID,
-            CLIENT_SECRET,
-            null);
-    verify(tokenCacheService).saveToken(TOKEN_CACHE_KEY, fetchedToken);
-    assertThat(idpCallCount.get()).isOne();
   }
 
   @Test

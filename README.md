@@ -302,18 +302,17 @@ A legacy scenario where Jumper forwards both the original token and a new LMS to
 * `Authorization` - Original incoming token
 * `X-Gateway-Token` - New LMS token
 
-#### Mesh Token
+#### Mesh LMS Token
 
-For calls involving multiple Gateway instances, Jumper obtains an OAuth token from the provider
-zone's identity provider and sends it as the upstream `Authorization` header. The original incoming
-token is forwarded separately in the `consumer-token` header. Mesh tokens are cached and reused
-while valid.
+Scenario with multiple Gateway instances involved.
+For gateway-to-gateway calls, Jumper creates a short-lived, self-signed Mesh LMS token from the
+incoming consumer token claims and sends it as the upstream `Authorization` header. The original
+consumer token is not forwarded to the downstream gateway.
 
 ```mermaid
 flowchart LR
     consumer((Consumer))
     idpA[Identity Provider<br/>Zone A]
-    idpB[Identity Provider<br/>Zone B]
     provider((Provider))
 
     subgraph zoneA [Zone A]
@@ -334,28 +333,25 @@ flowchart LR
     idpA -.->|token| consumer
     consumer --> kongA
     kongA --> jumperA
-    jumperA -.->|request mesh token| idpB
-    idpB -.->|mesh token| jumperA
-    jumperA -->|mesh token + consumer-token| kongB
+    jumperA -->|Mesh LMS token| kongB
     kongB --> jumperB
+    jumperB -.->|validate Mesh LMS token| issuerA
     jumperB -->|provider LMS token| provider
     provider -.->|get public key| issuerB
 
     classDef gatewayNode fill:#f8d7da,stroke:#c0392b,stroke-width:1px,color:#111;
     classDef external fill:#f7f7f7,stroke:#666,stroke-width:1px,color:#111;
     class kongA,jumperA,issuerA,kongB,jumperB,issuerB gatewayNode;
-    class consumer,idpA,idpB,provider external;
+    class consumer,idpA,provider external;
 ```
 
 **Required Headers:**
 * `remote_api_url` - URL (including service base path) of the other zone's Gateway, to which the request is forwarded
-* `issuer` - Issuer of the provider zone's identity provider
-* `client_id` - Client ID for the dedicated client in the provider zone
-* `client_secret` - Client secret for the dedicated client in the provider zone
+* `jumper_config` - Base64 encoded structure with `mesh` set to `true`
+* `issuer` - Legacy fallback discriminator for pre-migration proxy routes
 
 **Outgoing Headers:**
-* `Authorization` - Token obtained from the provider zone's identity provider
-* `consumer-token` - Original incoming token
+* `Authorization` - Mesh LMS token
 
 #### External Authorization Token
 

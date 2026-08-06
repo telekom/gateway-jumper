@@ -30,10 +30,9 @@ Feature: proper authorization token reaches provider endpoint if x-token-exchang
   
   
     
- Scenario Outline: Consumer calls proxy route with proxy route headers with xTokenExchange header, mesh token sent
+ Scenario Outline: Consumer calls proxy route with mesh flag and x-token-exchange header, mesh LMS token sent
     Given ProxyRoute headers are set with x-token-exchange
     And current zone is "<zone>"
-    And IDP set to provide internal token
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route
     Then API Provider receives default bearer authorization headers
