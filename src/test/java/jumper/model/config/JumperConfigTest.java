@@ -53,6 +53,62 @@ class JumperConfigTest {
     return oc;
   }
 
+  private JumperConfig configWithGatewayClientIssuer(String issuer) {
+    GatewayClient gatewayClient = new GatewayClient();
+    gatewayClient.setIssuer(issuer);
+    JumperConfig jc = new JumperConfig();
+    jc.setGatewayClient(gatewayClient);
+    return jc;
+  }
+
+  @Test
+  void determineRealmName_prefersRealmHeader() {
+    // arrange
+    JumperConfig jc = configWithGatewayClientIssuer("https://issuer/auth/realms/from-issuer");
+
+    // act & assert
+    assertEquals("from-header", jc.determineRealmName("from-header"));
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = {"", " "})
+  void determineRealmName_derivesRealmFromGatewayClientIssuerWhenHeaderIsBlank(String realmHeader) {
+    // arrange
+    JumperConfig jc = configWithGatewayClientIssuer("https://issuer/auth/realms/from-issuer");
+
+    // act & assert
+    assertEquals("from-issuer", jc.determineRealmName(realmHeader));
+  }
+
+  @Test
+  void determineRealmName_derivesRealmFromMeshIssuerWhenNoGatewayClientExists() {
+    // arrange - a zoned routing_config entry: mesh issuer, no realm, no gateway client
+    JumperConfig jc = new JumperConfig();
+    jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/from-mesh-issuer");
+
+    // act & assert
+    assertEquals("from-mesh-issuer", jc.determineRealmName(null));
+  }
+
+  @Test
+  void determineRealmName_fallsBackToDefaultRealmWhenNoSourceIsAvailable() {
+    // arrange
+    JumperConfig jc = new JumperConfig();
+
+    // act & assert
+    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName(null));
+  }
+
+  @Test
+  void determineRealmName_fallsBackToDefaultRealmWhenIssuerCarriesNoRealmSegment() {
+    // arrange
+    JumperConfig jc = configWithGatewayClientIssuer("https://issuer/auth/no-realm-here");
+
+    // act & assert
+    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName(null));
+  }
+
   @Test
   void getOauthCredentials_emptyWhenNoOauthConfigured() {
     // arrange

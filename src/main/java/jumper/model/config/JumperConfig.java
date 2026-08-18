@@ -188,6 +188,8 @@ public class JumperConfig {
     this.setRouteListener(jc.getRouteListener());
     this.setGatewayClient(jc.getGatewayClient());
 
+    resolveMissingRealmName(request);
+
     // check loadBalancing
     if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
       setRemoteApiUrl(LoadBalancingUtil.calculateUpstream(loadBalancing.getServers()));
@@ -218,6 +220,52 @@ public class JumperConfig {
         request); // TODO: remove as soon we have completely shifted to json_config
 
     return jc;
+  }
+
+  /**
+   * Fills in the realm for configs assembled from {@code routing_config}, the path taken whenever
+   * zone failover is configured. The realm can be absent there: the control plane emits the {@code
+   * realm} header only for non-failover routes, and a per-entry {@code realm} is omitted when
+   * empty. Without a realm, {@code SpectreService} builds its publish URL from {@code null} and the
+   * request it was only observing fails.
+   *
+   * <p>Deliberately additive: a realm already present in the config blob is never overwritten, so
+   * the legacy-header path in {@link #fillWithLegacyHeaders(ServerHttpRequest)} keeps its existing
+   * precedence and an entry keeps the realm the control plane assigned it.
+   */
+  private void resolveMissingRealmName(ServerHttpRequest request) {
+    if (StringUtils.isNotBlank(realmName)) {
+      return;
+    }
+
+    setRealmName(
+        determineRealmName(
+            HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_REALM)));
+  }
+
+  /**
+   * Realm precedence for a config that carries none of its own: the legacy {@code realm} header,
+   * then the realm embedded in an issuer URL, then {@link Constants#DEFAULT_REALM}.
+   *
+   * <p>Package-private for testing.
+   */
+  String determineRealmName(String realmHeader) {
+    if (StringUtils.isNotBlank(realmHeader)) {
+      return realmHeader;
+    }
+
+    // The gateway client issuer is this gateway's own issuer, ".../realms/<realm>". Preferred over
+    // the mesh issuer below, which names the *target* zone and only agrees while realms match.
+    String issuer = Objects.nonNull(gatewayClient) ? gatewayClient.getIssuer() : null;
+    if (StringUtils.isBlank(issuer)) {
+      issuer = internalTokenEndpoint;
+    }
+    if (StringUtils.isNotBlank(issuer) && issuer.contains(Constants.REALMS_PATH_SEGMENT)) {
+      return issuer.replaceFirst(".*" + Constants.REALMS_PATH_SEGMENT, "");
+    }
+
+    log.warn("no realm resolvable for config entry, falling back to {}", Constants.DEFAULT_REALM);
+    return Constants.DEFAULT_REALM;
   }
 
   public boolean isListenerMatched() {
