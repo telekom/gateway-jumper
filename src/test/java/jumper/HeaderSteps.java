@@ -97,6 +97,12 @@ public class HeaderSteps {
         RoutingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
   }
 
+  @Given("Listener routing_config header set")
+  public void listenerRoutingConfigHeaderSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getListenerRouteHeaders(baseSteps));
+  }
+
   @Given("Proxy routing_config header set")
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();

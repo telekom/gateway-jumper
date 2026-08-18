@@ -94,3 +94,24 @@ Feature: spectre events created
     Given Event provider set to respond with a 201 status code
     When horizon calls the spectre route with HEAD
     Then horizon receives a 201 status code
+
+  ################ spectre + zone failover ################
+  Scenario: Consumer calls listener route with routing_config while the zone is healthy, 2 spectre events created
+    Given Listener routing_config header set
+    And jumperConfig with consumer route listener set
+    And IDP set to provide internal token
+    And API provider set to respond with a 200 status code
+    And horizon set to receive events
+    When consumer calls the listener route
+    Then API consumer receives a 200 status code
+    And verify 2 horizon events received
+
+  Scenario: Consumer calls listener route with routing_config and skipped zone, 2 spectre events created
+    Given Listener routing_config header set
+    And skip zone header set
+    And jumperConfig with consumer route listener set
+    And API provider set to respond with a 200 status code
+    And horizon set to receive events
+    When consumer calls the listener route
+    Then API consumer receives a 200 status code
+    And verify 2 horizon events received

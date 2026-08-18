@@ -66,7 +66,15 @@ public class SpectreService {
       Object http,
       RouteListener listener,
       String payload) {
-    return publishEvent(createEvent(jc, exchange, http, listener, payload), jc);
+    // Deferred so that failures while *building* the event or the publish URL surface as an error
+    // signal instead of being thrown into the gateway filter chain, which would fail the request
+    // this event merely observes.
+    return Mono.defer(() -> publishEvent(createEvent(jc, exchange, http, listener, payload), jc))
+        .onErrorResume(
+            throwable -> {
+              log.error("Error publishing Spectre event", throwable);
+              return Mono.empty(); // Don't fail the main request flow
+            });
   }
 
   private Spectre createEvent(
@@ -137,15 +145,10 @@ public class SpectreService {
     String envName = jc.getRealmName();
 
     return publishEventMono(
-            publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
-            tokenGeneratorService.generateGatewayTokenForPublisher(
-                localIssuerUrl + "/" + envName, envName),
-            event)
-        .onErrorResume(
-            throwable -> {
-              log.error("Error publishing Spectre event", throwable);
-              return Mono.empty(); // Don't fail the main request flow
-            });
+        publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
+        tokenGeneratorService.generateGatewayTokenForPublisher(
+            localIssuerUrl + "/" + envName, envName),
+        event);
   }
 
   private Mono<Void> publishEventMono(String url, String token, Spectre event) {
