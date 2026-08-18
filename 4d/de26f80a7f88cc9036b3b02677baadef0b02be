@@ -1,0 +1,43 @@
+src/main/java/jumper/filter/SpectreRequestFilter.java
+  s_d3e7141aea1962::t_9230f9448b8a97 7,47
+src/main/java/jumper/filter/SpectreResponseFilter.java
+  s_d3e7141aea1962::t_b80e91eb5489ba 62
+src/main/java/jumper/Constants.java
+  s_d3e7141aea1962::t_758fec2ccde00d 73
+src/test/java/jumper/util/RoutingConfigUtil.java
+  s_d3e7141aea1962::t_2cfff196a350a2 50-60,62-63,108-111,113,130
+  s_d3e7141aea1962::t_9945c2fa569f68 61,125-128
+  s_d3e7141aea1962::t_35883bc2273a22 112,114,129,131
+src/main/java/jumper/service/SpectreService.java
+  s_d3e7141aea1962::t_8c07c7621da1b0 69-71,151
+  s_d3e7141aea1962::t_8444247a718943 72-77,148-150
+src/test/java/jumper/HeaderSteps.java
+  s_d3e7141aea1962::t_2cfff196a350a2 100-105
+src/test/java/jumper/model/config/JumperConfigTest.java
+  s_d3e7141aea1962::t_4a6de1c29ed28f 56-111
+src/test/resources/features/spectre.feature
+  s_d3e7141aea1962::t_be5ce7ea5aefa3 97-117
+src/main/java/jumper/model/config/JumperConfig.java
+  s_d3e7141aea1962::t_ad91181fcdd5b2 191
+  s_d3e7141aea1962::t_243663b4f27273 241-252,254,264,267-269
+  s_d3e7141aea1962::t_01d85b564e910b 192,225,231-233,235-240,253,255-263,265-266
+  s_d3e7141aea1962::t_4acd5c9b3055b0 228-230
+  s_d3e7141aea1962::t_852cc52d3d8d48 226-227,234
+  s_d3e7141aea1962::t_4508c2ea268e01 270
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "4dde26f80a7f88cc9036b3b02677baadef0b02be",
+  "prompts": {},
+  "sessions": {
+    "s_d3e7141aea1962": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4d73b391-61e4-40f6-8ba8-9299948057a8",
+        "model": "claude-opus-5"
+      },
+      "human_author": "christopher.braun@telekom.de <christopher.braun@telekom.de>"
+    }
+  }
+}
