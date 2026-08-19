@@ -9,12 +9,26 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.util.HashMap;
 import java.util.Optional;
 import jumper.Constants;
+import jumper.util.ObjectMapperUtil;
+import jumper.util.TokenUtil;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
+import tools.jackson.databind.json.JsonMapper;
 
 class JumperConfigTest {
+
+  @BeforeAll
+  static void initObjectMapper() {
+    // fillProcessingInfo parses the jumper_config header and the JWT header via ObjectMapperUtil,
+    // whose static holder is normally populated by Spring. Populate it for this context-less test.
+    new ObjectMapperUtil(JsonMapper.builder().build());
+  }
 
   private static final String CONSUMER = "eni--local-team--local-app";
   private static final String CONSUMER_SCOPE = "consumer_scope";
@@ -53,60 +67,130 @@ class JumperConfigTest {
     return oc;
   }
 
-  private JumperConfig configWithGatewayClientIssuer(String issuer) {
+  private static final String ENTRY_REALM = "entry-realm";
+  private static final String HEADER_REALM = "header-realm";
+  private static final String MESH_REALM = "mesh-realm";
+  private static final String GATEWAY_CLIENT_REALM = "gateway-client-realm";
+
+  private static JumperConfig configWithMeshIssuer(String realm) {
+    JumperConfig jc = new JumperConfig();
+    jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/" + realm);
+    return jc;
+  }
+
+  private static JumperConfig configWithGatewayClientIssuer(String realm) {
     GatewayClient gatewayClient = new GatewayClient();
-    gatewayClient.setIssuer(issuer);
+    gatewayClient.setIssuer("http://localhost:1081/auth/realms/" + realm);
     JumperConfig jc = new JumperConfig();
     jc.setGatewayClient(gatewayClient);
     return jc;
   }
 
-  @Test
-  void determineRealmName_prefersRealmHeader() {
-    // arrange
-    JumperConfig jc = configWithGatewayClientIssuer("https://issuer/auth/realms/from-issuer");
-
-    // act & assert
-    assertEquals("from-header", jc.determineRealmName("from-header"));
+  /**
+   * A jumper_config header value carrying a gateway client, as the legacy control plane sends it.
+   */
+  private static String jumperConfigHeaderWithGatewayClientIssuer(String realm) {
+    return JumperConfig.toJsonBase64(configWithGatewayClientIssuer(realm));
   }
 
-  @ParameterizedTest
-  @NullSource
-  @ValueSource(strings = {"", " "})
-  void determineRealmName_derivesRealmFromGatewayClientIssuerWhenHeaderIsBlank(String realmHeader) {
-    // arrange
-    JumperConfig jc = configWithGatewayClientIssuer("https://issuer/auth/realms/from-issuer");
+  private static ServerHttpRequest requestWith(String realmHeader, String jumperConfigHeader) {
+    MockServerHttpRequest.BodyBuilder builder =
+        MockServerHttpRequest.method(HttpMethod.DELETE, "/listener/services/1")
+            .header(Constants.HEADER_AUTHORIZATION, "Bearer " + TokenUtil.getConsumerAccessToken());
+    if (realmHeader != null) {
+      builder.header(Constants.HEADER_REALM, realmHeader);
+    }
+    if (jumperConfigHeader != null) {
+      builder.header(Constants.HEADER_JUMPER_CONFIG, jumperConfigHeader);
+    }
+    return builder.build();
+  }
 
-    // act & assert
-    assertEquals("from-issuer", jc.determineRealmName(realmHeader));
+  private static JumperConfig routingConfigEntry(String entryRealm, String meshRealm) {
+    JumperConfig jc = meshRealm == null ? new JumperConfig() : configWithMeshIssuer(meshRealm);
+    jc.setRealmName(entryRealm);
+    // fillProcessingInfo requires routing information or it throws
+    jc.setRemoteApiUrl("http://localhost:1080/provider");
+    return jc;
   }
 
   @Test
-  void determineRealmName_derivesRealmFromMeshIssuerWhenNoGatewayClientExists() {
-    // arrange - a zoned routing_config entry: mesh issuer, no realm, no gateway client
+  void determineRealmName_derivesRealmFromTheEntryIssuer() {
+    // arrange
+    JumperConfig jc = configWithMeshIssuer(MESH_REALM);
+
+    // act & assert
+    assertEquals(MESH_REALM, jc.determineRealmName());
+  }
+
+  @Test
+  void determineRealmName_ignoresGatewayClientIssuer() {
+    // arrange: gatewayClient comes from the jumper_config header, which the control plane does not
+    // emit alongside routing_config - on this path only the caller can supply it
+    JumperConfig jc = configWithGatewayClientIssuer(GATEWAY_CLIENT_REALM);
+
+    // act & assert
+    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName());
+  }
+
+  @Test
+  void determineRealmName_fallsBackToDefaultRealmWhenNoIssuerExists() {
+    // arrange
     JumperConfig jc = new JumperConfig();
-    jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/from-mesh-issuer");
 
     // act & assert
-    assertEquals("from-mesh-issuer", jc.determineRealmName(null));
-  }
-
-  @Test
-  void determineRealmName_fallsBackToDefaultRealmWhenNoSourceIsAvailable() {
-    // arrange
-    JumperConfig jc = new JumperConfig();
-
-    // act & assert
-    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName(null));
+    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName());
   }
 
   @Test
   void determineRealmName_fallsBackToDefaultRealmWhenIssuerCarriesNoRealmSegment() {
     // arrange
-    JumperConfig jc = configWithGatewayClientIssuer("https://issuer/auth/no-realm-here");
+    JumperConfig jc = new JumperConfig();
+    jc.setInternalTokenEndpoint("http://localhost:1081/auth/no-realm-here");
 
     // act & assert
-    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName(null));
+    assertEquals(Constants.DEFAULT_REALM, jc.determineRealmName());
+  }
+
+  @Test
+  void fillProcessingInfo_keepsTheEntryRealmDespiteEveryConflictingSource() {
+    // arrange: the selected routing_config entry carries its own realm, while the request offers a
+    // conflicting realm header, a conflicting jumper_config gateway client and a conflicting mesh
+    // issuer. The entry must win - this is the non-overwrite invariant.
+    JumperConfig entry = routingConfigEntry(ENTRY_REALM, MESH_REALM);
+
+    // act
+    entry.fillProcessingInfo(
+        requestWith(HEADER_REALM, jumperConfigHeaderWithGatewayClientIssuer(GATEWAY_CLIENT_REALM)));
+
+    // assert
+    assertEquals(ENTRY_REALM, entry.getRealmName());
+  }
+
+  @Test
+  void fillProcessingInfo_ignoresTheRealmHeaderAndPrefersTheEntryIssuer() {
+    // arrange: no realm on the entry, so a fallback is used. The inbound realm header must not be
+    // it - the control plane leaves that header untouched on failover routes.
+    JumperConfig entry = routingConfigEntry(null, MESH_REALM);
+
+    // act
+    entry.fillProcessingInfo(
+        requestWith(HEADER_REALM, jumperConfigHeaderWithGatewayClientIssuer(GATEWAY_CLIENT_REALM)));
+
+    // assert
+    assertEquals(MESH_REALM, entry.getRealmName());
+  }
+
+  @Test
+  void fillProcessingInfo_fallsBackToDefaultRealmRatherThanTrustTheRealmHeader() {
+    // arrange: nothing trustworthy to derive a realm from, only a caller-supplied realm header
+    JumperConfig entry = routingConfigEntry(null, null);
+
+    // act
+    entry.fillProcessingInfo(requestWith(HEADER_REALM, null));
+
+    // assert
+    assertEquals(Constants.DEFAULT_REALM, entry.getRealmName());
   }
 
   @Test
