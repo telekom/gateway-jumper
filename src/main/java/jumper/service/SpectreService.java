@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import jumper.Constants;
 import jumper.config.SpectreConfiguration;
 import jumper.model.config.JumperConfig;
@@ -145,7 +146,10 @@ public class SpectreService {
     String envName = jc.getRealmName();
 
     return publishEventMono(
-        publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
+        // quoted: the realm is config-supplied, and an unescaped "$" or "\" in a replacement
+        // string is interpreted by the regex engine instead of inserted literally
+        publishEventUrl.replaceFirst(
+            Constants.ENVIRONMENT_PLACEHOLDER, Matcher.quoteReplacement(envName)),
         tokenGeneratorService.generateGatewayTokenForPublisher(
             localIssuerUrl + "/" + envName, envName),
         event);
