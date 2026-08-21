@@ -1,0 +1,56 @@
+src/test/java/jumper/filter/ResponseFilterTest.java
+  s_fdee784b34c529::t_a98ed0d51491b5 32
+src/test/resources/features/tokenCaching.feature
+  s_fdee784b34c529::t_a51827a520c33a 74
+src/main/java/jumper/config/OauthTokenFetchProperties.java
+  s_fdee784b34c529::t_a98ed0d51491b5 31
+src/test/java/jumper/service/TokenFetchServiceTest.java
+  s_fdee784b34c529::t_b6702313d40135 753,757
+  s_fdee784b34c529::t_5cbecb50ce7fcd 45,939-940
+  s_fdee784b34c529::t_c0e196addd2d7e 17-18,54,441,704-707,710-717,723,747-749,751,780-781,935-938,941-952
+  s_fdee784b34c529::t_a51827a520c33a 20,634,720-721,725-746
+  s_fdee784b34c529::t_a98ed0d51491b5 442-467,876-877
+  s_fdee784b34c529::t_9a7d4ff7346e78 53,55,671,702-703,708-709,718-719,722,724,750,752,754-756,758-779
+  s_fdee784b34c529::t_4ea7da9cccbb9e 953
+src/main/java/jumper/service/TokenFetchService.java
+  s_fdee784b34c529::t_e67e5fc663e9da 368,404,447
+  s_fdee784b34c529::t_a98ed0d51491b5 412
+  s_fdee784b34c529::t_a51827a520c33a 20,305-311,525
+  s_fdee784b34c529::t_3091ef5a2be598 106,407,426-428,450
+  s_fdee784b34c529::t_c0e196addd2d7e 73,103,151,235,333-334
+src/main/java/jumper/service/TokenCacheService.java
+  s_fdee784b34c529::t_ca5b41cd10cfb4 7-10,23,138-139,157,159-163,169-177,181-182,185,187-193,197-199,203-204
+  s_fdee784b34c529::t_9a7d4ff7346e78 106-110,131-132,135,164,178
+  s_fdee784b34c529::t_b6702313d40135 133-134
+  s_fdee784b34c529::t_6119a716581bdd 179-180
+src/main/resources/application.yml
+  s_fdee784b34c529::t_50a21c8b186cd0 209
+  s_fdee784b34c529::t_a98ed0d51491b5 217
+README.md
+  s_fdee784b34c529::t_50a21c8b186cd0 195
+  s_fdee784b34c529::t_a98ed0d51491b5 203,206-208
+src/test/java/jumper/config/OauthTokenFetchPropertiesTest.java
+  s_fdee784b34c529::t_a98ed0d51491b5 30,52-53,144
+src/test/resources/features/errorResponse.feature
+  s_fdee784b34c529::t_0c1af76cf5a2eb 67-68,72,76,80,84,103,122,139-141
+src/test/java/jumper/service/TokenCacheServiceTest.java
+  s_fdee784b34c529::t_9a7d4ff7346e78 215-216,223-225,227-242
+  s_fdee784b34c529::t_0c1af76cf5a2eb 18,195-214,217,220-222,226,243-244,271-281
+  s_fdee784b34c529::t_e67e5fc663e9da 218-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "5a75bfb95fbf4e12cff1217656ac0228075d12a2",
+  "prompts": {},
+  "sessions": {
+    "s_fdee784b34c529": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0345c042fffeVfm5FgCtA3W4nD",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
