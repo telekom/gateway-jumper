@@ -98,6 +98,6 @@ jobs:
           path: ${{ steps.ort.outputs.results-path }}
       - name: Submit SBOM to dependency graph
         if: github.ref == 'refs/heads/main'
-        uses: advanced-security/spdx-dependency-submission-action@169d22427d74f3faf93504e70b03eede8dab272a #v0.2.0
+        uses: advanced-security/spdx-dependency-submission-action@08de88128d8a878c4d84a1d19ce677c314e6db15 #v0.3.1
         with:
           filePath: ${{ steps.ort.outputs.results-path }}"
