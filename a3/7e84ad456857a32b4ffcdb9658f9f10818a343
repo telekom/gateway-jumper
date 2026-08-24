@@ -1,0 +1,20 @@
+.github/dependabot.yml
+  s_a06bb765c98c9e::t_a85b2a5a2d301f 5-6,8
+  s_a06bb765c98c9e::t_3467143172d42f 10-14,18-20,23-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "a37e84ad456857a32b4ffcdb9658f9f10818a343",
+  "prompts": {},
+  "sessions": {
+    "s_a06bb765c98c9e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fcc3c81f7ffe0MDiHVVb5U03mO",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
