@@ -1,0 +1,14 @@
+.github/workflows/ort.yml
+  h_052be7cb63ce69 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "da3dc4e8f4cae7dbc7bc3c0c2103dc6708510d18",
+  "prompts": {},
+  "humans": {
+    "h_052be7cb63ce69": {
+      "author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
