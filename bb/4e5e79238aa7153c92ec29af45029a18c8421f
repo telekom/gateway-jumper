@@ -1,0 +1,25 @@
+mvnw
+  s_83a0a901971671::t_44e61588d90c3b 2-6
+mvnw.cmd
+  s_83a0a901971671::t_44e61588d90c3b 1-5
+.mvn/wrapper/maven-wrapper.properties
+  s_83a0a901971671::t_44e61588d90c3b 1-4
+pom.xml
+  s_83a0a901971671::t_44e61588d90c3b 368
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "bb4e5e79238aa7153c92ec29af45029a18c8421f",
+  "prompts": {},
+  "sessions": {
+    "s_83a0a901971671": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fcbbf9646ffeUIlDZvGxmbSSqU",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
