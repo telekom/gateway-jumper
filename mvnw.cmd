@@ -1,3 +1,7 @@
+REM SPDX-FileCopyrightText: 2023 Apache Software Foundation
+REM
+REM SPDX-License-Identifier: Apache-2.0
+
 <# : batch portion
 @REM ----------------------------------------------------------------------------
 @REM Licensed to the Apache Software Foundation (ASF) under one
