@@ -365,7 +365,7 @@ SPDX-License-Identifier: Apache-2.0
 							<include>src/test/java/**/*.java</include>
 						</includes>
             <googleJavaFormat>
-              <version>1.28.0</version>
+              <version>1.30.0</version>
               <reflowLongStrings>true</reflowLongStrings>
             </googleJavaFormat>
           </java>
