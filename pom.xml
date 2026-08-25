@@ -27,9 +27,7 @@ SPDX-License-Identifier: Apache-2.0
 		<spring-cloud.version>2025.1.3</spring-cloud.version>
 
 		<cucumber.version>7.34.7</cucumber.version>
-		<junit-platform.version>1.14.3</junit-platform.version>
 		<wiremock.version>3.13.2</wiremock.version>
-		<wiremock-jetty.version>12.1.12</wiremock-jetty.version>
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
 		<jib-maven-plugin.version>3.5.2</jib-maven-plugin.version>
@@ -48,41 +46,20 @@ SPDX-License-Identifier: Apache-2.0
 
 	<dependencyManagement>
 		<dependencies>
-			<!--
-			CVE remediation: jjwt-jackson pulls the Jackson 2 (com.fasterxml) JSON
-			backend transitively; the SB4-managed 2.21.4 is exposed to CVE-2026-54515
-			(GHSA-5jmj-h7xm-6q6v). Override the whole Jackson 2 line to 2.22.0 (past
-			the fix). This BOM only governs com.fasterxml.jackson.* and is independent
-			of the app's Jackson 3 (tools.jackson) stack. Imported first so it wins.
-			-->
-			<dependency>
-				<groupId>com.fasterxml.jackson</groupId>
-				<artifactId>jackson-bom</artifactId>
-				<version>2.22.2</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<!--
-			WireMock (wiremock-jetty12) is built and tested against Jetty 12.0.x, but the
-			Spring Boot 4 parent manages the core Jetty modules to 12.1.x while leaving the
-			ee10 servlet modules at 12.0.x. The resulting 12.0/12.1 mix breaks
-			ServletContextHandler. WireMock 3.x (latest 3.13.2) never targets 12.1; only
-			WireMock 4.x (still beta) does. Jumper runs on Netty (Jetty is test-only), so
-			pin all Jetty artifacts to a single 12.0.x line, kept at the latest 12.0.x
-			patch (12.0.36) for CVE-2026-1605/CVE-2026-2332/CVE-2025-11143. These imports
-			come first so they win over the Spring Boot parent BOM.
-			-->
+			<!-- WireMock declares Jetty 12.0.x modules. Reimport both Jetty BOMs at
+			Spring Boot's version because mixing 12.1.x core with 12.0.x EE10 modules
+			prevents WireMock's ServletContextHandler from initializing. -->
 			<dependency>
 				<groupId>org.eclipse.jetty</groupId>
 				<artifactId>jetty-bom</artifactId>
-				<version>${wiremock-jetty.version}</version>
+				<version>${jetty.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.eclipse.jetty.ee10</groupId>
 				<artifactId>jetty-ee10-bom</artifactId>
-				<version>${wiremock-jetty.version}</version>
+				<version>${jetty.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -92,23 +69,6 @@ SPDX-License-Identifier: Apache-2.0
 				<version>${spring-cloud.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.junit</groupId>
-				<artifactId>junit-bom</artifactId>
-				<version>6.1.3</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<!--
-			CVE remediation (runtime): bcprov-jdk18on arrives transitively via
-			spring-cloud-commons at 1.81.1, exposed to CVE-2026-0636
-			(GHSA-c3fc-8qff-9hwx). Force 1.84.
-			-->
-			<dependency>
-				<groupId>org.bouncycastle</groupId>
-				<artifactId>bcprov-jdk18on</artifactId>
-				<version>1.85.2</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -305,8 +265,7 @@ SPDX-License-Identifier: Apache-2.0
 
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
-			<version>1.21.4</version>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 
