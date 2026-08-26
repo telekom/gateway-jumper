@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# Conventional Commits policy for semantic-release (release.config.js).
+style = "conventional"
+
+allowed_types = [
+  "feat",
+  "fix",
+  "build",
+  "chore",
+  "ci",
+  "docs",
+  "perf",
+  "refactor",
+  "revert",
+  "style",
+  "test",
+]
+
+# committed compares allowed types case-insensitively. lefthook.yml separately
+# requires the type prefix to use the lowercase spelling listed above.
+
+# semantic-release does not restrict optional scopes or commit prose.
+# Zero disables committed's subject and line length checks.
+subject_length = 0
+line_length = 0
+hard_line_length = 0
+subject_capitalized = false
+subject_not_punctuated = false
+imperative_subject = false
