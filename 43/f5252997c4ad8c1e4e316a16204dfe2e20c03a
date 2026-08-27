@@ -7,6 +7,14 @@
   "base_commit_sha": "43f5252997c4ad8c1e4e316a16204dfe2e20c03a",
   "prompts": {},
   "sessions": {
+    "s_6bf3d2b9d1b25e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_080a571cffferFrJmiJrVeC5Cl",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
     "s_73804a604b3805": {
       "agent_id": {
         "tool": "opencode",
