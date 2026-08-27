@@ -49,6 +49,14 @@ pom.xml
   "base_commit_sha": "343bf794fe463284eb346a7e2fbb676e81b3de78",
   "prompts": {},
   "sessions": {
+    "s_1eafbcae3f354f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0534c1798ffefWHcMSluLRMvfQ",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
     "s_69421a9572ef01": {
       "agent_id": {
         "tool": "opencode",
@@ -56,6 +64,14 @@ pom.xml
         "model": "claude-opus-5"
       },
       "human_author": "luis.pflamminger@telekom.de <luis.pflamminger@telekom.de>"
+    },
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
     },
     "s_9edc7158335626": {
       "agent_id": {
