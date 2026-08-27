@@ -1,0 +1,30 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "a12e0d5c55b41ef1d6cabeb3e0630f068eb0e47c",
+  "prompts": {},
+  "humans": {
+    "h_052be7cb63ce69": {
+      "author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_e4cdce158e28c8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0239aaee3ffe7vfh4fTD5PSwE7",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    },
+    "s_fdee784b34c529": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0345c042fffeVfm5FgCtA3W4nD",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
