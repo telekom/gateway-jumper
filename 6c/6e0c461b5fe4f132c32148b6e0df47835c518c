@@ -1,0 +1,33 @@
+src/main/resources/application.yml
+  s_89eefadd9f889c::t_98281e00076d61 15-16,23-24
+README.md
+  s_89eefadd9f889c::t_98281e00076d61 184-193
+src/test/resources/application-test.yml
+  s_89eefadd9f889c::t_98281e00076d61 24-26
+src/test/java/jumper/config/ApplicationConfigurationTest.java
+  s_5fba026444d06f::t_95e8b640702c77 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "6c6e0c461b5fe4f132c32148b6e0df47835c518c",
+  "prompts": {},
+  "sessions": {
+    "s_5fba026444d06f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fb86b0916ffer1OkSiL8irF8N0",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    },
+    "s_89eefadd9f889c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fbd0ae9e6fferLrxQr8GodzGFh",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
