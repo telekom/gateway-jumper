@@ -12,13 +12,16 @@ server:
   forward-headers-strategy: none
 
 management:
+  server:
+    port: ${JUMPER_MANAGEMENT_PORT:}
   health:
     redis:
       enabled: false
   endpoint:
     health:
       probes:
-        enabled: true #healthcheck probes, liveness and readiness
+        enabled: true # healthcheck probes, liveness and readiness
+        add-additional-paths: true
       group:
         readiness:
           include: readinessState
