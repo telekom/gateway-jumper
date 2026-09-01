@@ -1,0 +1,33 @@
+release.config.js
+  h_052be7cb63ce69 18
+  h_052be7cb63ce69 20
+README.md
+  s_ce07c0c057ae9b::t_59dcdc17899954 64-66
+CONTRIBUTING.md
+  h_052be7cb63ce69 1-104
+committed.toml
+  h_052be7cb63ce69 1-32
+lefthook.yml
+  h_052be7cb63ce69 1-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "7e73e38bb35db0408b0d039814f8b3b358d4a2cf",
+  "prompts": {},
+  "humans": {
+    "h_052be7cb63ce69": {
+      "author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_ce07c0c057ae9b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa31c3640ffe6w2VPH5aGQZdhU",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
