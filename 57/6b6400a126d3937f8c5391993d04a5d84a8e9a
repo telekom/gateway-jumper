@@ -1,0 +1,16 @@
+.github/ort/config.yml
+  h_65f5d22af11f8f 37,39
+.github/workflows/ort.yml
+  h_65f5d22af11f8f 80-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "576b6400a126d3937f8c5391993d04a5d84a8e9a",
+  "prompts": {},
+  "humans": {
+    "h_65f5d22af11f8f": {
+      "author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}
