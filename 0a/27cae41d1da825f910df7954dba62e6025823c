@@ -1,0 +1,17 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.15",
+  "base_commit_sha": "0a27cae41d1da825f910df7954dba62e6025823c",
+  "prompts": {},
+  "sessions": {
+    "s_6bf3d2b9d1b25e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_080a571cffferFrJmiJrVeC5Cl",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+pom.xml
+  s_73804a604b3805::t_87b9dd36057d1f 381-383,385-418
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "dd51dbfa562baa300205254d198fdef57fcfd6d0",
+  "prompts": {},
+  "sessions": {
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}

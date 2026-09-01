@@ -1,5 +1,5 @@
 .github/workflows/build.yml
-  s_6bf3d2b9d1b25e::t_73038eec11c9be 119-144
+  s_6bf3d2b9d1b25e::t_73038eec11c9be 119-144,121-122,125-126,135
   s_6bf3d2b9d1b25e::t_72235c3d3b64ee 146,223,231-233,242
   s_6bf3d2b9d1b25e::t_cc8341e29a578b 149-151
   s_6bf3d2b9d1b25e::t_e14df59970aaa4 87,178,181,184,186,188
@@ -16,6 +16,14 @@
       "agent_id": {
         "tool": "opencode",
         "id": "ses_080a571cffferFrJmiJrVeC5Cl",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"

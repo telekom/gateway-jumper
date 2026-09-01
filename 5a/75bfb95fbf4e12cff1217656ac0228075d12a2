@@ -44,6 +44,14 @@ src/test/java/jumper/service/TokenCacheServiceTest.java
   "base_commit_sha": "5a75bfb95fbf4e12cff1217656ac0228075d12a2",
   "prompts": {},
   "sessions": {
+    "s_917c7f95df32ab": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_917c7f95df32ab",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
     "s_fdee784b34c529": {
       "agent_id": {
         "tool": "opencode",
