@@ -70,3 +70,21 @@ Feature: Token caching for external OAuth tokens
     When consumer calls the proxy route
     Then API Provider receives authorization ExternalConfigured
     And API consumer receives a 200 status code
+
+  Scenario: Cached token is served during the minimum background refresh interval
+    Given RealRoute headers are set
+    And oauth tokenEndpoint set
+    And jumperConfig oauth "consumer grant_type client_credentials" set
+    And IDP set to provide a short-lived token then fail refreshes
+    And API provider set to respond with a 200 status code
+    When consumer calls the proxy route
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+    When consumer calls the proxy route again
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+    And IDP token endpoint eventually receives exactly 2 calls
+    When consumer calls the proxy route again
+    Then API Provider receives authorization ExternalConfigured
+    And API consumer receives a 200 status code
+    And IDP token endpoint call count remains exactly 2

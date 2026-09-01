@@ -89,6 +89,11 @@ public class BaseSteps {
     requestExchange.expectStatus().isEqualTo(arg0);
   }
 
+  @And("response contains Retry-After header")
+  public void responseContainsRetryAfterHeader() {
+    requestExchange.expectHeader().valueEquals("Retry-After", "30");
+  }
+
   @And("horizon receives a {int} status code")
   public void horizonReceivesAStatusCode(int arg0) {
     requestExchange.expectStatus().isEqualTo(arg0);
@@ -252,6 +257,11 @@ public class BaseSteps {
     mockIrisServer.createExpectationExternalTokenNoExpiresInMultipleCalls(id, 5);
   }
 
+  @And("IDP set to provide a short-lived token then fail refreshes")
+  public void idpSetToProvideShortLivedTokenThenFailRefreshes() {
+    mockIrisServer.createExpectationShortLivedExternalTokenThenFail(id);
+  }
+
   @And("IDP set to provide alternative token without expires_in allowing multiple calls")
   public void idpSetToProvideAlternativeTokenWithoutExpiresInMultipleCalls() {
     mockIrisServer.createExpectationAlternativeTokenNoExpiresInMultipleCalls(id, 5);
@@ -260,6 +270,16 @@ public class BaseSteps {
   @And("IDP token endpoint was called exactly {int} times")
   public void idpTokenEndpointWasCalledTimes(int expectedCount) {
     mockIrisServer.verifyTokenEndpointCallCount(expectedCount);
+  }
+
+  @And("IDP token endpoint eventually receives exactly {int} calls")
+  public void idpTokenEndpointEventuallyReceivesCalls(int expectedCount) {
+    mockIrisServer.awaitTokenEndpointCallCount(expectedCount);
+  }
+
+  @And("IDP token endpoint call count remains exactly {int}")
+  public void idpTokenEndpointCallCountRemains(int expectedCount) {
+    mockIrisServer.verifyTokenEndpointCallCountRemains(expectedCount);
   }
 
   @When("consumer calls the proxy route")

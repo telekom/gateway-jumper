@@ -183,6 +183,36 @@ For local development and testing, Jumper uses Spring Boot's configuration mecha
 
 For additional standard Spring Boot properties, refer to the [Spring Boot documentation](https://docs.spring.io/spring-boot/appendix/application-properties/index.html).
 
+### OAuth Token Background Refresh
+
+Jumper refreshes cached OAuth tokens in the background while continuing to serve a token that is
+still safe to forward. This applies to tokens fetched for mesh routing and external authorization.
+The refresh policy can be configured with these environment variables:
+
+| Environment variable | Default | Description |
+|---|---|---|
+| `JUMPER_OAUTH_TOKEN_FETCH_CONNECT_TIMEOUT` | `2s` | Maximum time allowed to establish the token endpoint connection. |
+| `JUMPER_OAUTH_TOKEN_FETCH_OVERALL_TIMEOUT` | `10s` | Maximum duration of one shared token fetch, including retries. |
+| `JUMPER_OAUTH_TOKEN_FETCH_REQUEST_WAIT_TIMEOUT` | `4s` | Maximum time one request waits for a shared token fetch. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRIES` | `1` | Maximum retries after a retryable connection failure. |
+| `JUMPER_OAUTH_TOKEN_FETCH_RETRY_BACKOFF` | `200ms` | Initial retry backoff. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRY_BACKOFF` | `1s` | Maximum retry backoff. |
+| `JUMPER_OAUTH_TOKEN_FETCH_ERROR_BODY_LOG_LIMIT` | `8KB` | Maximum identity provider error-body bytes retained for debug logging; the complete body is still drained. |
+| `JUMPER_OAUTH_TOKEN_FETCH_REFRESH_AHEAD` | `30s` | Start refreshing this long before token expiry. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MIN_SERVE` | `10s` | Do not serve a token with this much lifetime or less remaining. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MINIMUM_BACKGROUND_REFRESH_INTERVAL` | `5s` | Minimum interval after a background refresh finishes before the same token key may be refreshed again. |
+
+`refresh-ahead` must exceed `min-serve`, and `request-wait-timeout` must not exceed
+`overall-timeout`. The error-body log limit must be between `1B` and `64KB`. The minimum background
+refresh interval bounds request volume when a token's complete lifetime is shorter than
+`refresh-ahead`; once a token is no longer safe to serve, its foreground replacement ignores this
+interval.
+
+The former `spring.cloud.oauth.connect-timeout` property remains a deprecated fallback for the new
+connect-timeout setting. The former seconds-valued `jumper.tokencache.ttlOffset` property remains a
+deprecated fallback for `min-serve`. If its value is at least `refresh-ahead`, increase
+`JUMPER_OAUTH_TOKEN_FETCH_REFRESH_AHEAD` so it remains greater than `min-serve`.
+
 ## Usage Scenarios
 
 Jumper supports various token handling and routing scenarios.  
