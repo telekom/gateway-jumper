@@ -1,0 +1,19 @@
+.github/workflows/ort.yml
+  s_35c53a4ec0ff2c::t_8fc21f1b950ef8 79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "2a05caf2e6e1a9f2c251107862df2e3dd87c6cc1",
+  "prompts": {},
+  "sessions": {
+    "s_35c53a4ec0ff2c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa76bc83affetBXTzWZSzn1rmu",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}
