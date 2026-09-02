@@ -1,3 +1,5 @@
+.github/workflows/build.yml
+  s_dfeec42a6c3d1c::t_0d39d2f2e0cd48 239
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -9,6 +11,14 @@
       "agent_id": {
         "tool": "opencode",
         "id": "ses_080a571cffferFrJmiJrVeC5Cl",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"
