@@ -12,6 +12,22 @@
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_7e52c0e5439db3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_05d1297c1ffeajiI6EN2ObzJ3L",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_dfeec42a6c3d1c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_06c8c6673ffeL9tbpwl4bE4vdr",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
     }
   }
 }
