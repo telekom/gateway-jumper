@@ -43,6 +43,7 @@ src/test/java/jumper/service/TokenFetchServiceTest.java
   s_fdee784b34c529::t_a98ed0d51491b5 442-467
   s_fdee784b34c529::t_9a7d4ff7346e78 53,55,671,702-703,708-709,718-719,722,724,750,752,754-756,758-779
   s_fdee784b34c529::t_4ea7da9cccbb9e 952
+  s_73804a604b3805::t_713477237f62a2 17-18,20,45,53-55,441-467,634,671,702-727,729-744,746-781,934-952
 src/main/java/jumper/config/OauthTokenFetchProperties.java
   s_fdee784b34c529::t_7dce3d0c7048cd 8,15,21-27,49-61
   s_fdee784b34c529::t_557de31a4d57db 11,14,28-30,32-33,35-44,48
@@ -68,6 +69,7 @@ src/test/resources/features/tokenCaching.feature
   s_fdee784b34c529::t_940fb100870c29 86,90
   s_fdee784b34c529::t_78c00bda18ae5a 73,75-85,87-89
   s_fdee784b34c529::t_a51827a520c33a 74
+  s_73804a604b3805::t_cc18e6914dced4 74
 src/test/java/jumper/config/OauthTokenFetchPropertiesTest.java
   s_fdee784b34c529::t_6ab6f80e84f6c8 17,31,33-37,43-49,60-61,72-73,79-102,131-143,145
   s_fdee784b34c529::t_a07bb2e3a33b20 29,32,62-64,70,74-76
@@ -107,6 +109,7 @@ src/main/java/jumper/service/TokenFetchService.java
   s_fdee784b34c529::t_a51827a520c33a 20,317-323,536
   s_fdee784b34c529::t_3091ef5a2be598 107,436-437
   s_fdee784b34c529::t_c0e196addd2d7e 345-346
+  s_73804a604b3805::t_6f5e625e0ca723 20,107,317-323,345-346,380,436-437,536
 README.md
   s_fdee784b34c529::t_83e67e41425b51 202,205
   s_fdee784b34c529::t_164b74d60982b9 188,191-193,201,204,212
@@ -114,6 +117,7 @@ README.md
   s_fdee784b34c529::t_25f0e2ba612e69 186-187,189-190
   s_fdee784b34c529::t_50a21c8b186cd0 195
   s_fdee784b34c529::t_a98ed0d51491b5 203,206-208
+  s_73804a604b3805::t_e4cb6fc6de5188 195,203,206-208
 src/main/java/jumper/service/TokenCacheService.java
   s_fdee784b34c529::t_3aa9158862e086 13
   s_fdee784b34c529::t_1779502403aae7 19,40
@@ -131,6 +135,7 @@ src/main/java/jumper/service/TokenCacheService.java
   s_fdee784b34c529::t_9a7d4ff7346e78 106-110,131-132,135,164,178
   s_fdee784b34c529::t_b6702313d40135 133-134
   s_fdee784b34c529::t_6119a716581bdd 179-180
+  s_73804a604b3805::t_e9f3d0589dce95 7-10,23,106-110,131-135,138-139,157,159-164,169-182,185,187-193,197-199,203-204
 src/test/java/jumper/service/TokenCacheServiceTest.java
   s_fdee784b34c529::t_ffbc67c1c16599 25,128-129,131,133,137,143-144,148-150,154,159-160,163-164,167-168,171-173,176,178-192
   s_fdee784b34c529::t_6730c87212546c 19
@@ -151,6 +156,7 @@ src/main/resources/application.yml
   s_fdee784b34c529::t_7dce3d0c7048cd 208,210-214
   s_fdee784b34c529::t_50a21c8b186cd0 209
   s_fdee784b34c529::t_a98ed0d51491b5 217
+  s_73804a604b3805::t_9af0a7b92866a5 209,217
 src/test/java/jumper/filter/ResponseFilterTest.java
   s_fdee784b34c529::t_bc6d09e3134ae1 1-31,33-60
   s_fdee784b34c529::t_a98ed0d51491b5 32
@@ -166,6 +172,14 @@ src/test/java/jumper/filter/ResponseFilterTest.java
     }
   },
   "sessions": {
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
     "s_e4cdce158e28c8": {
       "agent_id": {
         "tool": "opencode",

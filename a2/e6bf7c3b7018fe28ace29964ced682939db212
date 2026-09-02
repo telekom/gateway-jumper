@@ -1,0 +1,27 @@
+AGENTS.md
+  h_052be7cb63ce69 22-24
+  h_052be7cb63ce69 5-21,25-26
+.github/skills/pr-code-review/SKILL.md
+  s_5fbd6eba09a98c::t_2e716e6a6436d2 1-136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "a2e6bf7c3b7018fe28ace29964ced682939db212",
+  "prompts": {},
+  "humans": {
+    "h_052be7cb63ce69": {
+      "author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_5fbd6eba09a98c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9edcf21dffeWifOIDkPbNMlDs",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
