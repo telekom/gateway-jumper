@@ -52,6 +52,14 @@ src/test/java/jumper/service/TokenCacheServiceTest.java
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"
     },
+    "s_b3e3da23074aaa": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_b3e3da23074aaa",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
     "s_fdee784b34c529": {
       "agent_id": {
         "tool": "opencode",
