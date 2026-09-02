@@ -1,0 +1,41 @@
+src/main/java/jumper/service/TokenCacheService.java
+  s_73804a604b3805::t_e9f3d0589dce95 87-88
+  s_73804a604b3805::t_2be56fee3bf92c 87-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "82977848baa63f7c3ac56b54e3dcbe9ee0326bc8",
+  "prompts": {},
+  "humans": {
+    "h_052be7cb63ce69": {
+      "author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_e4cdce158e28c8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0239aaee3ffe7vfh4fTD5PSwE7",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    },
+    "s_fdee784b34c529": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_0345c042fffeVfm5FgCtA3W4nD",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
