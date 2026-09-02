@@ -41,6 +41,7 @@ jobs:
           filters: |
             deps:
               - 'pom.xml'
+              - '.ort.yml'
 
   ort-scan:
     name: ORT scan
