@@ -1,27 +1,14 @@
 .github/workflows/build.yml
-  s_73804a604b3805::t_681bc9720c1d7b 21,39,42-54,61-63,81-83,94,96,113-115,126,128,142,149-151,162,164,176,190-192,272-273
+  h_65f5d22af11f8f 21,39,42-54,61-63,81-83,94,96,113-115,126,128,142,149-151,162,164,176,190-192,272-273
 ---
 {
   "schema_version": "authorship/3.0.0",
-  "git_ai_version": "1.6.24",
+  "git_ai_version": "1.7.1",
   "base_commit_sha": "43f5252997c4ad8c1e4e316a16204dfe2e20c03a",
   "prompts": {},
-  "sessions": {
-    "s_6bf3d2b9d1b25e": {
-      "agent_id": {
-        "tool": "opencode",
-        "id": "ses_080a571cffferFrJmiJrVeC5Cl",
-        "model": "unknown"
-      },
-      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
-    },
-    "s_73804a604b3805": {
-      "agent_id": {
-        "tool": "opencode",
-        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
-        "model": "unknown"
-      },
-      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+  "humans": {
+    "h_65f5d22af11f8f": {
+      "author": "Miká Juznik <mika.juznik@telekom.de>"
     }
   }
 }
