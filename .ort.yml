@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: Apache-2.0
+
+curations:
+  packages:
+    - id: "Maven:com.google.j2objc:j2objc-annotations:3.1"
+      curations:
+        comment: "Scan the published annotation sources instead of the full j2objc repository."
+        source_code_origins: [ARTIFACT]
