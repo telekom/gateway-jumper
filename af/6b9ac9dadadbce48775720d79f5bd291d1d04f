@@ -1,33 +1,23 @@
 src/main/java/jumper/model/config/JumperConfig.java
-  s_917c7f95df32ab::t_61969cacd0f13c 191,236,241,245-259,263-266,269-271
+  s_b3e3da23074aaa::t_9e6d996748f4ed 191,236,241,245-259,263-266,269-271
 src/main/java/jumper/service/SpectreService.java
-  s_917c7f95df32ab::t_83a1baa390d1b4 13,149-152
+  s_b3e3da23074aaa::t_5f992547aed2ec 13,149-152
 src/test/java/jumper/model/config/JumperConfigTest.java
-  s_917c7f95df32ab::t_503fb230795afd 12-14,19-22,26-32,70-81,83,89-94,96-114,117-118,120,123,127-130,133,137,142,148-149,152-193
-src/main/java/jumper/service/TokenCacheService.java
-  s_fdee784b34c529::t_6119a716581bdd 87-88
+  s_b3e3da23074aaa::t_3f59b303dc0d78 12-14,19-22,26-32,70-81,83,89-94,96-114,117-118,120,123,127-130,133,137,142,148-149,152-193
 ---
 {
   "schema_version": "authorship/3.0.0",
-  "git_ai_version": "1.6.24",
+  "git_ai_version": "1.7.1",
   "base_commit_sha": "af6b9ac9dadadbce48775720d79f5bd291d1d04f",
   "prompts": {},
   "sessions": {
-    "s_917c7f95df32ab": {
+    "s_b3e3da23074aaa": {
       "agent_id": {
         "tool": "claude",
-        "id": "s_917c7f95df32ab",
+        "id": "s_b3e3da23074aaa",
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"
-    },
-    "s_fdee784b34c529": {
-      "agent_id": {
-        "tool": "opencode",
-        "id": "ses_0345c042fffeVfm5FgCtA3W4nD",
-        "model": "unknown"
-      },
-      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
     }
   }
 }
