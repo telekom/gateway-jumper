@@ -1,11 +1,16 @@
 src/test/resources/features/errorResponse.feature
-  s_73804a604b3805::t_a4169963338e4c 20-26
+  s_73804a604b3805::t_7355c58bac4224 20-26
 ---
 {
   "schema_version": "authorship/3.0.0",
-  "git_ai_version": "1.6.24",
+  "git_ai_version": "1.7.1",
   "base_commit_sha": "b4cb5bc642346a4ec9c65818b78e7284fd7500bb",
   "prompts": {},
+  "humans": {
+    "h_65f5d22af11f8f": {
+      "author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  },
   "sessions": {
     "s_73804a604b3805": {
       "agent_id": {
