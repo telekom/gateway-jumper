@@ -12,16 +12,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static com.github.tomakehurst.wiremock.stubbing.Scenario.STARTED;
 import static jumper.config.Config.*;
 import static jumper.util.JumperConfigUtil.addIdSuffix;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.http.Fault;
+import java.time.Duration;
 import java.util.Base64;
 import jumper.model.TokenInfo;
 import jumper.util.AccessToken;
 import jumper.util.ObjectMapperUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.awaitility.Awaitility;
 import tools.jackson.core.JacksonException;
 
 @Slf4j
@@ -411,6 +414,45 @@ public class MockIrisServer {
                     .withFixedDelay(100)));
   }
 
+  public void createExpectationShortLivedExternalTokenThenFail(String id) {
+    TokenInfo tokenInfo = new TokenInfo();
+    tokenInfo.setAccessToken(getToken(CONSUMER_EXTERNAL_CONFIGURED));
+    tokenInfo.setExpiresIn(20);
+    tokenInfo.setTokenType("bearer");
+
+    String tokenInfoJson;
+    try {
+      tokenInfoJson = ObjectMapperUtil.getInstance().writeValueAsString(tokenInfo);
+    } catch (JacksonException error) {
+      throw new IllegalStateException("Failed to serialize test token", error);
+    }
+
+    String authorization =
+        "Basic "
+            + Base64.getEncoder()
+                .encodeToString(
+                    (addIdSuffix("external_configured", id) + ":" + "secret").getBytes());
+    server.stubFor(
+        post(urlPathEqualTo("/external"))
+            .inScenario("background-refresh-failure")
+            .whenScenarioStateIs(STARTED)
+            .withRequestBody(equalTo("grant_type=client_credentials"))
+            .withHeader("Authorization", equalTo(authorization))
+            .willSetStateTo("refresh-fails")
+            .willReturn(
+                aResponse()
+                    .withStatus(200)
+                    .withHeader("Content-Type", "application/json; charset=utf-8")
+                    .withBody(tokenInfoJson)));
+    server.stubFor(
+        post(urlPathEqualTo("/external"))
+            .inScenario("background-refresh-failure")
+            .whenScenarioStateIs("refresh-fails")
+            .withRequestBody(equalTo("grant_type=client_credentials"))
+            .withHeader("Authorization", equalTo(authorization))
+            .willReturn(aResponse().withStatus(500)));
+  }
+
   public void createExpectationExternalTokenNoExpiresInMultipleCalls(String id, int maxCalls) {
     String tokenInfoJson = getTokenInfoJsonWithoutExpiresIn(CONSUMER_EXTERNAL_CONFIGURED);
 
@@ -459,6 +501,25 @@ public class MockIrisServer {
 
   public void verifyTokenEndpointCallCount(int expectedCount) {
     server.verify(exactly(expectedCount), postRequestedFor(urlPathEqualTo("/external")));
+  }
+
+  public void awaitTokenEndpointCallCount(int expectedCount) {
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(2))
+        .untilAsserted(
+            () ->
+                server.verify(
+                    exactly(expectedCount), postRequestedFor(urlPathEqualTo("/external"))));
+  }
+
+  public void verifyTokenEndpointCallCountRemains(int expectedCount) {
+    Awaitility.await()
+        .during(Duration.ofMillis(500))
+        .atMost(Duration.ofSeconds(1))
+        .untilAsserted(
+            () ->
+                server.verify(
+                    exactly(expectedCount), postRequestedFor(urlPathEqualTo("/external"))));
   }
 
   private String getTokenInfoJsonWithoutExpiresIn(String client) {
