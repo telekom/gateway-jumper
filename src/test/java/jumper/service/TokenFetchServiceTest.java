@@ -13,6 +13,7 @@ import static org.mockito.Mockito.*;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import com.github.benmanes.caffeine.cache.Ticker;
+import io.jsonwebtoken.Jwts;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
@@ -21,6 +22,8 @@ import java.net.NoRouteToHostException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -129,6 +132,70 @@ class TokenFetchServiceTest {
 
     verify(tokenCacheService)
         .saveTokenIfFetchMatches(eq(TOKEN_CACHE_KEY), any(), any(TokenInfo.class));
+  }
+
+  @Test
+  void tokenWithoutExpiresIn_usesAccessTokenExpiration() {
+    Date tokenExpiration = jwtDate(Instant.now().plusSeconds(300));
+    TokenInfo responseToken = tokenWithoutExpiresIn(jwtExpiringAt(tokenExpiration));
+    tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
+
+    StepVerifier.create(
+            tokenFetchService.getAccessTokenWithClientCredentials(
+                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+        .assertNext(token -> assertThat(token.getExpiration()).isEqualTo(tokenExpiration))
+        .verifyComplete();
+  }
+
+  @Test
+  void tokenWithoutExpiresIn_usesExpiredAccessTokenExpiration() {
+    Date tokenExpiration = jwtDate(Instant.now().minusSeconds(7200));
+    TokenInfo responseToken = tokenWithoutExpiresIn(jwtExpiringAt(tokenExpiration));
+    tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
+
+    StepVerifier.create(
+            tokenFetchService.getAccessTokenWithClientCredentials(
+                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+        .assertNext(token -> assertThat(token.getExpiration()).isEqualTo(tokenExpiration))
+        .verifyComplete();
+  }
+
+  @Test
+  void expiresInTakesPrecedenceOverAccessTokenExpiration() {
+    TokenInfo responseToken = tokenWithoutExpiresIn(jwtExpiringAt(Instant.now().plusSeconds(300)));
+    responseToken.setExpiresIn(120);
+    Date responseExpiration = responseToken.getExpiration();
+    tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
+
+    StepVerifier.create(
+            tokenFetchService.getAccessTokenWithClientCredentials(
+                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+        .assertNext(token -> assertThat(token.getExpiration()).isEqualTo(responseExpiration))
+        .verifyComplete();
+  }
+
+  @Test
+  void jwtWithoutExpiration_keepsDefaultCacheLifetime() {
+    TokenInfo responseToken = tokenWithoutExpiresIn(Jwts.builder().subject("subject").compact());
+    tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
+
+    StepVerifier.create(
+            tokenFetchService.getAccessTokenWithClientCredentials(
+                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+        .assertNext(token -> assertThat(token.getExpiration()).isNull())
+        .verifyComplete();
+  }
+
+  @Test
+  void opaqueTokenWithoutExpiresIn_keepsDefaultCacheLifetime() {
+    TokenInfo responseToken = tokenWithoutExpiresIn("opaque-access-token");
+    tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
+
+    StepVerifier.create(
+            tokenFetchService.getAccessTokenWithClientCredentials(
+                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+        .assertNext(token -> assertThat(token.getExpiration()).isNull())
+        .verifyComplete();
   }
 
   @Test
@@ -1013,6 +1080,25 @@ class TokenFetchServiceTest {
     tokenInfo.setExpiresIn(expiresInSeconds);
     tokenInfo.setTokenType("Bearer");
     return tokenInfo;
+  }
+
+  private TokenInfo tokenWithoutExpiresIn(String accessToken) {
+    TokenInfo tokenInfo = new TokenInfo();
+    tokenInfo.setAccessToken(accessToken);
+    tokenInfo.setTokenType("Bearer");
+    return tokenInfo;
+  }
+
+  private String jwtExpiringAt(Instant expiration) {
+    return jwtExpiringAt(jwtDate(expiration));
+  }
+
+  private String jwtExpiringAt(Date expiration) {
+    return Jwts.builder().expiration(expiration).compact();
+  }
+
+  private Date jwtDate(Instant instant) {
+    return Date.from(Instant.ofEpochSecond(instant.getEpochSecond()));
   }
 
   @SuppressWarnings("unchecked")

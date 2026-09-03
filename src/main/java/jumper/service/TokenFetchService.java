@@ -36,6 +36,7 @@ import jumper.service.TokenCacheService.FetchSelection;
 import jumper.service.TokenFetchMetrics.Mode;
 import jumper.service.TokenFetchMetrics.Outcome;
 import jumper.util.BasicAuthUtil;
+import jumper.util.OauthTokenUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -421,7 +422,7 @@ public class TokenFetchService {
         .flatMap(
             tokenInfo ->
                 StringUtils.isNotBlank(tokenInfo.getAccessToken())
-                    ? Mono.just(tokenInfo)
+                    ? Mono.just(applyAccessTokenExpirationFallback(tokenInfo))
                     : Mono.error(
                         new ResponseStatusException(
                             HttpStatus.NOT_ACCEPTABLE,
@@ -462,6 +463,14 @@ public class TokenFetchService {
                 .onRetryExhaustedThrow(
                     (retryBackoffSpec, retrySignal) ->
                         new TokenFetchUnavailableException(tokenEndpoint, retrySignal.failure())));
+  }
+
+  private TokenInfo applyAccessTokenExpirationFallback(TokenInfo tokenInfo) {
+    if (tokenInfo.getExpiration() == null) {
+      OauthTokenUtil.getExpirationFromAccessToken(tokenInfo.getAccessToken())
+          .ifPresent(tokenInfo::setExpiration);
+    }
+    return tokenInfo;
   }
 
   Mono<? extends Throwable> handleIdpError(
