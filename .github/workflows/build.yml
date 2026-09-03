@@ -113,7 +113,7 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: "maven"
       - name: Inject slug vars
-        uses: rlespinasse/github-slug-action@ef93b2ea4b6405d06fd8684fc3ff795d262ecae8 #v5.7.0
+        uses: rlespinasse/github-slug-action@0e3299190dac9a700da92a90de4556116ea965ed #v5.7.1
       - name: Log in to the container registry
         uses: ./.github/actions/registry-login
         with:
