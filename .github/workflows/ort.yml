@@ -5,7 +5,7 @@
 name: ORT Scan
 
 # An ORT scan is expensive, so it runs only where dependencies can have changed: on pull
-# requests and pushes that touch pom.xml.
+# requests and pushes that touch dependencies or ORT configuration.
 
 on:
   pull_request:
@@ -15,6 +15,9 @@ on:
       - next
     paths:
       - pom.xml
+      - .ort.yml
+      - .github/ort/config.yml
+      - .github/workflows/ort.yml
   workflow_dispatch:
 
 permissions:
@@ -42,6 +45,8 @@ jobs:
             deps:
               - 'pom.xml'
               - '.ort.yml'
+              - '.github/ort/config.yml'
+              - '.github/workflows/ort.yml'
 
   ort-scan:
     name: ORT scan
@@ -61,16 +66,16 @@ jobs:
         run: |
           # Move into default config dir
           export ORT_CONFIG_DIR=$HOME/.ort/config
-          mkdir -p ${ORT_CONFIG_DIR}
-          cd ${ORT_CONFIG_DIR}
+          mkdir -p "${ORT_CONFIG_DIR}"
+          cd "${ORT_CONFIG_DIR}"
           # Checkout default config repo
           git init -q
-          git remote add origin https://github.com/oss-review-toolkit/ort-config.git
+          git remote add origin https://github.com/telekom/ort-config.git
           git fetch -q --depth 1 origin main
           git checkout -q FETCH_HEAD
-          # Copy custom config into config dir if it exists
+          # Merge custom config into the default config if it exists
           if [ -f "${GITHUB_WORKSPACE}/.github/ort/config.yml" ]; then
-            cp ${GITHUB_WORKSPACE}/.github/ort/config.yml ${ORT_CONFIG_DIR}
+            yq -i ". *= load(\"${GITHUB_WORKSPACE}/.github/ort/config.yml\")" config.yml
           fi
       - name: Run GitHub Action for ORT
         id: ort
@@ -102,4 +107,4 @@ jobs:
         if: github.ref == 'refs/heads/main'
         uses: advanced-security/spdx-dependency-submission-action@8b97fad313c1af2c5c490e1f72ab338371eb92f6 #v0.3.2
         with:
-          filePath: ${{ steps.ort.outputs.results-path }}"
+          filePath: ${{ steps.ort.outputs.results-path }}
