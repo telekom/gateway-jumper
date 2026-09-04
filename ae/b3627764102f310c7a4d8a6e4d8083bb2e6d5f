@@ -7,6 +7,11 @@
   "git_ai_version": "1.6.15",
   "base_commit_sha": "aeb3627764102f310c7a4d8a6e4d8083bb2e6d5f",
   "prompts": {},
+  "humans": {
+    "h_65f5d22af11f8f": {
+      "author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  },
   "sessions": {
     "s_6bf3d2b9d1b25e": {
       "agent_id": {
