@@ -1,16 +1,17 @@
-pom.xml
-  s_73804a604b3805::t_5491ede542c124 381-383,385-418
+.ort.yml
+  s_2c15fd597fe8f1::t_2119200db21715 11
+  s_2c15fd597fe8f1::t_98518cc7c96607 12-39
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.7.1",
-  "base_commit_sha": "dd51dbfa562baa300205254d198fdef57fcfd6d0",
+  "base_commit_sha": "02902edf515c42fabea363fbc8a5762291f4ff85",
   "prompts": {},
   "sessions": {
-    "s_73804a604b3805": {
+    "s_2c15fd597fe8f1": {
       "agent_id": {
         "tool": "opencode",
-        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
+        "id": "ses_f9e0e51b8ffexZLtLQuCBe42Xo",
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"

@@ -7,11 +7,24 @@
   "git_ai_version": "1.6.15",
   "base_commit_sha": "aeb3627764102f310c7a4d8a6e4d8083bb2e6d5f",
   "prompts": {},
+  "humans": {
+    "h_65f5d22af11f8f": {
+      "author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  },
   "sessions": {
     "s_6bf3d2b9d1b25e": {
       "agent_id": {
         "tool": "opencode",
         "id": "ses_080a571cffferFrJmiJrVeC5Cl",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_73804a604b3805": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"

@@ -2,13 +2,8 @@
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.15",
-  "base_commit_sha": "d8e32b1b354b6e8898685f6c0f292af4997fa4d2",
+  "base_commit_sha": "7a03a342a63f7143aebb19fe7dc0f7af7a82ff01",
   "prompts": {},
-  "humans": {
-    "h_65f5d22af11f8f": {
-      "author": "Miká Juznik <mika.juznik@telekom.de>"
-    }
-  },
   "sessions": {
     "s_6bf3d2b9d1b25e": {
       "agent_id": {

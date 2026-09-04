@@ -1,0 +1,21 @@
+pom.xml
+  s_386523cad38339::t_37528db95b0d85 50-51
+  s_386523cad38339::t_b2422af88a4d56 49,55,62
+  s_386523cad38339::t_b218b2d8e82ed5 268
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "0b0bcb6e84eb0d279126b4764b7ae8c5250a9bc1",
+  "prompts": {},
+  "sessions": {
+    "s_386523cad38339": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fc7b9b106ffeEWi1gJe7JUvkV7",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}

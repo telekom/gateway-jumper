@@ -1,0 +1,49 @@
+.github/ort/config.yml
+  h_65f5d22af11f8f 37,39
+.github/workflows/ort.yml
+  h_65f5d22af11f8f 47,86-87
+  s_35c53a4ec0ff2c::t_c6535416351c0c 61-62
+  s_2c15fd597fe8f1::t_36fece36f54afe 20,49
+  s_2c15fd597fe8f1::t_b73362b37a2558 8,18-19,48,110
+  s_2c15fd597fe8f1::t_5df54fc2f101ba 69-70
+  s_e933319e303fc7::t_12085b8cbe9609 76,78
+.ort.yml
+  h_65f5d22af11f8f 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "7cfd561a075436eef75f5bd10ce4f1c717aae0df",
+  "prompts": {},
+  "humans": {
+    "h_65f5d22af11f8f": {
+      "author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_2c15fd597fe8f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9e0e51b8ffexZLtLQuCBe42Xo",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_35c53a4ec0ff2c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa76bc83affetBXTzWZSzn1rmu",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_e933319e303fc7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f93def196ffeC9WNgwEn543rLb",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}

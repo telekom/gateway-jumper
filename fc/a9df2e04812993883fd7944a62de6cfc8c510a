@@ -1,0 +1,33 @@
+.github/workflows/ort.yml
+  s_e933319e303fc7::t_12085b8cbe9609 76,78
+  s_2c15fd597fe8f1::t_36fece36f54afe 20,49
+  s_2c15fd597fe8f1::t_b73362b37a2558 8,18-19,48,110
+  s_2c15fd597fe8f1::t_5df54fc2f101ba 69-70
+.ort.yml
+  s_2c15fd597fe8f1::t_98518cc7c96607 12-39
+  s_2c15fd597fe8f1::t_2119200db21715 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "fca9df2e04812993883fd7944a62de6cfc8c510a",
+  "prompts": {},
+  "sessions": {
+    "s_2c15fd597fe8f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9e0e51b8ffexZLtLQuCBe42Xo",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    },
+    "s_e933319e303fc7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f93def196ffeC9WNgwEn543rLb",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}

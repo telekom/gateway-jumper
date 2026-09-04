@@ -6,7 +6,7 @@ src/main/java/jumper/service/TokenCacheService.java
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.24",
-  "base_commit_sha": "bccf9297e79a1776196f9ca10b9c7f6790f3e71c",
+  "base_commit_sha": "82977848baa63f7c3ac56b54e3dcbe9ee0326bc8",
   "prompts": {},
   "humans": {
     "h_052be7cb63ce69": {
