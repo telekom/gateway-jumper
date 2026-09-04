@@ -8,3 +8,32 @@ curations:
       curations:
         comment: "Scan the published annotation sources instead of the full j2objc repository."
         source_code_origins: [ARTIFACT]
+
+package_configurations:
+  - id: "Maven:jakarta.servlet:jakarta.servlet-api:6.1.0"
+    source_code_origin: ARTIFACT
+    license_finding_curations:
+      - path: "META-INF/LICENSE.md"
+        start_lines: 281
+        line_count: 336
+        detected_license: "GPL-2.0-only"
+        concluded_license: "GPL-2.0-only WITH Classpath-exception-2.0"
+        reason: "INCORRECT"
+        comment: "The Classpath Exception follows the GPL text in the same license file."
+      - path: "META-INF/NOTICE.md"
+        start_lines: 41
+        line_count: 8
+        detected_license: "NOASSERTION"
+        concluded_license: "NONE"
+        reason: "DOCUMENTATION_OF"
+        comment: "This is a generic cryptography notice, not a license grant."
+  - id: "Maven:redis.clients.authentication:redis-authx-core:0.1.1-beta2"
+    source_code_origin: ARTIFACT
+    license_finding_curations:
+      - path: "META-INF/maven/redis.clients.authentication/redis-authx-core/pom.xml"
+        start_lines: 27
+        line_count: 3
+        detected_license: "NOASSERTION"
+        concluded_license: "MIT"
+        reason: "INCORRECT"
+        comment: "These lines explicitly declare the MIT license."
