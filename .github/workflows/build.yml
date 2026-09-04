@@ -128,7 +128,8 @@ jobs:
           # No credentials are passed: Jib reads the Docker config written by the registry
           # login step above, which this job also needs for cosign.
           mvn -B -U package -DskipTests jib:build \
-            -Djib.to.image="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+            -Djib.to.image="${IMAGE_REPOSITORY}:${IMAGE_TAG}" \
+            -Djib.container.labels=expiration=3months
           echo "digest=$(cat target/jib-image.digest)" >> "${GITHUB_OUTPUT}"
       - name: Scan preview image
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
