@@ -2,21 +2,13 @@
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.15",
-  "base_commit_sha": "73d4c07537cb494fc113f19dc1c5286a91cc8951",
+  "base_commit_sha": "5bad86a047dee318465140ff0ff741b6281670da",
   "prompts": {},
   "sessions": {
     "s_6bf3d2b9d1b25e": {
       "agent_id": {
         "tool": "opencode",
         "id": "ses_080a571cffferFrJmiJrVeC5Cl",
-        "model": "unknown"
-      },
-      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
-    },
-    "s_73804a604b3805": {
-      "agent_id": {
-        "tool": "opencode",
-        "id": "ses_fe0545aa2ffe3uU09q7aNpCu0M",
         "model": "unknown"
       },
       "human_author": "Miká Juznik <mika.juznik@telekom.de>"
