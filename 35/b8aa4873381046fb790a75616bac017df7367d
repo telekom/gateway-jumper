@@ -1,0 +1,20 @@
+.ort.yml
+  s_2c15fd597fe8f1::t_98518cc7c96607 12-39
+  s_2c15fd597fe8f1::t_2119200db21715 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.1",
+  "base_commit_sha": "35b8aa4873381046fb790a75616bac017df7367d",
+  "prompts": {},
+  "sessions": {
+    "s_2c15fd597fe8f1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9e0e51b8ffexZLtLQuCBe42Xo",
+        "model": "unknown"
+      },
+      "human_author": "Miká Juznik <mika.juznik@telekom.de>"
+    }
+  }
+}
