@@ -1,0 +1,53 @@
+src/main/java/jumper/service/TokenFetchService.java
+  s_44a1a8327eac22::t_5fc760b4de1891 149-151,153,156
+  s_44a1a8327eac22::t_efb1599f6f6262 375-382
+  s_44a1a8327eac22::t_ce5d3c618bbd1c 453-459
+  s_cf898f94fa387b::t_d860a33c2dece8 24
+  s_44a1a8327eac22::t_0adbe59422cfcd 339-341
+  s_44a1a8327eac22::t_3bce2c5f88f418 309-319,535-539
+src/test/java/jumper/service/TokenFetchServiceTest.java
+  s_44a1a8327eac22::t_8ae6dba30d1430 673-674,679
+  s_44a1a8327eac22::t_0f7330ce287ccb 28
+  s_44a1a8327eac22::t_8b1cda889f0f4b 805-808
+  s_44a1a8327eac22::t_df764a346e35bc 201,371-372,389-390,439-440,455-456,480-481,505-506,533-534,565,624-625,649
+  s_44a1a8327eac22::t_f31b17c3d91e85 84,225,228,608,899-900
+  s_44a1a8327eac22::t_828e80ae492963 773,836
+  s_44a1a8327eac22::t_8ec6dbe9cab5fc 566
+  s_44a1a8327eac22::t_8aa461aaf01788 650
+README.md
+  s_44a1a8327eac22::t_4472f31c21eb04 190-191
+  s_44a1a8327eac22::t_9d6032ecf88cc9 197
+src/main/java/jumper/service/TokenCacheService.java
+  s_44a1a8327eac22::t_a0697fef52d986 13-14
+  s_44a1a8327eac22::t_fc65f1073d9f5e 34
+  s_44a1a8327eac22::t_eca1020d518c27 61-65,69-70,72-73,75-78,80-84
+src/test/java/jumper/service/TokenCacheServiceTest.java
+  s_cf898f94fa387b::t_93eb0e111b0afd 43-44,46-48,57-58,66-67,75-76,84,92-93,101-102,110,118-119,133,150
+  s_44a1a8327eac22::t_fc05bd9699c8ab 172
+src/main/java/jumper/config/OauthTokenFetchProperties.java
+  s_44a1a8327eac22::t_f2c9ddea1dce3b 18-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "0192294a9877f3350285e0cf3a1c98669260ec44",
+  "prompts": {},
+  "sessions": {
+    "s_44a1a8327eac22": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98c93640ffePovbdWCX4ih9ys",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    },
+    "s_cf898f94fa387b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f5f0d6028ffeZDjiI33qoPocrN",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
