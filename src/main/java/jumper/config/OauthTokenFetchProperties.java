@@ -15,6 +15,25 @@ import org.springframework.boot.convert.DurationUnit;
 import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
+/**
+ * Resilience settings for fetching OAuth tokens from identity providers. Each component maps to a
+ * {@code JUMPER_OAUTH_TOKEN_FETCH_*} environment variable documented in the README section "OAuth
+ * Token Background Refresh"; keep both descriptions in sync.
+ *
+ * @param connectTimeout maximum time allowed to establish the token endpoint connection
+ * @param overallTimeout maximum duration of one shared token fetch, including retries
+ * @param requestWaitTimeout maximum time one request waits for a shared token fetch before it fails
+ *     with 504; the fetch itself continues for other waiters and the cache
+ * @param maxRetries maximum retries after a retryable connection failure
+ * @param retryBackoff initial retry backoff
+ * @param maxRetryBackoff maximum retry backoff
+ * @param errorBodyLogLimit maximum identity provider error-body bytes retained for debug logging;
+ *     the complete body is still drained
+ * @param refreshAhead start refreshing this long before token expiry
+ * @param minServe do not serve a token with this much lifetime or less remaining
+ * @param minimumBackgroundRefreshInterval minimum interval after a background refresh finishes
+ *     before the same token key may be refreshed again
+ */
 @ConfigurationProperties("jumper.oauth.token-fetch")
 @Validated
 public record OauthTokenFetchProperties(

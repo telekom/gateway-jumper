@@ -10,7 +10,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Objects;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import jumper.config.OauthTokenFetchProperties;
 import jumper.model.TokenInfo;
@@ -30,6 +31,7 @@ public class TokenCacheService {
 
   private static final String TOKEN_CACHE_KEY_DELIMITER = ".";
   private static final String TOKEN_CACHE_NAME = "cache-token-info";
+  private static final Duration NO_EXPIRATION = ChronoUnit.FOREVER.getDuration();
 
   private final Cache tokenCache;
   private final OauthTokenFetchProperties tokenFetchProperties;
@@ -56,27 +58,30 @@ public class TokenCacheService {
     log.debug("TokenCacheService initialized with Spring-managed cache: {}", TOKEN_CACHE_NAME);
   }
 
-  public TokenLookup lookup(String tokenCacheKey) {
+  /**
+   * Returns the cached token when it remains forwardable for longer than {@code minServe}. Tokens
+   * without an expiration are always servable.
+   */
+  public Optional<TokenInfo> findServableToken(String tokenCacheKey) {
     log.debug("Looking up token from cache with key: {}", tokenCacheKey);
 
     TokenInfo token = tokenCache.get(tokenCacheKey, TokenInfo.class);
-    if (token == null) {
-      return new TokenLookup(null, Freshness.NOT_SERVABLE);
+    if (token == null || remainingLifetime(token).compareTo(tokenFetchProperties.minServe()) <= 0) {
+      return Optional.empty();
     }
+    return Optional.of(token);
+  }
+
+  /** Whether the token expires within {@code refreshAhead} and should be refreshed proactively. */
+  public boolean isExpiringSoon(TokenInfo token) {
+    return remainingLifetime(token).compareTo(tokenFetchProperties.refreshAhead()) <= 0;
+  }
+
+  private Duration remainingLifetime(TokenInfo token) {
     if (token.getExpiration() == null) {
-      return new TokenLookup(token, Freshness.FRESH);
+      return NO_EXPIRATION;
     }
-
-    Duration remaining = Duration.ofMillis(token.getExpiration().getTime() - clock.millis());
-    if (remaining.compareTo(tokenFetchProperties.minServe()) <= 0) {
-      return new TokenLookup(null, Freshness.NOT_SERVABLE);
-    }
-
-    Freshness freshness =
-        remaining.compareTo(tokenFetchProperties.refreshAhead()) <= 0
-            ? Freshness.NEEDS_REFRESH
-            : Freshness.FRESH;
-    return new TokenLookup(token, freshness);
+    return Duration.ofMillis(token.getExpiration().getTime() - clock.millis());
   }
 
   void saveToken(String tokenKey, TokenInfo gwAccessToken) {
@@ -202,30 +207,6 @@ public class TokenCacheService {
       return hexString.toString();
     } catch (NoSuchAlgorithmException error) {
       throw new IllegalStateException("SHA-256 algorithm not available", error);
-    }
-  }
-
-  public enum Freshness {
-    FRESH,
-    NEEDS_REFRESH,
-    NOT_SERVABLE
-  }
-
-  public record TokenLookup(TokenInfo token, Freshness freshness) {
-
-    public TokenLookup {
-      Objects.requireNonNull(freshness, "freshness");
-      if (freshness != Freshness.NOT_SERVABLE) {
-        Objects.requireNonNull(token, "A servable token lookup requires a token");
-      }
-    }
-
-    public boolean servable() {
-      return freshness != Freshness.NOT_SERVABLE;
-    }
-
-    public boolean needsRefresh() {
-      return freshness == Freshness.NEEDS_REFRESH;
     }
   }
 

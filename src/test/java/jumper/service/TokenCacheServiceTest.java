@@ -16,7 +16,6 @@ import java.util.Date;
 import jumper.config.OauthTokenFetchProperties;
 import jumper.model.TokenInfo;
 import jumper.model.config.OauthCredentials;
-import jumper.service.TokenCacheService.Freshness;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.CacheManager;
@@ -41,12 +40,12 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofSeconds(20));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    var firstLookup = tokenCacheService.lookup(TOKEN_KEY);
-    var secondLookup = tokenCacheService.lookup(TOKEN_KEY);
+    var firstLookup = tokenCacheService.findServableToken(TOKEN_KEY);
+    var secondLookup = tokenCacheService.findServableToken(TOKEN_KEY);
 
-    assertThat(firstLookup.token()).isSameAs(token);
-    assertThat(firstLookup.freshness()).isEqualTo(Freshness.NEEDS_REFRESH);
-    assertThat(secondLookup.token()).isSameAs(token);
+    assertThat(firstLookup).containsSame(token);
+    assertThat(tokenCacheService.isExpiringSoon(token)).isTrue();
+    assertThat(secondLookup).containsSame(token);
   }
 
   @Test
@@ -55,11 +54,8 @@ class TokenCacheServiceTest {
     token.setAccessToken("access-token");
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    var lookup = tokenCacheService.lookup(TOKEN_KEY);
-
-    assertThat(lookup.servable()).isTrue();
-    assertThat(lookup.needsRefresh()).isFalse();
-    assertThat(lookup.token()).isSameAs(token);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(token);
+    assertThat(tokenCacheService.isExpiringSoon(token)).isFalse();
   }
 
   @Test
@@ -67,7 +63,8 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofSeconds(60));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).freshness()).isEqualTo(Freshness.FRESH);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(token);
+    assertThat(tokenCacheService.isExpiringSoon(token)).isFalse();
   }
 
   @Test
@@ -75,11 +72,8 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofSeconds(5));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    var lookup = tokenCacheService.lookup(TOKEN_KEY);
-
-    assertThat(lookup.servable()).isFalse();
-    assertThat(lookup.token()).isNull();
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).token()).isNull();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
   }
 
   @Test
@@ -87,7 +81,7 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofSeconds(-1));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).servable()).isFalse();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
   }
 
   @Test
@@ -95,7 +89,8 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofSeconds(30));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).freshness()).isEqualTo(Freshness.NEEDS_REFRESH);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(token);
+    assertThat(tokenCacheService.isExpiringSoon(token)).isTrue();
   }
 
   @Test
@@ -103,7 +98,8 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofMillis(30_001));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).freshness()).isEqualTo(Freshness.FRESH);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(token);
+    assertThat(tokenCacheService.isExpiringSoon(token)).isFalse();
   }
 
   @Test
@@ -111,7 +107,7 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofSeconds(10));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).servable()).isFalse();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
   }
 
   @Test
@@ -119,7 +115,8 @@ class TokenCacheServiceTest {
     TokenInfo token = tokenExpiringIn(Duration.ofMillis(10_001));
     tokenCacheService.saveToken(TOKEN_KEY, token);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).freshness()).isEqualTo(Freshness.NEEDS_REFRESH);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(token);
+    assertThat(tokenCacheService.isExpiringSoon(token)).isTrue();
   }
 
   @Test
@@ -133,7 +130,7 @@ class TokenCacheServiceTest {
     tokenCacheService.completeFetch(TOKEN_KEY, fetch);
     tokenCacheService.evictToken(TOKEN_KEY);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).servable()).isFalse();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
     assertThat(tokenCacheService.activeFetchCount()).isZero();
   }
 
@@ -150,7 +147,7 @@ class TokenCacheServiceTest {
     tokenCacheService.completeFetch(TOKEN_KEY, oldFetch);
 
     assertThat(saved).isFalse();
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).servable()).isFalse();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
     assertThat(tokenCacheService.activeFetchCount()).isZero();
   }
 
@@ -172,7 +169,7 @@ class TokenCacheServiceTest {
     assertThat(tokenCacheService.activeFetchCount()).isOne();
     tokenCacheService.completeFetch(TOKEN_KEY, newFetch);
 
-    assertThat(tokenCacheService.lookup(TOKEN_KEY).token()).isSameAs(newToken);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(newToken);
     assertThat(tokenCacheService.activeFetchCount()).isZero();
     tokenCacheService.evictToken(TOKEN_KEY);
     assertThat(tokenCacheService.activeFetchCount()).isZero();

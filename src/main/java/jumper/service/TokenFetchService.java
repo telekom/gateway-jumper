@@ -21,6 +21,7 @@ import java.net.NoRouteToHostException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -28,7 +29,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import jumper.Constants;
 import jumper.config.OauthTokenFetchProperties;
-import jumper.exception.TokenFetchUnavailableException;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
@@ -147,13 +147,14 @@ public class TokenFetchService {
 
   private Mono<TokenInfo> resolveToken(
       String tokenEndpoint, String tokenKey, Supplier<TokenRequest> requestSupplier) {
-    TokenCacheService.TokenLookup cached = tokenCache.lookup(tokenKey);
-    if (cached.servable()) {
+    Optional<TokenInfo> cached = tokenCache.findServableToken(tokenKey);
+    if (cached.isPresent()) {
+      TokenInfo token = cached.get();
       metrics.record(Outcome.CACHE_HIT, FOREGROUND);
-      if (cached.needsRefresh()) {
+      if (tokenCache.isExpiringSoon(token)) {
         tryStartBackgroundRefresh(tokenEndpoint, tokenKey, requestSupplier);
       }
-      return Mono.just(cached.token());
+      return Mono.just(token);
     }
 
     return getOrCreateInFlightRequest(tokenEndpoint, tokenKey, requestSupplier);
@@ -306,24 +307,17 @@ public class TokenFetchService {
         () -> {
           Mono<TokenInfo> waiter =
               getOrCreateSharedRequest(tokenEndpoint, tokenKey, requestSupplier, FOREGROUND)
-                  .publisher();
-          if (tokenFetchProperties
-                  .requestWaitTimeout()
-                  .compareTo(tokenFetchProperties.overallTimeout())
-              < 0) {
-            waiter =
-                waiter
-                    .timeout(tokenFetchProperties.requestWaitTimeout())
-                    .onErrorMap(
-                        TimeoutException.class,
-                        error -> {
-                          metrics.record(Outcome.DEADLINE, FOREGROUND);
-                          return new ResponseStatusException(
-                              HttpStatus.GATEWAY_TIMEOUT,
-                              "Timed out waiting for a token from " + tokenEndpoint,
-                              error);
-                        });
-          }
+                  .publisher()
+                  .timeout(tokenFetchProperties.requestWaitTimeout())
+                  .onErrorMap(
+                      TimeoutException.class,
+                      error -> {
+                        metrics.record(Outcome.DEADLINE, FOREGROUND);
+                        return new ResponseStatusException(
+                            HttpStatus.GATEWAY_TIMEOUT,
+                            "Timed out waiting for a token from " + tokenEndpoint,
+                            error);
+                      });
           metrics.waiterStarted();
           return waiter
               .onErrorMap(TokenRequestBuildException.class, Throwable::getCause)
@@ -343,9 +337,15 @@ public class TokenFetchService {
   }
 
   /**
-   * Builds a shared fetch that downstream waiter cancellation cannot stop. Terminal cleanup runs
-   * before {@code cache()} replays signals to waiters; {@code doFinally} is the guarded fallback
-   * for cancellation paths that do not invoke {@code doOnTerminate}.
+   * Builds a shared fetch that downstream waiter cancellation cannot stop.
+   *
+   * <p>Cleanup is registered twice on purpose. {@code doOnTerminate} runs before the terminal
+   * signal passes through {@code cache()} to the waiters, so the finished publisher is already
+   * removed from the active-fetch map when waiters observe the result. With {@code doFinally} alone
+   * there is a window after a failed fetch in which a new caller joins the dead publisher and
+   * receives the stale error replayed instead of starting a fresh fetch. {@code doFinally} runs
+   * after propagation and only adds coverage for cancellation, which {@code doOnTerminate} does not
+   * see. The {@code cleanedUp} flag makes the second call a no-op.
    */
   private Mono<TokenInfo> createInFlightRequest(
       String tokenEndpoint, String tokenKey, Supplier<TokenRequest> requestSupplier, Mode mode) {
@@ -390,6 +390,7 @@ public class TokenFetchService {
                 })
             .doOnNext(ignored -> metrics.record(Outcome.SUCCESS, mode))
             .doOnError(error -> metrics.record(classifyOutcome(error, mode), mode))
+            // Ordering matters: see the method Javadoc before collapsing these into one operator.
             .doOnTerminate(cleanup)
             .doFinally(signal -> cleanup.run())
             .cache();
@@ -462,7 +463,13 @@ public class TokenFetchService {
                 .doBeforeRetry(ignored -> metrics.recordRetry(mode))
                 .onRetryExhaustedThrow(
                     (retryBackoffSpec, retrySignal) ->
-                        new TokenFetchUnavailableException(tokenEndpoint, retrySignal.failure())));
+                        new ResponseStatusException(
+                            HttpStatus.UNAUTHORIZED,
+                            "Failed to connect to "
+                                + tokenEndpoint
+                                + ", cause: "
+                                + retrySignal.failure().getMessage(),
+                            retrySignal.failure())));
   }
 
   private TokenInfo applyAccessTokenExpirationFallback(TokenInfo tokenInfo) {
@@ -537,14 +544,12 @@ public class TokenFetchService {
     if (error instanceof TokenRequestBuildException) {
       return Outcome.REQUEST_BUILD_FAILURE;
     }
-    if (error instanceof TokenFetchUnavailableException) {
-      return Outcome.RETRY_EXHAUSTED;
-    }
     if (error instanceof ResponseStatusException responseStatusException) {
-      return switch (responseStatusException.getStatusCode().value()) {
-        case 504 -> Outcome.DEADLINE;
-        default -> Outcome.IDP_ERROR;
-      };
+      if (responseStatusException.getStatusCode().value() == 504) {
+        return Outcome.DEADLINE;
+      }
+      // Exhausted connection retries surface as 401 wrapping the last connection failure.
+      return isConnectionFailure(error.getCause()) ? Outcome.RETRY_EXHAUSTED : Outcome.IDP_ERROR;
     }
     return isConnectionFailure(error) ? Outcome.CONNECT_FAILURE : Outcome.IDP_ERROR;
   }

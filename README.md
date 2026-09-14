@@ -187,13 +187,14 @@ For additional standard Spring Boot properties, refer to the [Spring Boot docume
 
 Jumper refreshes cached OAuth tokens in the background while continuing to serve a token that is
 still safe to forward. This applies to tokens fetched for mesh routing and external authorization.
-The refresh policy can be configured with these environment variables:
+The refresh policy can be configured with these environment variables (also documented on
+`OauthTokenFetchProperties`):
 
 | Environment variable | Default | Description |
 |---|---|---|
 | `JUMPER_OAUTH_TOKEN_FETCH_CONNECT_TIMEOUT` | `2s` | Maximum time allowed to establish the token endpoint connection. |
 | `JUMPER_OAUTH_TOKEN_FETCH_OVERALL_TIMEOUT` | `10s` | Maximum duration of one shared token fetch, including retries. |
-| `JUMPER_OAUTH_TOKEN_FETCH_REQUEST_WAIT_TIMEOUT` | `4s` | Maximum time one request waits for a shared token fetch. |
+| `JUMPER_OAUTH_TOKEN_FETCH_REQUEST_WAIT_TIMEOUT` | `4s` | Maximum time one request waits for a shared token fetch before it fails with 504; the fetch itself continues for other waiters and the cache. |
 | `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRIES` | `1` | Maximum retries after a retryable connection failure. |
 | `JUMPER_OAUTH_TOKEN_FETCH_RETRY_BACKOFF` | `200ms` | Initial retry backoff. |
 | `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRY_BACKOFF` | `1s` | Maximum retry backoff. |
