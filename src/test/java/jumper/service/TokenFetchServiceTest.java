@@ -21,12 +21,11 @@ import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,10 +34,11 @@ import jumper.config.OauthTokenFetchProperties;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
-import jumper.service.TokenCacheService.FetchSelection;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -61,9 +61,10 @@ class TokenFetchServiceTest {
   private static final String TOKEN_ENDPOINT = "https://idp.example.com/token";
   private static final String CLIENT_ID = "test-client";
   private static final String CLIENT_SECRET = "test-secret";
-  private static final String TOKEN_CACHE_KEY = "test-cache-key";
 
+  private ConcurrentMapCache tokenCache;
   private TokenCacheService tokenCacheService;
+  private String tokenCacheKey;
   private TokenGeneratorService tokenGeneratorService;
   private TokenFetchService tokenFetchService;
   private SimpleMeterRegistry meterRegistry;
@@ -73,42 +74,17 @@ class TokenFetchServiceTest {
 
   @BeforeEach
   void setUp() {
-    tokenCacheService = mock(TokenCacheService.class);
+    tokenCache = new ConcurrentMapCache("cache-token-info");
+    CacheManager cacheManager = mock(CacheManager.class);
+    when(cacheManager.getCache("cache-token-info")).thenReturn(tokenCache);
+    tokenCacheService =
+        new TokenCacheService(cacheManager, tokenFetchProperties(), Clock.systemUTC());
+    tokenCacheKey =
+        tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null);
     tokenGeneratorService = mock(TokenGeneratorService.class);
     meterRegistry = new SimpleMeterRegistry();
     tokenFetchMetrics = new TokenFetchMetrics(meterRegistry);
     idpCallCount = new AtomicInteger(0);
-
-    when(tokenCacheService.generateTokenCacheKey(anyString(), anyString(), anyString(), any()))
-        .thenReturn(TOKEN_CACHE_KEY);
-    when(tokenCacheService.findServableToken(anyString())).thenReturn(Optional.empty());
-    ConcurrentHashMap<String, Mono<TokenInfo>> activeFetches = new ConcurrentHashMap<>();
-    when(tokenCacheService.getOrCreateFetch(anyString(), any()))
-        .thenAnswer(
-            invocation -> {
-              String tokenKey = invocation.getArgument(0);
-              Mono<TokenInfo> candidate = invocation.getArgument(1);
-              boolean[] created = {false};
-              Mono<TokenInfo> selected =
-                  activeFetches.computeIfAbsent(
-                      tokenKey,
-                      ignored -> {
-                        created[0] = true;
-                        return candidate;
-                      });
-              return new FetchSelection(selected, created[0]);
-            });
-    when(tokenCacheService.saveTokenIfFetchMatches(anyString(), any(), any()))
-        .thenAnswer(
-            invocation ->
-                activeFetches.get(invocation.getArgument(0)) == invocation.getArgument(1));
-    doAnswer(
-            invocation -> {
-              activeFetches.remove(invocation.getArgument(0), invocation.getArgument(1));
-              return null;
-            })
-        .when(tokenCacheService)
-        .completeFetch(anyString(), any());
 
     WebClient webClient = mockWebClient(createTokenInfo(3600), Duration.ZERO);
 
@@ -124,11 +100,9 @@ class TokenFetchServiceTest {
             token -> {
               assertThat(token.getAccessToken()).isEqualTo("mocked-access-token");
               assertThat(idpCallCount.get()).isEqualTo(1);
+              assertThat(cachedToken()).isSameAs(token);
             })
         .verifyComplete();
-
-    verify(tokenCacheService)
-        .saveTokenIfFetchMatches(eq(TOKEN_CACHE_KEY), any(), any(TokenInfo.class));
   }
 
   @Test
@@ -198,19 +172,16 @@ class TokenFetchServiceTest {
   @Test
   void singleRequest_cacheHit_doesNotCallIdp() {
     TokenInfo cachedToken = createTokenInfo(3600);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
 
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .assertNext(
-            token -> {
-              assertThat(token.getAccessToken()).isEqualTo("mocked-access-token");
-              assertThat(idpCallCount.get()).isEqualTo(0);
-            })
+        .expectNext(cachedToken)
         .verifyComplete();
 
-    verify(tokenCacheService, never()).saveToken(anyString(), any(TokenInfo.class));
+    assertThat(idpCallCount.get()).isZero();
+    assertThat(cachedToken()).isSameAs(cachedToken);
   }
 
   @Test
@@ -220,12 +191,12 @@ class TokenFetchServiceTest {
     config.setInternalTokenEndpoint("https://idp.example.com/auth/realms/provider");
     config.setClientId(CLIENT_ID);
     config.setClientSecret(CLIENT_SECRET);
-    TokenInfo cachedToken = createTokenInfo(3600);
-    AtomicInteger cacheLookups = new AtomicInteger();
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY))
-        .thenAnswer(
-            invocation ->
-                cacheLookups.getAndIncrement() == 0 ? Optional.empty() : Optional.of(cachedToken));
+    String meshTokenKey =
+        tokenCacheService.generateTokenCacheKey(
+            "https://idp.example.com/auth/realms/provider/protocol/openid-connect/token",
+            CLIENT_ID,
+            CLIENT_SECRET,
+            null);
 
     // act
     TokenInfo fetchedToken = tokenFetchService.getInternalMeshAccessToken(config).block();
@@ -234,15 +205,8 @@ class TokenFetchServiceTest {
     // assert
     assertThat(fetchedToken).isNotNull();
     assertThat(fetchedToken.getAccessToken()).isEqualTo("mocked-access-token");
-    assertThat(reusedToken).isSameAs(cachedToken);
-    verify(tokenCacheService, times(2))
-        .generateTokenCacheKey(
-            "https://idp.example.com/auth/realms/provider/protocol/openid-connect/token",
-            CLIENT_ID,
-            CLIENT_SECRET,
-            null);
-    verify(tokenCacheService)
-        .saveTokenIfFetchMatches(eq(TOKEN_CACHE_KEY), any(), same(fetchedToken));
+    assertThat(reusedToken).isSameAs(fetchedToken);
+    assertThat(tokenCache.get(meshTokenKey, TokenInfo.class)).isSameAs(fetchedToken);
     assertThat(idpCallCount.get()).isOne();
   }
 
@@ -289,15 +253,6 @@ class TokenFetchServiceTest {
 
   @Test
   void concurrentRequests_differentKeys_makesSeparateIdpCalls() {
-    String tokenKey1 = "key-zone-A";
-    String tokenKey2 = "key-zone-B";
-
-    when(tokenCacheService.generateTokenCacheKey(
-            eq("https://zone-a.example.com/token"), anyString(), anyString(), any()))
-        .thenReturn(tokenKey1);
-    when(tokenCacheService.generateTokenCacheKey(
-            eq("https://zone-b.example.com/token"), anyString(), anyString(), any()))
-        .thenReturn(tokenKey2);
     WebClient slowWebClient = mockWebClient(createTokenInfo(3600), Duration.ofMillis(100));
     tokenFetchService = createTokenFetchService(slowWebClient);
 
@@ -321,7 +276,7 @@ class TokenFetchServiceTest {
   }
 
   @Test
-  void afterCompletedRequest_nextRequestMakesNewIdpCall() {
+  void afterEviction_nextRequestMakesNewIdpCall() {
     // First request
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
@@ -331,7 +286,8 @@ class TokenFetchServiceTest {
 
     assertThat(idpCallCount.get()).isEqualTo(1);
 
-    // Second request (cache still empty — simulates eviction)
+    tokenCacheService.evictToken(tokenCacheKey);
+
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
@@ -339,8 +295,29 @@ class TokenFetchServiceTest {
         .verifyComplete();
 
     assertThat(idpCallCount.get())
-        .as("After the first in-flight completes, a new request should trigger a fresh IDP call")
+        .as("After eviction, a new request should trigger a fresh IDP call")
         .isEqualTo(2);
+  }
+
+  @Test
+  void evictionDuringFetch_discardsStaleResultButStillServesWaiter() {
+    Sinks.One<TokenInfo> idpResponse = Sinks.one();
+    tokenFetchService = createTokenFetchService(mockWebClient(idpResponse.asMono()));
+    TokenInfo staleToken = createTokenInfo(3600);
+
+    Mono<TokenInfo> waiter =
+        tokenFetchService
+            .getAccessTokenWithClientCredentials(TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null)
+            .cache();
+    waiter.subscribe(ignored -> {}, ignored -> {});
+    await().atMost(Duration.ofSeconds(1)).untilAsserted(() -> assertThat(idpCallCount).hasValue(1));
+
+    tokenCacheService.evictToken(tokenCacheKey);
+    idpResponse.tryEmitValue(staleToken).orThrow();
+
+    StepVerifier.create(waiter).expectNext(staleToken).verifyComplete();
+    assertThat(tokenCache.get(tokenCacheKey)).isNull();
+    assertThat(tokenCacheService.activeFetchCount()).isZero();
   }
 
   @Test
@@ -368,8 +345,7 @@ class TokenFetchServiceTest {
   void tokenInsideRefreshWindow_isServedWhileSingleBackgroundRefreshRuns() {
     TokenInfo cachedToken = createTokenInfo(20);
     TokenInfo refreshedToken = createTokenInfo(3600);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     tokenFetchService =
         createTokenFetchService(mockWebClient(refreshedToken, Duration.ofMillis(200)));
 
@@ -386,8 +362,7 @@ class TokenFetchServiceTest {
   @Test
   void concurrentRequestsInsideRefreshWindow_makeSingleIdpCall() {
     TokenInfo cachedToken = createTokenInfo(20);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     TokenInfo refreshedToken = createTokenInfo(3600);
     Sinks.One<TokenInfo> idpResponse = Sinks.one();
     tokenFetchService = createTokenFetchService(mockWebClient(idpResponse.asMono()));
@@ -434,10 +409,7 @@ class TokenFetchServiceTest {
     credentials.setClientId(CLIENT_ID);
     credentials.setClientSecret(CLIENT_SECRET);
     credentials.setGrantType("client_credentials");
-    when(tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, credentials))
-        .thenReturn(TOKEN_CACHE_KEY);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     tokenFetchService =
         createTokenFetchService(mockWebClient(refreshedToken, Duration.ofMillis(200)));
 
@@ -452,8 +424,7 @@ class TokenFetchServiceTest {
   @Test
   void failedBackgroundRefresh_doesNotFailRequestAndIsCounted() {
     TokenInfo cachedToken = createTokenInfo(20);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     tokenFetchService = createTokenFetchService(mockFailingWebClient());
 
     StepVerifier.create(
@@ -477,8 +448,7 @@ class TokenFetchServiceTest {
   @Test
   void failedBackgroundRefresh_isRetriedAfterCooldownExpires() {
     TokenInfo cachedToken = createTokenInfo(20);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     AtomicLong tickerNanos = new AtomicLong();
     tokenFetchService = createTokenFetchService(mockFailingWebClient(), tickerNanos::get);
 
@@ -502,8 +472,7 @@ class TokenFetchServiceTest {
   @Test
   void backgroundRefreshCooldownStartsAgainWhenAttemptFinishes() {
     TokenInfo cachedToken = createTokenInfo(20);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     AtomicLong tickerNanos = new AtomicLong();
     Sinks.One<TokenInfo> idpResponse = Sinks.one();
     tokenFetchService =
@@ -530,8 +499,7 @@ class TokenFetchServiceTest {
   void successfulBackgroundRefresh_isNotRepeatedBeforeMinimumInterval() {
     TokenInfo cachedToken = createTokenInfo(20);
     TokenInfo shortLivedToken = createTokenInfo(20);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     AtomicLong tickerNanos = new AtomicLong();
     tokenFetchService =
         createTokenFetchService(mockWebClient(shortLivedToken, Duration.ZERO), tickerNanos::get);
@@ -560,10 +528,8 @@ class TokenFetchServiceTest {
     credentials.setClientId(CLIENT_ID);
     credentials.setClientKey("invalid-key");
     credentials.setGrantType("client_credentials");
-    when(tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, credentials))
-        .thenReturn(TOKEN_CACHE_KEY);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(
+        tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, credentials), cachedToken);
     when(tokenGeneratorService.createJwtTokenFromKey(any(), anyString(), any(), any(), anyString()))
         .thenThrow(new IllegalArgumentException("Invalid client key"));
 
@@ -590,8 +556,6 @@ class TokenFetchServiceTest {
     credentials.setClientKey("invalid-key");
     credentials.setGrantType("client_credentials");
     IllegalArgumentException signingFailure = new IllegalArgumentException("Invalid client key");
-    when(tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, credentials))
-        .thenReturn(TOKEN_CACHE_KEY);
     when(tokenGeneratorService.createJwtTokenFromKey(any(), anyString(), any(), any(), anyString()))
         .thenThrow(signingFailure);
 
@@ -605,7 +569,7 @@ class TokenFetchServiceTest {
   void notServableCachedToken_fetchesReplacement() {
     TokenInfo cachedToken = createTokenInfo(5);
     TokenInfo refreshedToken = createTokenInfo(3600);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.empty());
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     tokenFetchService = createTokenFetchService(mockWebClient(refreshedToken, Duration.ZERO));
 
     StepVerifier.create(
@@ -615,14 +579,14 @@ class TokenFetchServiceTest {
         .verifyComplete();
 
     assertThat(idpCallCount).hasValue(1);
+    assertThat(cachedToken()).isSameAs(refreshedToken);
   }
 
   @Test
   void cancellingTriggeringRequest_doesNotCancelBackgroundRefresh() {
     TokenInfo cachedToken = createTokenInfo(20);
     TokenInfo refreshedToken = createTokenInfo(3600);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(tokenCacheKey, cachedToken);
     tokenFetchService =
         createTokenFetchService(mockWebClient(refreshedToken, Duration.ofMillis(200)));
 
@@ -644,10 +608,8 @@ class TokenFetchServiceTest {
     credentials.setClientId(CLIENT_ID);
     credentials.setClientKey("client-key");
     credentials.setGrantType("client_credentials");
-    when(tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, credentials))
-        .thenReturn(TOKEN_CACHE_KEY);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY)).thenReturn(Optional.of(cachedToken));
-    when(tokenCacheService.isExpiringSoon(cachedToken)).thenReturn(true);
+    tokenCacheService.saveToken(
+        tokenCacheService.generateTokenCacheKey(TOKEN_ENDPOINT, credentials), cachedToken);
     CountDownLatch releaseSigning = new CountDownLatch(1);
     when(tokenGeneratorService.createJwtTokenFromKey(any(), anyString(), any(), any(), anyString()))
         .thenAnswer(
@@ -890,24 +852,19 @@ class TokenFetchServiceTest {
                                 .isEqualTo(HttpStatus.NOT_ACCEPTABLE)))
         .verify();
 
-    verify(tokenCacheService, never()).saveTokenIfFetchMatches(anyString(), any(), any());
+    assertThat(tokenCache.get(tokenCacheKey)).isNull();
   }
 
   @Test
   void metricsUseOnlyBoundedTagsAndGaugesReturnToZero() {
-    TokenInfo cachedToken = createTokenInfo(3600);
-    when(tokenCacheService.findServableToken(TOKEN_CACHE_KEY))
-        .thenReturn(Optional.empty(), Optional.of(cachedToken));
-
+    TokenInfo fetchedToken =
+        tokenFetchService
+            .getAccessTokenWithClientCredentials(TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null)
+            .block(Duration.ofSeconds(1));
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .expectNextCount(1)
-        .verifyComplete();
-    StepVerifier.create(
-            tokenFetchService.getAccessTokenWithClientCredentials(
-                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .expectNext(cachedToken)
+        .expectNext(fetchedToken)
         .verifyComplete();
 
     assertThat(metricCount("success", "foreground")).isOne();
@@ -984,8 +941,7 @@ class TokenFetchServiceTest {
     Level previousLevel = logger.getLevel();
     logger.setLevel(Level.DEBUG);
     try {
-      StepVerifier.create(
-              tokenFetchService.handleIdpError(response, TOKEN_ENDPOINT, TOKEN_CACHE_KEY))
+      StepVerifier.create(tokenFetchService.handleIdpError(response, TOKEN_ENDPOINT, tokenCacheKey))
           .assertNext(
               error ->
                   assertThat(error)
@@ -1025,18 +981,28 @@ class TokenFetchServiceTest {
         tokenCacheService,
         tokenGeneratorService,
         tokenFetchMetrics,
-        new OauthTokenFetchProperties(
-            Duration.ofSeconds(2),
-            overallTimeout,
-            requestWaitTimeout,
-            1,
-            Duration.ofMillis(200),
-            Duration.ofSeconds(1),
-            DataSize.ofKilobytes(8),
-            Duration.ofSeconds(30),
-            Duration.ofSeconds(10),
-            Duration.ofSeconds(5)),
+        tokenFetchProperties(overallTimeout, requestWaitTimeout),
         ticker);
+  }
+
+  private OauthTokenFetchProperties tokenFetchProperties() {
+    return tokenFetchProperties(Duration.ofSeconds(5), Duration.ofSeconds(5));
+  }
+
+  /** refreshAhead 30s and minServe 10s: tokens created with 20s are servable but expiring soon. */
+  private OauthTokenFetchProperties tokenFetchProperties(
+      Duration overallTimeout, Duration requestWaitTimeout) {
+    return new OauthTokenFetchProperties(
+        Duration.ofSeconds(2),
+        overallTimeout,
+        requestWaitTimeout,
+        1,
+        Duration.ofMillis(200),
+        Duration.ofSeconds(1),
+        DataSize.ofKilobytes(8),
+        Duration.ofSeconds(30),
+        Duration.ofSeconds(10),
+        Duration.ofSeconds(5));
   }
 
   private double backgroundFailureCount(String outcome) {
@@ -1184,7 +1150,10 @@ class TokenFetchServiceTest {
   }
 
   private void verifyTokenSaved(TokenInfo refreshedToken) {
-    verify(tokenCacheService)
-        .saveTokenIfFetchMatches(eq(TOKEN_CACHE_KEY), any(), same(refreshedToken));
+    assertThat(cachedToken()).isSameAs(refreshedToken);
+  }
+
+  private TokenInfo cachedToken() {
+    return tokenCache.get(tokenCacheKey, TokenInfo.class);
   }
 }
