@@ -120,6 +120,16 @@ class TokenCacheServiceTest {
   }
 
   @Test
+  void isServable_appliesMinimumServeThresholdToAnyToken() {
+    assertThat(tokenCacheService.isServable(tokenExpiringIn(Duration.ofSeconds(10)))).isFalse();
+    assertThat(tokenCacheService.isServable(tokenExpiringIn(Duration.ofMillis(10_001)))).isTrue();
+    assertThat(tokenCacheService.isServable(tokenExpiringIn(Duration.ofSeconds(-1)))).isFalse();
+    TokenInfo withoutExpiry = new TokenInfo();
+    withoutExpiry.setAccessToken("access-token");
+    assertThat(tokenCacheService.isServable(withoutExpiry)).isTrue();
+  }
+
+  @Test
   void refreshBeforeEviction_isRemovedByLaterEviction() {
     TokenInfo refreshedToken = tokenExpiringIn(Duration.ofMinutes(5));
     Mono<TokenInfo> fetch = Mono.just(refreshedToken);

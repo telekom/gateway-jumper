@@ -30,7 +30,8 @@ import org.springframework.validation.annotation.Validated;
  * @param errorBodyLogLimit maximum identity provider error-body bytes retained for debug logging;
  *     the complete body is still drained
  * @param refreshAhead start refreshing this long before token expiry
- * @param minServe do not serve a token with this much lifetime or less remaining
+ * @param minServe do not serve a token with this much lifetime or less remaining; a freshly fetched
+ *     token that already violates this is rejected with 406 and not cached
  * @param minimumBackgroundRefreshInterval minimum interval after a background refresh finishes
  *     before the same token key may be refreshed again
  */

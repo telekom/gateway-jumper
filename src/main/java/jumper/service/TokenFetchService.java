@@ -420,15 +420,7 @@ public class TokenFetchService {
         .onStatus(
             HttpStatusCode::isError, response -> handleIdpError(response, tokenEndpoint, tokenKey))
         .bodyToMono(TokenInfo.class)
-        .flatMap(
-            tokenInfo ->
-                StringUtils.isNotBlank(tokenInfo.getAccessToken())
-                    ? Mono.just(applyAccessTokenExpirationFallback(tokenInfo))
-                    : Mono.error(
-                        new ResponseStatusException(
-                            HttpStatus.NOT_ACCEPTABLE,
-                            "Identity provider returned an invalid token response from "
-                                + tokenEndpoint)))
+        .flatMap(tokenInfo -> validateTokenResponse(tokenInfo, tokenEndpoint))
         .switchIfEmpty(
             Mono.error(
                 new ResponseStatusException(
@@ -472,12 +464,34 @@ public class TokenFetchService {
                             retrySignal.failure())));
   }
 
-  private TokenInfo applyAccessTokenExpirationFallback(TokenInfo tokenInfo) {
+  /**
+   * Rejects responses that cannot be forwarded: a blank access token, or a token whose remaining
+   * lifetime is already at or below {@code minServe}. Such tokens are neither cached nor served;
+   * caching them would only make the next lookup reject what this request already forwarded.
+   */
+  private Mono<TokenInfo> validateTokenResponse(TokenInfo tokenInfo, String tokenEndpoint) {
+    if (StringUtils.isBlank(tokenInfo.getAccessToken())) {
+      return Mono.error(
+          new ResponseStatusException(
+              HttpStatus.NOT_ACCEPTABLE,
+              "Identity provider returned an invalid token response from " + tokenEndpoint));
+    }
+    applyAccessTokenExpirationFallback(tokenInfo);
+    if (!tokenCache.isServable(tokenInfo)) {
+      return Mono.error(
+          new ResponseStatusException(
+              HttpStatus.NOT_ACCEPTABLE,
+              "Identity provider returned an expired or nearly expired token from "
+                  + tokenEndpoint));
+    }
+    return Mono.just(tokenInfo);
+  }
+
+  private void applyAccessTokenExpirationFallback(TokenInfo tokenInfo) {
     if (tokenInfo.getExpiration() == null) {
       OauthTokenUtil.getExpirationFromAccessToken(tokenInfo.getAccessToken())
           .ifPresent(tokenInfo::setExpiration);
     }
-    return tokenInfo;
   }
 
   Mono<? extends Throwable> handleIdpError(

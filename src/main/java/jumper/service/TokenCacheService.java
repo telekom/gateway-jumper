@@ -66,10 +66,18 @@ public class TokenCacheService {
     log.debug("Looking up token from cache with key: {}", tokenCacheKey);
 
     TokenInfo token = tokenCache.get(tokenCacheKey, TokenInfo.class);
-    if (token == null || remainingLifetime(token).compareTo(tokenFetchProperties.minServe()) <= 0) {
+    if (token == null || !isServable(token)) {
       return Optional.empty();
     }
     return Optional.of(token);
+  }
+
+  /**
+   * Whether the token remains forwardable for longer than {@code minServe}. Applies to freshly
+   * fetched tokens as well as cached ones. Tokens without an expiration are always servable.
+   */
+  public boolean isServable(TokenInfo token) {
+    return remainingLifetime(token).compareTo(tokenFetchProperties.minServe()) > 0;
   }
 
   /** Whether the token expires within {@code refreshAhead} and should be refreshed proactively. */

@@ -119,7 +119,7 @@ class TokenFetchServiceTest {
   }
 
   @Test
-  void tokenWithoutExpiresIn_usesExpiredAccessTokenExpiration() {
+  void expiredAccessToken_isRejectedAndNotCached() {
     Date tokenExpiration = jwtDate(Instant.now().minusSeconds(7200));
     TokenInfo responseToken = tokenWithoutExpiresIn(jwtExpiringAt(tokenExpiration));
     tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
@@ -127,8 +127,26 @@ class TokenFetchServiceTest {
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .assertNext(token -> assertThat(token.getExpiration()).isEqualTo(tokenExpiration))
-        .verifyComplete();
+        .expectErrorSatisfies(this::assertNotAcceptable)
+        .verify();
+
+    assertThat(tokenCache.get(tokenCacheKey)).isNull();
+    assertThat(idpCallCount).hasValue(1);
+  }
+
+  @Test
+  void expiresInWithinMinServe_isRejectedAndNotCached() {
+    TokenInfo responseToken = createTokenInfo(5);
+    tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
+
+    StepVerifier.create(
+            tokenFetchService.getAccessTokenWithClientCredentials(
+                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+        .expectErrorSatisfies(this::assertNotAcceptable)
+        .verify();
+
+    assertThat(tokenCache.get(tokenCacheKey)).isNull();
+    assertThat(metricCount("idp_error", "foreground")).isOne();
   }
 
   @Test
@@ -842,14 +860,7 @@ class TokenFetchServiceTest {
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .expectErrorSatisfies(
-            error ->
-                assertThat(error)
-                    .isInstanceOfSatisfying(
-                        ResponseStatusException.class,
-                        exception ->
-                            assertThat(exception.getStatusCode())
-                                .isEqualTo(HttpStatus.NOT_ACCEPTABLE)))
+        .expectErrorSatisfies(this::assertNotAcceptable)
         .verify();
 
     assertThat(tokenCache.get(tokenCacheKey)).isNull();
@@ -1026,6 +1037,14 @@ class TokenFetchServiceTest {
       current = current.getCause();
     }
     return false;
+  }
+
+  private void assertNotAcceptable(Throwable error) {
+    assertThat(error)
+        .isInstanceOfSatisfying(
+            ResponseStatusException.class,
+            exception ->
+                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_ACCEPTABLE));
   }
 
   private double metricCount(String outcome, String mode) {
