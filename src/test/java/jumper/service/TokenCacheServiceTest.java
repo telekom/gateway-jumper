@@ -22,6 +22,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCache;
 import org.springframework.util.unit.DataSize;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.test.StepVerifier;
 
 class TokenCacheServiceTest {
 
@@ -130,73 +132,73 @@ class TokenCacheServiceTest {
   }
 
   @Test
-  void refreshBeforeEviction_isRemovedByLaterEviction() {
+  void completedFetch_savesTokenAndUnregistersItself() {
     TokenInfo refreshedToken = tokenExpiringIn(Duration.ofMinutes(5));
-    Mono<TokenInfo> fetch = Mono.just(refreshedToken);
-    assertThat(tokenCacheService.getOrCreateFetch(TOKEN_KEY, fetch).created()).isTrue();
+    var fetch = tokenCacheService.getOrCreateFetch(TOKEN_KEY, Mono.just(refreshedToken));
+    assertThat(fetch.created()).isTrue();
 
-    assertThat(tokenCacheService.saveTokenIfFetchMatches(TOKEN_KEY, fetch, refreshedToken))
-        .isTrue();
-    tokenCacheService.completeFetch(TOKEN_KEY, fetch);
-    tokenCacheService.evictToken(TOKEN_KEY);
+    StepVerifier.create(fetch.publisher()).expectNext(refreshedToken).verifyComplete();
 
-    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(refreshedToken);
     assertThat(tokenCacheService.activeFetchCount()).isZero();
+    tokenCacheService.evictToken(TOKEN_KEY);
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
   }
 
   @Test
-  void evictionBeforeRefresh_discardsOlderRefreshResult() {
+  void evictionDuringFetch_discardsOlderRefreshResult() {
     tokenCacheService.saveToken(TOKEN_KEY, tokenExpiringIn(Duration.ofMinutes(5)));
-    Mono<TokenInfo> oldFetch = Mono.never();
-    tokenCacheService.getOrCreateFetch(TOKEN_KEY, oldFetch);
+    Sinks.One<TokenInfo> idpResponse = Sinks.one();
+    tokenCacheService.getOrCreateFetch(TOKEN_KEY, idpResponse.asMono()).publisher().subscribe();
 
     tokenCacheService.evictToken(TOKEN_KEY);
-    boolean saved =
-        tokenCacheService.saveTokenIfFetchMatches(
-            TOKEN_KEY, oldFetch, tokenExpiringIn(Duration.ofMinutes(5)));
-    tokenCacheService.completeFetch(TOKEN_KEY, oldFetch);
+    idpResponse.tryEmitValue(tokenExpiringIn(Duration.ofMinutes(5))).orThrow();
 
-    assertThat(saved).isFalse();
     assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
     assertThat(tokenCacheService.activeFetchCount()).isZero();
   }
 
   @Test
   void fetchStartedAfterEviction_canPopulateCacheWhileOlderFetchCannot() {
-    Mono<TokenInfo> oldFetch = Mono.never();
-    tokenCacheService.getOrCreateFetch(TOKEN_KEY, oldFetch);
+    Sinks.One<TokenInfo> oldResponse = Sinks.one();
+    tokenCacheService.getOrCreateFetch(TOKEN_KEY, oldResponse.asMono()).publisher().subscribe();
     tokenCacheService.evictToken(TOKEN_KEY);
     TokenInfo newToken = tokenExpiringIn(Duration.ofMinutes(5));
-    Mono<TokenInfo> newFetch = Mono.just(newToken);
-    tokenCacheService.getOrCreateFetch(TOKEN_KEY, newFetch);
+    Sinks.One<TokenInfo> newResponse = Sinks.one();
+    var newFetch = tokenCacheService.getOrCreateFetch(TOKEN_KEY, newResponse.asMono());
+    assertThat(newFetch.created()).isTrue();
+    newFetch.publisher().subscribe();
 
-    assertThat(
-            tokenCacheService.saveTokenIfFetchMatches(
-                TOKEN_KEY, oldFetch, tokenExpiringIn(Duration.ofMinutes(5))))
-        .isFalse();
-    assertThat(tokenCacheService.saveTokenIfFetchMatches(TOKEN_KEY, newFetch, newToken)).isTrue();
-    tokenCacheService.completeFetch(TOKEN_KEY, oldFetch);
-    assertThat(tokenCacheService.activeFetchCount()).isOne();
-    tokenCacheService.completeFetch(TOKEN_KEY, newFetch);
+    oldResponse.tryEmitValue(tokenExpiringIn(Duration.ofMinutes(5))).orThrow();
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
+    assertThat(tokenCacheService.activeFetchCount())
+        .as("finishing the evicted fetch must not unregister its replacement")
+        .isOne();
 
+    newResponse.tryEmitValue(newToken).orThrow();
     assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).containsSame(newToken);
-    assertThat(tokenCacheService.activeFetchCount()).isZero();
-    tokenCacheService.evictToken(TOKEN_KEY);
     assertThat(tokenCacheService.activeFetchCount()).isZero();
   }
 
   @Test
+  void failedFetch_isUnregisteredBeforeWaitersObserveTheError() {
+    var fetch =
+        tokenCacheService.getOrCreateFetch(
+            TOKEN_KEY, Mono.error(new IllegalStateException("IDP unavailable")));
+
+    StepVerifier.create(fetch.publisher())
+        .expectErrorSatisfies(error -> assertThat(tokenCacheService.activeFetchCount()).isZero())
+        .verify();
+  }
+
+  @Test
   void concurrentSelection_reusesExistingFetch() {
-    Mono<TokenInfo> first = Mono.never();
-    Mono<TokenInfo> second = Mono.never();
+    var created = tokenCacheService.getOrCreateFetch(TOKEN_KEY, Mono.never());
+    var reused = tokenCacheService.getOrCreateFetch(TOKEN_KEY, Mono.never());
 
-    var created = tokenCacheService.getOrCreateFetch(TOKEN_KEY, first);
-    var reused = tokenCacheService.getOrCreateFetch(TOKEN_KEY, second);
-
-    assertThat(created.publisher()).isSameAs(first);
     assertThat(created.created()).isTrue();
-    assertThat(reused.publisher()).isSameAs(first);
     assertThat(reused.created()).isFalse();
+    assertThat(reused.publisher()).isSameAs(created.publisher());
   }
 
   @Test

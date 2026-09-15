@@ -36,8 +36,7 @@ public class TokenCacheService {
   private final Cache tokenCache;
   private final OauthTokenFetchProperties tokenFetchProperties;
   private final Clock clock;
-  private final ConcurrentHashMap<String, Mono<TokenInfo>> activeFetches =
-      new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ActiveFetch> activeFetches = new ConcurrentHashMap<>();
 
   @Autowired
   public TokenCacheService(
@@ -98,12 +97,15 @@ public class TokenCacheService {
   }
 
   /**
-   * Atomically selects the active fetch for a token key. The caller owns subscribing to the
-   * candidate only when {@link FetchSelection#created()} is true.
+   * Atomically joins the current fetch for a token key or installs {@code source} as the new one.
+   * The returned publisher is shared: it caches its result for late waiters, saves a successful
+   * token while this fetch is still current, and unregisters itself when it terminates. The caller
+   * owns subscribing to it only when {@link FetchSelection#created()} is true; downstream
+   * cancellation does not stop the underlying fetch.
    */
-  public FetchSelection getOrCreateFetch(String tokenKey, Mono<TokenInfo> candidate) {
+  public FetchSelection getOrCreateFetch(String tokenKey, Mono<TokenInfo> source) {
     boolean[] created = {false};
-    Mono<TokenInfo> selected =
+    ActiveFetch selected =
         activeFetches.compute(
             tokenKey,
             (key, existing) -> {
@@ -111,9 +113,9 @@ public class TokenCacheService {
                 return existing;
               }
               created[0] = true;
-              return candidate;
+              return new ActiveFetch(tokenKey, source);
             });
-    return new FetchSelection(selected, created[0]);
+    return new FetchSelection(selected.publisher, created[0]);
   }
 
   /**
@@ -121,24 +123,16 @@ public class TokenCacheService {
    * intentionally run inside the per-key map operation and must not re-enter {@code activeFetches};
    * this linearizes the identity check and write against eviction.
    */
-  public boolean saveTokenIfFetchMatches(String tokenKey, Mono<TokenInfo> fetch, TokenInfo token) {
-    boolean[] saved = new boolean[1];
+  private void saveTokenIfFetchMatches(String tokenKey, ActiveFetch fetch, TokenInfo token) {
     activeFetches.computeIfPresent(
         tokenKey,
         (key, current) -> {
           if (current == fetch) {
             tokenCache.put(tokenKey, token);
-            saved[0] = true;
             log.debug("Token saved with tokenKey: '{}'", tokenKey);
           }
           return current;
         });
-    return saved[0];
-  }
-
-  /** Removes a completed fetch without removing a replacement installed after eviction. */
-  public void completeFetch(String tokenKey, Mono<TokenInfo> fetch) {
-    activeFetches.remove(tokenKey, fetch);
   }
 
   /**
@@ -219,4 +213,28 @@ public class TokenCacheService {
   }
 
   public record FetchSelection(Mono<TokenInfo> publisher, boolean created) {}
+
+  /**
+   * One registered fetch. Identity is the object itself, so a replacement installed after eviction
+   * is never confused with the fetch it replaced.
+   *
+   * <p>Unregistration is attached twice on purpose. {@code doOnTerminate} runs before the terminal
+   * signal passes through {@code cache()} to the waiters, so a caller arriving right after a failed
+   * fetch starts a fresh one instead of joining the dead publisher and receiving the stale error.
+   * {@code doFinally} runs after propagation and only adds coverage for cancellation, which {@code
+   * doOnTerminate} does not see. {@code remove(key, this)} is idempotent, so the second call is a
+   * no-op.
+   */
+  private final class ActiveFetch {
+    private final Mono<TokenInfo> publisher;
+
+    private ActiveFetch(String tokenKey, Mono<TokenInfo> source) {
+      this.publisher =
+          source
+              .doOnNext(token -> saveTokenIfFetchMatches(tokenKey, this, token))
+              .doOnTerminate(() -> activeFetches.remove(tokenKey, this))
+              .doFinally(signal -> activeFetches.remove(tokenKey, this))
+              .cache();
+    }
+  }
 }

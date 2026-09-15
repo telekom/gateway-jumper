@@ -24,7 +24,6 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import jumper.Constants;
@@ -326,42 +325,12 @@ public class TokenFetchService {
   }
 
   /**
-   * Atomically joins the current per-key fetch or installs a new cached publisher. Eviction removes
-   * the selected publisher, allowing the next caller to install a replacement.
+   * Joins the current per-key fetch or installs a new one. {@link TokenCacheService} owns sharing,
+   * saving the result, and unregistering the fetch; this service only supplies the HTTP request.
    */
   private FetchSelection getOrCreateSharedRequest(
       String tokenEndpoint, String tokenKey, Supplier<TokenRequest> requestSupplier, Mode mode) {
-    Mono<TokenInfo> candidate =
-        createInFlightRequest(tokenEndpoint, tokenKey, requestSupplier, mode);
-    return tokenCache.getOrCreateFetch(tokenKey, candidate);
-  }
-
-  /**
-   * Builds a shared fetch that downstream waiter cancellation cannot stop.
-   *
-   * <p>Cleanup is registered twice on purpose. {@code doOnTerminate} runs before the terminal
-   * signal passes through {@code cache()} to the waiters, so the finished publisher is already
-   * removed from the active-fetch map when waiters observe the result. With {@code doFinally} alone
-   * there is a window after a failed fetch in which a new caller joins the dead publisher and
-   * receives the stale error replayed instead of starting a fresh fetch. {@code doFinally} runs
-   * after propagation and only adds coverage for cancellation, which {@code doOnTerminate} does not
-   * see. The {@code cleanedUp} flag makes the second call a no-op.
-   */
-  private Mono<TokenInfo> createInFlightRequest(
-      String tokenEndpoint, String tokenKey, Supplier<TokenRequest> requestSupplier, Mode mode) {
-    AtomicReference<Mono<TokenInfo>> self = new AtomicReference<>();
-    AtomicBoolean cleanedUp = new AtomicBoolean();
-    Runnable cleanup =
-        () -> {
-          if (cleanedUp.compareAndSet(false, true)) {
-            if (mode == BACKGROUND) {
-              recentBackgroundRefreshAttempts.put(tokenKey, Boolean.TRUE);
-            }
-            tokenCache.completeFetch(tokenKey, self.get());
-            metrics.fetchFinished();
-          }
-        };
-    Mono<TokenInfo> request =
+    Mono<TokenInfo> source =
         Mono.fromCallable(requestSupplier::get)
             .onErrorMap(TokenRequestBuildException::new)
             .subscribeOn(Schedulers.boundedElastic())
@@ -381,8 +350,6 @@ public class TokenFetchService {
                         HttpStatus.GATEWAY_TIMEOUT,
                         "Timeout occurred while fetching token from " + tokenEndpoint,
                         error))
-            .doOnNext(
-                tokenInfo -> tokenCache.saveTokenIfFetchMatches(tokenKey, self.get(), tokenInfo))
             .doOnSubscribe(
                 ignored -> {
                   log.debug("Creating new token request for key: {}", tokenKey);
@@ -390,12 +357,15 @@ public class TokenFetchService {
                 })
             .doOnNext(ignored -> metrics.record(Outcome.SUCCESS, mode))
             .doOnError(error -> metrics.record(classifyOutcome(error, mode), mode))
-            // Ordering matters: see the method Javadoc before collapsing these into one operator.
-            .doOnTerminate(cleanup)
-            .doFinally(signal -> cleanup.run())
-            .cache();
-    self.set(request);
-    return request;
+            // The shared publisher never cancels this source, so terminate covers every outcome.
+            .doOnTerminate(
+                () -> {
+                  if (mode == BACKGROUND) {
+                    recentBackgroundRefreshAttempts.put(tokenKey, Boolean.TRUE);
+                  }
+                  metrics.fetchFinished();
+                });
+    return tokenCache.getOrCreateFetch(tokenKey, source);
   }
 
   private Mono<TokenInfo> getAccessTokenQuery(
