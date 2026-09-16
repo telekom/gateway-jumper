@@ -1,0 +1,33 @@
+src/main/java/jumper/config/OauthTokenFetchProperties.java
+  s_44a1a8327eac22::t_7addc42128f96b 33-34
+src/test/java/jumper/service/TokenCacheServiceTest.java
+  s_44a1a8327eac22::t_61c51ccaeff3a7 149-158
+  s_44a1a8327eac22::t_d80f9888b120c4 148
+src/main/java/jumper/service/TokenFetchService.java
+  s_44a1a8327eac22::t_92e5d2d22e8e98 438-440
+README.md
+  s_44a1a8327eac22::t_a7cce0d59db44a 203
+src/test/java/jumper/service/TokenFetchServiceTest.java
+  s_44a1a8327eac22::t_61c51ccaeff3a7 122,132,139,143-146,149-153
+  s_44a1a8327eac22::t_93fb3fa85485e8 130-131,147-148
+src/main/java/jumper/service/TokenCacheService.java
+  s_44a1a8327eac22::t_93fb3fa85485e8 122-126
+  s_44a1a8327eac22::t_956ce92b21a419 129-136
+  s_44a1a8327eac22::t_f15f10292cee40 75-76
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "cf76465c432131cc841e7ca9eea445372a9027da",
+  "prompts": {},
+  "sessions": {
+    "s_44a1a8327eac22": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f98c93640ffePovbdWCX4ih9ys",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
