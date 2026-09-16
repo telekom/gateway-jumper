@@ -146,6 +146,17 @@ class TokenCacheServiceTest {
   }
 
   @Test
+  void completedFetch_forwardsShortLivedTokenWithoutCaching() {
+    TokenInfo shortLived = tokenExpiringIn(Duration.ofSeconds(5));
+    var fetch = tokenCacheService.getOrCreateFetch(TOKEN_KEY, Mono.just(shortLived));
+
+    StepVerifier.create(fetch.publisher()).expectNext(shortLived).verifyComplete();
+
+    assertThat(tokenCacheService.findServableToken(TOKEN_KEY)).isEmpty();
+    assertThat(tokenCacheService.activeFetchCount()).isZero();
+  }
+
+  @Test
   void evictionDuringFetch_discardsOlderRefreshResult() {
     tokenCacheService.saveToken(TOKEN_KEY, tokenExpiringIn(Duration.ofMinutes(5)));
     Sinks.One<TokenInfo> idpResponse = Sinks.one();

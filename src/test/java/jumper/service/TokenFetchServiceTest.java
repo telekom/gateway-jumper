@@ -119,7 +119,7 @@ class TokenFetchServiceTest {
   }
 
   @Test
-  void expiredAccessToken_isRejectedAndNotCached() {
+  void expiredAccessToken_isForwardedButNotCached() {
     Date tokenExpiration = jwtDate(Instant.now().minusSeconds(7200));
     TokenInfo responseToken = tokenWithoutExpiresIn(jwtExpiringAt(tokenExpiration));
     tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
@@ -127,26 +127,30 @@ class TokenFetchServiceTest {
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .expectErrorSatisfies(this::assertNotAcceptable)
-        .verify();
+        .assertNext(
+            token -> assertThat(token.getAccessToken()).isEqualTo(responseToken.getAccessToken()))
+        .verifyComplete();
 
     assertThat(tokenCache.get(tokenCacheKey)).isNull();
     assertThat(idpCallCount).hasValue(1);
   }
 
   @Test
-  void expiresInWithinMinServe_isRejectedAndNotCached() {
+  void expiresInWithinMinServe_isForwardedButNotCached_soEveryRequestFetches() {
     TokenInfo responseToken = createTokenInfo(5);
     tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
 
-    StepVerifier.create(
-            tokenFetchService.getAccessTokenWithClientCredentials(
-                TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .expectErrorSatisfies(this::assertNotAcceptable)
-        .verify();
-
-    assertThat(tokenCache.get(tokenCacheKey)).isNull();
-    assertThat(metricCount("idp_error", "foreground")).isOne();
+    for (int request = 1; request <= 2; request++) {
+      StepVerifier.create(
+              tokenFetchService.getAccessTokenWithClientCredentials(
+                  TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
+          .assertNext(
+              token -> assertThat(token.getAccessToken()).isEqualTo(responseToken.getAccessToken()))
+          .verifyComplete();
+      assertThat(tokenCache.get(tokenCacheKey)).isNull();
+      assertThat(idpCallCount).hasValue(request);
+    }
+    assertThat(metricCount("success", "foreground")).isEqualTo(2);
   }
 
   @Test

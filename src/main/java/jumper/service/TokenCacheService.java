@@ -72,8 +72,8 @@ public class TokenCacheService {
   }
 
   /**
-   * Whether the token remains forwardable for longer than {@code minServe}. Applies to freshly
-   * fetched tokens as well as cached ones. Tokens without an expiration are always servable.
+   * Whether a later lookup could still forward the token, i.e. it remains valid for longer than
+   * {@code minServe}. Tokens without an expiration are always servable.
    */
   public boolean isServable(TokenInfo token) {
     return remainingLifetime(token).compareTo(tokenFetchProperties.minServe()) > 0;
@@ -119,11 +119,21 @@ public class TokenCacheService {
   }
 
   /**
-   * Saves a fetched token only while that exact fetch is still current for the key. Cache writes
-   * intentionally run inside the per-key map operation and must not re-enter {@code activeFetches};
-   * this linearizes the identity check and write against eviction.
+   * Saves a fetched token only while that exact fetch is still current for the key, and only when a
+   * later lookup could still serve it. A token already at or below {@code minServe} is forwarded to
+   * the waiting requests but not cached; the next request fetches again. Cache writes intentionally
+   * run inside the per-key map operation and must not re-enter {@code activeFetches}; this
+   * linearizes the identity check and write against eviction.
    */
   private void saveTokenIfFetchMatches(String tokenKey, ActiveFetch fetch, TokenInfo token) {
+    if (!isServable(token)) {
+      log.warn(
+          "Identity provider issued a token with {} or less remaining lifetime for tokenKey '{}';"
+              + " forwarding it without caching",
+          tokenFetchProperties.minServe(),
+          tokenKey);
+      return;
+    }
     activeFetches.computeIfPresent(
         tokenKey,
         (key, current) -> {

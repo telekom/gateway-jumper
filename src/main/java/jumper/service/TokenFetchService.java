@@ -435,9 +435,9 @@ public class TokenFetchService {
   }
 
   /**
-   * Rejects responses that cannot be forwarded: a blank access token, or a token whose remaining
-   * lifetime is already at or below {@code minServe}. Such tokens are neither cached nor served;
-   * caching them would only make the next lookup reject what this request already forwarded.
+   * Rejects responses without an access token. Lifetime is not validated here: a short-lived token
+   * is still forwarded to the requests waiting on this fetch, and {@link TokenCacheService} decides
+   * whether it is worth caching.
    */
   private Mono<TokenInfo> validateTokenResponse(TokenInfo tokenInfo, String tokenEndpoint) {
     if (StringUtils.isBlank(tokenInfo.getAccessToken())) {
@@ -447,13 +447,6 @@ public class TokenFetchService {
               "Identity provider returned an invalid token response from " + tokenEndpoint));
     }
     applyAccessTokenExpirationFallback(tokenInfo);
-    if (!tokenCache.isServable(tokenInfo)) {
-      return Mono.error(
-          new ResponseStatusException(
-              HttpStatus.NOT_ACCEPTABLE,
-              "Identity provider returned an expired or nearly expired token from "
-                  + tokenEndpoint));
-    }
     return Mono.just(tokenInfo);
   }
 
