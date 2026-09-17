@@ -1,0 +1,30 @@
+src/test/java/jumper/service/TokenFetchServiceTest.java
+  s_5cafe68da5246d::t_301436e72676d0 122,130-131,135
+src/main/java/jumper/service/TokenCacheService.java
+  s_5cafe68da5246d::t_b83ba6a491fe1a 84-85
+  s_5cafe68da5246d::t_1896cd9e69bd4c 83
+  s_5cafe68da5246d::t_301436e72676d0 82,86-87
+src/test/java/jumper/service/TokenCacheServiceTest.java
+  s_5cafe68da5246d::t_301436e72676d0 135-143
+  s_5cafe68da5246d::t_e75e457901b3dd 134
+README.md
+  s_5cafe68da5246d::t_301436e72676d0 203
+src/main/java/jumper/service/TokenFetchService.java
+  s_5cafe68da5246d::t_301436e72676d0 438-440,450-455
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "46a7d0970b7573d4b07989b2d0a6af0c94c02459",
+  "prompts": {},
+  "sessions": {
+    "s_5cafe68da5246d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f50f695cbffeCmi14SSIaHILL5",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
