@@ -200,7 +200,7 @@ The refresh policy can be configured with these environment variables (also docu
 | `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRY_BACKOFF` | `1s` | Maximum retry backoff. |
 | `JUMPER_OAUTH_TOKEN_FETCH_ERROR_BODY_LOG_LIMIT` | `8KB` | Maximum identity provider error-body bytes retained for debug logging; the complete body is still drained. |
 | `JUMPER_OAUTH_TOKEN_FETCH_REFRESH_AHEAD` | `30s` | Start refreshing this long before token expiry. |
-| `JUMPER_OAUTH_TOKEN_FETCH_MIN_SERVE` | `10s` | Do not serve a cached token with this much lifetime or less remaining. A freshly fetched token that already violates this is forwarded to the waiting requests but not cached, so each request fetches anew. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MIN_SERVE` | `10s` | Do not serve a cached token with this much lifetime or less remaining. A freshly fetched token with a positive lifetime at or below this threshold is forwarded to the waiting requests but not cached, so each request fetches anew. An already expired fetched token is rejected. |
 | `JUMPER_OAUTH_TOKEN_FETCH_MINIMUM_BACKGROUND_REFRESH_INTERVAL` | `5s` | Minimum interval after a background refresh finishes before the same token key may be refreshed again. |
 
 `refresh-ahead` must exceed `min-serve`, and `request-wait-timeout` must not exceed

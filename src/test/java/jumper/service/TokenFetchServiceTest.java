@@ -119,7 +119,7 @@ class TokenFetchServiceTest {
   }
 
   @Test
-  void expiredAccessToken_isForwardedButNotCached() {
+  void expiredAccessToken_isRejectedAndNotCached() {
     Date tokenExpiration = jwtDate(Instant.now().minusSeconds(7200));
     TokenInfo responseToken = tokenWithoutExpiresIn(jwtExpiringAt(tokenExpiration));
     tokenFetchService = createTokenFetchService(mockWebClient(responseToken, Duration.ZERO));
@@ -127,12 +127,12 @@ class TokenFetchServiceTest {
     StepVerifier.create(
             tokenFetchService.getAccessTokenWithClientCredentials(
                 TOKEN_ENDPOINT, CLIENT_ID, CLIENT_SECRET, null))
-        .assertNext(
-            token -> assertThat(token.getAccessToken()).isEqualTo(responseToken.getAccessToken()))
-        .verifyComplete();
+        .expectErrorSatisfies(this::assertNotAcceptable)
+        .verify();
 
     assertThat(tokenCache.get(tokenCacheKey)).isNull();
     assertThat(idpCallCount).hasValue(1);
+    assertThat(metricCount("idp_error", "foreground")).isOne();
   }
 
   @Test

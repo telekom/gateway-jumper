@@ -132,6 +132,16 @@ class TokenCacheServiceTest {
   }
 
   @Test
+  void isExpired_usesStrictCurrentTimeBoundary() {
+    assertThat(tokenCacheService.isExpired(tokenExpiringIn(Duration.ofMillis(-1)))).isTrue();
+    assertThat(tokenCacheService.isExpired(tokenExpiringIn(Duration.ZERO))).isTrue();
+    assertThat(tokenCacheService.isExpired(tokenExpiringIn(Duration.ofMillis(1)))).isFalse();
+    TokenInfo withoutExpiry = new TokenInfo();
+    withoutExpiry.setAccessToken("access-token");
+    assertThat(tokenCacheService.isExpired(withoutExpiry)).isFalse();
+  }
+
+  @Test
   void completedFetch_savesTokenAndUnregistersItself() {
     TokenInfo refreshedToken = tokenExpiringIn(Duration.ofMinutes(5));
     var fetch = tokenCacheService.getOrCreateFetch(TOKEN_KEY, Mono.just(refreshedToken));

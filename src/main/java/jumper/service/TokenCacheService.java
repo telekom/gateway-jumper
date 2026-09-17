@@ -79,6 +79,12 @@ public class TokenCacheService {
     return remainingLifetime(token).compareTo(tokenFetchProperties.minServe()) > 0;
   }
 
+  /** Whether the token has a known expiration that is at or before the current time. */
+  boolean isExpired(TokenInfo token) {
+    return token.getExpiration() != null
+        && !token.getExpiration().toInstant().isAfter(clock.instant());
+  }
+
   /** Whether the token expires within {@code refreshAhead} and should be refreshed proactively. */
   public boolean isExpiringSoon(TokenInfo token) {
     return remainingLifetime(token).compareTo(tokenFetchProperties.refreshAhead()) <= 0;
