@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import org.hibernate.validator.constraints.time.DurationMax;
 import org.hibernate.validator.constraints.time.DurationMin;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationUnit;
@@ -38,16 +39,47 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties("jumper.oauth.token-fetch")
 @Validated
 public record OauthTokenFetchProperties(
-    @NotNull @DurationMin(millis = 1) @DurationUnit(ChronoUnit.MILLIS) Duration connectTimeout,
-    @NotNull @DurationMin(millis = 1) @DurationUnit(ChronoUnit.MILLIS) Duration overallTimeout,
-    @NotNull @DurationMin(millis = 1) @DurationUnit(ChronoUnit.MILLIS) Duration requestWaitTimeout,
+    @NotNull
+        @DurationMin(millis = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.MILLIS)
+        Duration connectTimeout,
+    @NotNull
+        @DurationMin(millis = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.MILLIS)
+        Duration overallTimeout,
+    @NotNull
+        @DurationMin(millis = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.MILLIS)
+        Duration requestWaitTimeout,
     @Min(0) int maxRetries,
-    @NotNull @DurationMin(millis = 1) @DurationUnit(ChronoUnit.MILLIS) Duration retryBackoff,
-    @NotNull @DurationMin(millis = 1) @DurationUnit(ChronoUnit.MILLIS) Duration maxRetryBackoff,
+    @NotNull
+        @DurationMin(millis = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.MILLIS)
+        Duration retryBackoff,
+    @NotNull
+        @DurationMin(millis = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.MILLIS)
+        Duration maxRetryBackoff,
     @NotNull DataSize errorBodyLogLimit,
-    @NotNull @DurationMin(seconds = 1) @DurationUnit(ChronoUnit.SECONDS) Duration refreshAhead,
-    @NotNull @DurationMin(seconds = 1) @DurationUnit(ChronoUnit.SECONDS) Duration minServe,
-    @NotNull @DurationMin(seconds = 1) @DurationUnit(ChronoUnit.SECONDS)
+    @NotNull
+        @DurationMin(seconds = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.SECONDS)
+        Duration refreshAhead,
+    @NotNull
+        @DurationMin(seconds = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.SECONDS)
+        Duration minServe,
+    @NotNull
+        @DurationMin(seconds = 1)
+        @DurationMax(millis = Integer.MAX_VALUE)
+        @DurationUnit(ChronoUnit.SECONDS)
         Duration minimumBackgroundRefreshInterval) {
 
   private static final long MAX_ERROR_BODY_LOG_BYTES = DataSize.ofKilobytes(64).toBytes();

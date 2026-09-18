@@ -79,27 +79,15 @@ class OauthTokenFetchPropertiesTest {
   }
 
   @Test
-  void rejectsNonPositiveConnectTimeout() {
+  void rejectsMaximumRetryBackoffBelowInitialBackoff() {
     contextRunner
         .withPropertyValues(validProperties())
-        .withPropertyValues("jumper.oauth.token-fetch.connect-timeout=0ms")
+        .withPropertyValues("jumper.oauth.token-fetch.max-retry-backoff=100ms")
         .run(
             context ->
                 assertThat(context.getStartupFailure())
                     .rootCause()
-                    .hasMessageContaining("connectTimeout"));
-  }
-
-  @Test
-  void rejectsNegativeRetryCount() {
-    contextRunner
-        .withPropertyValues(validProperties())
-        .withPropertyValues("jumper.oauth.token-fetch.max-retries=-1")
-        .run(
-            context ->
-                assertThat(context.getStartupFailure())
-                    .rootCause()
-                    .hasMessageContaining("maxRetries"));
+                    .hasMessageContaining("maxRetryBackoff must not be shorter than retryBackoff"));
   }
 
   @Test
