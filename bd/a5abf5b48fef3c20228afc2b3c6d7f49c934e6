@@ -1,0 +1,27 @@
+src/test/java/jumper/config/OauthTokenFetchPropertiesTest.java
+  s_871ca24770c9ba::t_f423758d2d243a 82,85,90
+src/main/java/jumper/config/OauthTokenFetchProperties.java
+  s_871ca24770c9ba::t_2fa4426a8c81c4 12,42-46
+  s_871ca24770c9ba::t_fdae2178f11dce 47-56,58-67,69-82
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "bda5abf5b48fef3c20228afc2b3c6d7f49c934e6",
+  "prompts": {},
+  "humans": {
+    "h_052be7cb63ce69": {
+      "author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  },
+  "sessions": {
+    "s_871ca24770c9ba": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f4ca35833ffebXLvOaq58F0Hng",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
