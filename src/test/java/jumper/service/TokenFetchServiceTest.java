@@ -884,8 +884,15 @@ class TokenFetchServiceTest {
 
     assertThat(metricCount("success", "foreground")).isOne();
     assertThat(metricCount("cache_hit", "foreground")).isOne();
-    assertThat(meterRegistry.get("jumper.oauth.token.fetch.active").gauge().value()).isZero();
-    assertThat(meterRegistry.get("jumper.oauth.token.waiters").gauge().value()).isZero();
+    // Waiter cleanup in doFinally can run after block() returns.
+    await()
+        .atMost(Duration.ofSeconds(1))
+        .untilAsserted(
+            () -> {
+              assertThat(meterRegistry.get("jumper.oauth.token.fetch.active").gauge().value())
+                  .isZero();
+              assertThat(meterRegistry.get("jumper.oauth.token.waiters").gauge().value()).isZero();
+            });
     assertThat(
             meterRegistry.getMeters().stream()
                 .flatMap(meter -> meter.getId().getTags().stream())
