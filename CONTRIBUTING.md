@@ -85,7 +85,7 @@ Use a bypass only when necessary. CI still runs its required checks.
 ## Commit messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/). The accepted
-types match [`release.config.js`](release.config.js):
+types are configured in [`committed.toml`](committed.toml):
 
 `feat`, `fix`, `build`, `chore`, `ci`, `docs`, `perf`, `refactor`, `revert`,
 `style`, and `test`.
@@ -100,5 +100,7 @@ length beyond the Conventional Commits structure.
 ## Releases
 
 See [Releases](README.md#releases) for branch roles and the automatic release
-process. Because every accepted commit type can publish a release, choose the
-type that describes the change.
+process. `feat` publishes a minor version, `fix` and `perf` publish a patch, and
+breaking changes publish a major version. Recognized reverts publish a patch.
+Other non-breaking commits do not trigger a release. Choose the type that
+describes the change.
