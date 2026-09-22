@@ -45,8 +45,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
   @Value("${spring.application.name}")
   private String applicationName;
 
-  private Map<String, String> customResponseHeaders;
-
   public JsonErrorWebExceptionHandler(
       ErrorAttributes errorAttributes,
       Resources resources,
@@ -109,8 +107,8 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
     ServerResponse.BodyBuilder responseBuilder =
         ServerResponse.status(this.getHttpStatus(error)).contentType(MediaType.APPLICATION_JSON);
 
-    if (!customResponseHeaders.isEmpty()) {
-      customResponseHeaders.forEach(responseBuilder::header);
+    if (shouldAddRetryAfter(super.getError(request))) {
+      responseBuilder.header("Retry-After", "30");
     }
 
     return responseBuilder.body(BodyInserters.fromValue(error));
@@ -132,8 +130,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
       ServerRequest request,
       Throwable error,
       MergedAnnotation<ResponseStatus> responseStatusAnnotation) {
-    customResponseHeaders = new HashMap<>();
-
     if (error instanceof ResponseStatusException) {
       return HttpStatus.valueOf(((ResponseStatusException) error).getStatusCode().value());
     }
@@ -151,7 +147,6 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
 
     if (error instanceof java.net.UnknownHostException) {
       logError(request, error);
-      customResponseHeaders.put("Retry-After", "30");
       return HttpStatus.SERVICE_UNAVAILABLE;
     }
 
@@ -162,6 +157,10 @@ public class JsonErrorWebExceptionHandler extends DefaultErrorWebExceptionHandle
 
   private void logError(ServerRequest request, Throwable throwable) {
     log.error(request.exchange().getLogPrefix() + this.formatError(throwable, request));
+  }
+
+  private boolean shouldAddRetryAfter(Throwable error) {
+    return error instanceof java.net.UnknownHostException;
   }
 
   private String formatError(Throwable ex, ServerRequest request) {

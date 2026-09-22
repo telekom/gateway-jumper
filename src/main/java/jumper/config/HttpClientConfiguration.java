@@ -36,9 +36,6 @@ import reactor.netty.transport.ProxyProvider;
 @Slf4j
 public class HttpClientConfiguration {
 
-  @Value("${spring.cloud.oauth.connect-timeout:10000}")
-  private int oauthConnectTimeout;
-
   @Value("${spring.cloud.oauth.pool.max-life-time:300}")
   private int oauthPoolMaxLifeTime;
 
@@ -54,6 +51,7 @@ public class HttpClientConfiguration {
   private final HttpClientProperties properties;
   private final TlsHardeningConfiguration tlsHardeningConfiguration;
   private final MeterRegistry meterRegistry;
+  private final OauthTokenFetchProperties oauthTokenFetchProperties;
 
   @Bean
   public HttpClientCustomizer httpClientCustomizer() throws SSLException {
@@ -73,7 +71,9 @@ public class HttpClientConfiguration {
     HttpClient httpClient =
         HttpClient.create(getProvider())
             .secure(t -> t.sslContext(sslContext))
-            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, oauthConnectTimeout);
+            .option(
+                ChannelOption.CONNECT_TIMEOUT_MILLIS,
+                Math.toIntExact(oauthTokenFetchProperties.connectTimeout().toMillis()));
     httpClient = configureProxy(httpClient);
 
     return webClientBuilder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();

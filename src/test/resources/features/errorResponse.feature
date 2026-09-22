@@ -136,7 +136,7 @@ Feature: proper error message returned based on conditions
       | jumper_config | http_element  | api_receiver_code | msg_content | error | error_code |
     # default
       | "default" | body | 406 |  "Empty response while fetching token from http://localhost:1081/external" | "Not Acceptable" | 406 |
-      | "default" | header | 406 | "Failed while fetching token from http://localhost:1081/external: Content type 'application/octet-stream' not supported for TokenInfo" | "Not Acceptable" | 406 |
+      | "default" | header | 406 | "Identity provider returned an invalid token response from http://localhost:1081/external" | "Not Acceptable" | 406 |
       | "default" | both  | 406 | "Empty response while fetching token from http://localhost:1081/external" | "Not Acceptable" | 406 |
 
 ################ external IDP - timeout connection ################
@@ -148,7 +148,7 @@ Feature: proper error message returned based on conditions
     And API provider set to respond with a 200 status code
     When consumer calls the proxy route with idp timeout
     And API consumer receives a 504 status code
-    And error response contains msg "Timeout occurred while fetching token from http://localhost:1081/external" error "Gateway Timeout" status 504
+    And error response contains msg "Timed out waiting for a token from http://localhost:1081/external" error "Gateway Timeout" status 504
 
 ################ external IDP - drop connection ################
   Scenario: external IDP drop connection
