@@ -26,7 +26,7 @@ SPDX-License-Identifier: Apache-2.0
 		<java.version>25</java.version>
 		<spring-cloud.version>2025.1.3</spring-cloud.version>
 
-		<cucumber.version>7.34.7</cucumber.version>
+		<cucumber.version>7.34.8</cucumber.version>
 		<wiremock.version>3.13.2</wiremock.version>
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
@@ -308,7 +308,7 @@ SPDX-License-Identifier: Apache-2.0
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
-				<version>3.10.0</version>
+				<version>3.10.2</version>
 				<executions>
 					<execution>
 						<goals>
@@ -333,7 +333,7 @@ SPDX-License-Identifier: Apache-2.0
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>3.6.0</version>
         <configuration>
           <excludedGroups>ignore</excludedGroups>
           <argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
