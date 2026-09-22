@@ -98,7 +98,9 @@ CI ensures that exact version tags such as `4.12.3` and `5.0.0-rc.1` are immutab
 
 Pull requests build a preview image tagged `pr-<number>-<branch>`. It is built and signed the same way a release is.
 
-Preview and release image scans fail CI on HIGH or CRITICAL OS or library vulnerabilities, including findings without a fix. A failed scan blocks signing and release publication. Image tags are pushed before scanning, so a failed scan can leave an unsigned image in the registry.
+Preview and release image scans fail CI on HIGH or CRITICAL OS or library vulnerabilities, except findings with statuses `affected`, `under_investigation`, and `not_affected`. `affected` means no vendor fix is recorded yet, so CI starts blocking that finding once Trivy records a fix. `under_investigation` and `not_affected` findings are excluded because they are not currently confirmed as actionable vulnerabilities. The scans still fail on `end_of_life`, `will_not_fix`, and `fix_deferred` findings. Keep the same `TRIVY_IGNORE_STATUS` list on both scans. Do not replace it with `ignore-unfixed: true`, which also suppresses `end_of_life`, `will_not_fix`, and `fix_deferred` findings.
+
+A failed scan blocks signing and release publication. Image tags are pushed before scanning, so a failed scan can leave an unsigned image in the registry.
 
 Pull requests from forks do not build a preview image, because GitHub withholds registry credentials from them. If you need to deploy such a change, merge it to next and deploy the resulting RC image.
 

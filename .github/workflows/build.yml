@@ -135,6 +135,10 @@ jobs:
         env:
           TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
           TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+          # Ignore findings assessed as not affected or still under investigation,
+          # plus affected findings with no vendor fix. Keep end_of_life,
+          # will_not_fix, and fix_deferred findings visible and blocking.
+          TRIVY_IGNORE_STATUS: affected,under_investigation,not_affected
         with:
           image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.build.outputs.digest }}"
           exit-code: "1"
@@ -297,6 +301,8 @@ jobs:
         env:
           TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
           TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+          # Match the preview scan's status filter.
+          TRIVY_IGNORE_STATUS: affected,under_investigation,not_affected
         with:
           image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.image.outputs.digest }}"
           exit-code: "1"
