@@ -1,0 +1,19 @@
+src/test/java/jumper/service/TokenFetchServiceTest.java
+  s_6c7f382a17716a::t_73e78be700baef 887-895
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "b2b38bfbec83f44cfb39928bd06d6584263222fa",
+  "prompts": {},
+  "sessions": {
+    "s_6c7f382a17716a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f36d14634ffelCwTEj3SSIhcRO",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
