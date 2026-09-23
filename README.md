@@ -81,7 +81,7 @@ Releases are automatic. Every push to a release branch is validated, and if the 
 
 `main` is the default branch and produces stable releases. `next` is the release-candidate line: it exists whenever a change requires validation in a customer-facing environment before it is promoted to stable. Once that version is promoted into `main`, `next` is deleted, and it is recreated from `main` when a future prerelease line is needed.
 
-Versions are calculated from [Conventional Commits](https://www.conventionalcommits.org/). Every accepted type releases something, so a docs-only or dependency-only merge still publishes a patch version.
+Versions follow the default semantic-release rules with the [Conventional Commits](https://www.conventionalcommits.org/) preset. `feat` publishes a minor version; `fix` and `perf` publish a patch. A `!` marker or `BREAKING CHANGE:` footer publishes a major version for any commit type. Recognized reverts publish a patch. Other commits, including non-breaking `docs`, `ci`, and `chore` commits, do not trigger a release.
 
 ### Which branch a change goes to
 
@@ -97,6 +97,10 @@ For each released version the pipeline builds an image tagged with that version,
 CI ensures that exact version tags such as `4.12.3` and `5.0.0-rc.1` are immutable. The floating `latest` and `next` tags track the newest stable release and the newest release candidate respectively.
 
 Pull requests build a preview image tagged `pr-<number>-<branch>`. It is built and signed the same way a release is.
+
+Preview and release image scans fail CI on HIGH or CRITICAL OS or library vulnerabilities, except findings with statuses `affected`, `under_investigation`, and `not_affected`. `affected` means no vendor fix is recorded yet, so CI starts blocking that finding once Trivy records a fix. `under_investigation` and `not_affected` findings are excluded because they are not currently confirmed as actionable vulnerabilities. The scans still fail on `end_of_life`, `will_not_fix`, and `fix_deferred` findings. Keep the same `TRIVY_IGNORE_STATUS` list on both scans. Do not replace it with `ignore-unfixed: true`, which also suppresses `end_of_life`, `will_not_fix`, and `fix_deferred` findings.
+
+A failed scan blocks signing and release publication. Image tags are pushed before scanning, so a failed scan can leave an unsigned image in the registry.
 
 Pull requests from forks do not build a preview image, because GitHub withholds registry credentials from them. If you need to deploy such a change, merge it to next and deploy the resulting RC image.
 

@@ -135,10 +135,16 @@ jobs:
         env:
           TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
           TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+          # Ignore findings assessed as not affected or still under investigation,
+          # plus affected findings with no vendor fix. Keep end_of_life,
+          # will_not_fix, and fix_deferred findings visible and blocking.
+          TRIVY_IGNORE_STATUS: affected,under_investigation,not_affected
         with:
           image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.build.outputs.digest }}"
-          exit-code: "0"
-          vuln-type: os # library findings are handled by ort and github auto submission
+          exit-code: "1"
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          scanners: vuln
           format: table
       - name: Sign image
         env:
@@ -277,8 +283,7 @@ jobs:
           fi
           printf 'release: releasing digest %s\n' "${digest}"
           echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
-      - name: Scan image
-        # Always runs against the digest
+      - name: Submit image dependencies
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
         env:
           TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
@@ -286,10 +291,25 @@ jobs:
         with:
           image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.image.outputs.digest }}"
           exit-code: "0"
-          vuln-type: os # library findings are handled by ort and github auto submission
+          vuln-type: os # Library dependencies are submitted separately by ORT and GitHub.
           format: github
           output: dependency-results.sbom.json
           github-pat: ${{ secrets.GITHUB_TOKEN }}
+      - name: Scan image
+        # Scan reused digests too, because new vulnerabilities may have been disclosed.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 #v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ secrets.ARTIFACTORY_O28M_PUSH_USER }}
+          TRIVY_PASSWORD: ${{ secrets.ARTIFACTORY_O28M_PUSH_TOKEN }}
+          # Match the preview scan's status filter.
+          TRIVY_IGNORE_STATUS: affected,under_investigation,not_affected
+        with:
+          image-ref: "${{ env.IMAGE_REPOSITORY }}@${{ steps.image.outputs.digest }}"
+          exit-code: "1"
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          scanners: vuln
+          format: table
       - name: Sign image
         if: steps.version-tag.outputs.exists == 'false'
         env:
