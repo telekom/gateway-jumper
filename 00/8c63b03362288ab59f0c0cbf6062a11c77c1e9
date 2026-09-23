@@ -1,0 +1,22 @@
+.github/workflows/build.yml
+  s_8a2a893c6bafe8::t_9d0bbfca1ae229 138-141,304-305
+README.md
+  s_8a2a893c6bafe8::t_9d0bbfca1ae229 101
+  s_8a2a893c6bafe8::t_92e5894586af87 102-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "008c63b03362288ab59f0c0cbf6062a11c77c1e9",
+  "prompts": {},
+  "sessions": {
+    "s_8a2a893c6bafe8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f366876c6ffe6FOpHmVbchjVVn",
+        "model": "unknown"
+      },
+      "human_author": null
+    }
+  }
+}
