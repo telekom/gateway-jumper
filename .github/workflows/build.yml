@@ -14,10 +14,11 @@ name: Build
 #   3. publish-release  - semantic-release creates the Git tag and GitHub release, and
 #                         points the floating alias (`latest` or `next`) at the digest
 #
-# A Git tag therefore never exists without a verified image. An interrupted release is
+# Automatic releases create the Git tag only after image verification. An interrupted release is
 # finished by re-running this workflow: if the version tag already exists, was built from
 # this same commit, and its digest still verifies, the build and sign steps are skipped
 # and the run completes the tagging.
+# Manual dispatch recovers an existing tag's image without publishing a release or aliases.
 #
 # Required environment setup:
 # Variables:
@@ -32,6 +33,12 @@ name: Build
 # - COSIGN_PRIVATE_KEY / COSIGN_PUBLIC_KEY / COSIGN_PASSWORD: Image signing key material
 
 on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing version tag to build (e.g. 4.17.4 or 5.0.0-rc.1)
+        required: true
+        type: string
   pull_request:
   push:
     branches:
@@ -41,11 +48,10 @@ on:
 permissions:
   contents: read
 
-# Serialise runs per ref. Releases for a given branch therefore never overlap, which is
-# what makes the "version tag is unpublished" check in build-image race-free. Superseded
-# pull request runs are cancelled; release runs never are.
+# Recovery shares the main release group for stable tags and next for RC tags.
+# Pull requests have separate groups and cancel superseded runs.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && contains(inputs.release_tag, '-rc.') && 'refs/heads/next' || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -54,12 +60,53 @@ env:
   IMAGE_REPOSITORY: ${{ vars.REGISTRY_HOST }}${{ vars.REGISTRY_REPO }}
 
 jobs:
-  lint-java:
-    name: Lint Java
+  resolve-source:
+    name: Resolve source commit
     runs-on: ubuntu-latest
+    outputs:
+      source-sha: ${{ steps.source.outputs.source-sha }}
+      release-version: ${{ steps.source.outputs.release-version }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Resolve existing release tag
+        id: source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_REF: ${{ github.ref }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            if [ "${WORKFLOW_REF}" != "refs/heads/main" ]; then
+              echo "Dispatch image recovery from main." >&2
+              exit 1
+            fi
+            if [[ ! "${RELEASE_TAG}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]]; then
+              echo "Expected a version tag such as 4.17.4 or 5.0.0-rc.1." >&2
+              exit 1
+            fi
+            source_sha="$(git rev-parse --verify "refs/tags/${RELEASE_TAG}^{commit}")"
+            if ! git merge-base --is-ancestor "${source_sha}" refs/remotes/origin/main &&
+               ! git merge-base --is-ancestor "${source_sha}" refs/remotes/origin/next; then
+              echo "The tag must belong to main or next history." >&2
+              exit 1
+            fi
+            echo "release-version=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+          fi
+          echo "source-sha=${source_sha}" >> "${GITHUB_OUTPUT}"
+
+  lint-java:
+    name: Lint Java
+    runs-on: ubuntu-latest
+    needs: [resolve-source]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+        with:
+          ref: ${{ needs.resolve-source.outputs.source-sha }}
       - name: Set up JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 #v6.0.1
         with:
@@ -72,9 +119,12 @@ jobs:
   build-test-java:
     name: Build and test Java
     runs-on: ubuntu-latest
+    needs: [resolve-source]
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+        with:
+          ref: ${{ needs.resolve-source.outputs.source-sha }}
       - name: Set up JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 #v6.0.1
         with:
@@ -164,27 +214,28 @@ jobs:
             "${IMAGE_REPOSITORY}@${DIGEST}"
 
   compute-version:
-    name: Compute release version
+    name: Resolve image version
     runs-on: ubuntu-latest
-    needs: [lint-java, build-test-java]
-    # Only a push to a protected release branch may publish, PR runs never reach this job.
-    # The two jobs below depend on this one, so they are skipped along with it.
-    if: github.event_name == 'push'
+    needs: [resolve-source, lint-java, build-test-java]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     permissions:
       # semantic-release verifies push access with `git push --dry-run` even in dry-run
       # mode, so this job needs write permission although it writes nothing.
       contents: write
     outputs:
-      new-release-published: ${{ steps.compute.outputs.new-release-published }}
-      new-release-version: ${{ steps.compute.outputs.new-release-version }}
+      new-release-published: ${{ github.event_name == 'workflow_dispatch' || steps.compute.outputs.new-release-published == 'true' }}
+      new-release-version: ${{ needs.resolve-source.outputs.release-version || steps.compute.outputs.new-release-version }}
+      source-sha: ${{ needs.resolve-source.outputs.source-sha }}
     steps:
       - name: Check out the validated commit
+        if: github.event_name == 'push'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           fetch-tags: "true"
       - name: Restore the branch reference
+        if: github.event_name == 'push'
         # Checking out a SHA leaves a detached HEAD. semantic-release compares the local
         # branch against its remote, so put HEAD back on the branch name without moving
         # it off the validated commit.
@@ -192,6 +243,7 @@ jobs:
           BRANCH: ${{ github.ref_name }}
         run: git checkout -B "${BRANCH}"
       - name: Compute version
+        if: github.event_name == 'push'
         # Dry run only: this decides the version for the image tag before anything is
         # built. It has no side effects, so it is safe to repeat on a re-run.
         id: compute
@@ -217,7 +269,7 @@ jobs:
       - name: Check out the validated commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ needs.compute-version.outputs.source-sha }}
       - name: Set up JDK
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 #v6.0.1
         with:
@@ -234,16 +286,20 @@ jobs:
         id: version-tag
         env:
           VERSION: ${{ needs.compute-version.outputs.new-release-version }}
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ needs.compute-version.outputs.source-sha }}
         run: |
           # SemVer image tags are immutable. The registry does not enforce that, so CI does.
           # An existing tag is only acceptable when this run is completing an interrupted
           # release of the very same commit: the scan and signature-verification steps below
           # then run against the existing digest and the run finishes tagging instead of
           # rebuilding.
-          if ! digest="$(crane digest "${IMAGE_REPOSITORY}:${VERSION}" 2>/dev/null)"; then
-            echo "exists=false" >> "${GITHUB_OUTPUT}"
-            exit 0
+          if ! digest="$(crane digest "${IMAGE_REPOSITORY}:${VERSION}" 2>registry-error.txt)"; then
+            if grep -q 'MANIFEST_UNKNOWN' registry-error.txt; then
+              echo "exists=false" >> "${GITHUB_OUTPUT}"
+              exit 0
+            fi
+            cat registry-error.txt >&2
+            exit 1
           fi
           # The version alone does not prove the existing image belongs to this release. An
           # interrupted release can be followed by further commits, and the next run then
@@ -267,7 +323,7 @@ jobs:
         if: steps.version-tag.outputs.exists == 'false'
         env:
           VERSION: ${{ needs.compute-version.outputs.new-release-version }}
-          SOURCE_SHA: ${{ github.sha }}
+          SOURCE_SHA: ${{ needs.compute-version.outputs.source-sha }}
         run: |
           mvn -B -U package -DskipTests jib:build \
             -Djib.to.image="${IMAGE_REPOSITORY}:${VERSION}" \
@@ -312,7 +368,8 @@ jobs:
           scanners: vuln
           format: table
       - name: Sign image
-        if: steps.version-tag.outputs.exists == 'false'
+        # Recovery can resume after a scan or signing failure without rebuilding the image.
+        if: steps.version-tag.outputs.exists == 'false' || github.event_name == 'workflow_dispatch'
         env:
           DIGEST: ${{ steps.image.outputs.digest }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
@@ -332,6 +389,7 @@ jobs:
     name: Tag and publish release
     runs-on: ubuntu-latest
     needs: [compute-version, build-image]
+    if: github.event_name == 'push'
     permissions:
       contents: write
       issues: write
