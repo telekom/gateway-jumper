@@ -1,0 +1,23 @@
+README.md
+  s_e64ca6ca45ced9::t_e5747187dd79b5 123-143
+.github/workflows/build.yml
+  s_e64ca6ca45ced9::t_0b11af1e64aab0 219
+  s_e64ca6ca45ced9::t_2d75cf76af0893 17,21,36-41,52,63-100,104,108-109,122,126-127,217,220,226-228,231,238,246,272,289,296-302,326,371-372,392
+  s_e64ca6ca45ced9::t_ff7cc87a48928d 51,54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.6",
+  "base_commit_sha": "92736ca6c67d76053baaad6e6c0f1b290ba9f29b",
+  "prompts": {},
+  "sessions": {
+    "s_e64ca6ca45ced9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f2d8d4fcfffeIVMtdybOLDN3lT",
+        "model": "unknown"
+      },
+      "human_author": "Niklas Beilmann <niklas.beilmann@telekom.de>"
+    }
+  }
+}
