@@ -115,3 +115,14 @@ Feature: spectre events created
     When consumer calls the listener route
     Then API consumer receives a 200 status code
     And verify 2 horizon events received
+
+  Scenario: Consumer calls listener route with proxy failover routing_config and skipped zone, realm taken from the failover entry
+    Given Listener routing_config header set with proxy failover
+    And skip zone header set
+    And jumperConfig with consumer route listener set
+    And API provider set to respond with a 200 status code
+    And horizon set to receive events
+    When consumer calls the listener route
+    Then API consumer receives a 200 status code
+    And verify 2 horizon events received
+    And verify received horizon events published for realm sit

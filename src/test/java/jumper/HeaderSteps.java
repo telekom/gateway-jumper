@@ -122,6 +122,13 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getListenerRouteHeaders(baseSteps));
   }
 
+  @Given("Listener routing_config header set with proxy failover")
+  public void listenerRoutingConfigHeaderSetWithProxyFailover() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getListenerRouteHeadersProxyFailover(baseSteps));
+  }
+
   @Given("Proxy routing_config header set")
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
