@@ -34,8 +34,8 @@ jobs:
     steps:
       - name: Checkout project
         if: github.event_name != 'pull_request' # Checkout not necessary for PRs
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
-      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 #v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d #v4
         id: filter
         with:
           filters: |
@@ -55,7 +55,7 @@ jobs:
           git config --global url.https://github.com/.insteadOf ssh://git@github.com/
           git config --global url.https://github.com/.insteadOf git://github.com/
       - name: Checkout project
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 #v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       - name: Prepare ORT config
         run: |
           # Move into default config dir
@@ -98,6 +98,6 @@ jobs:
           path: ${{ steps.ort.outputs.results-path }}
       - name: Submit SBOM to dependency graph
         if: github.ref == 'refs/heads/main'
-        uses: advanced-security/spdx-dependency-submission-action@169d22427d74f3faf93504e70b03eede8dab272a #v0.2.0
+        uses: advanced-security/spdx-dependency-submission-action@8b97fad313c1af2c5c490e1f72ab338371eb92f6 #v0.3.2
         with:
           filePath: ${{ steps.ort.outputs.results-path }}"

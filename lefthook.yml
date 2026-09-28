@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+
+# Install these optional local hooks once per clone with: lefthook install
+# CI remains the authoritative validation gate.
+
+# After hooks are installed, fail visibly when the lefthook binary is missing.
+# This setting does not install hooks or require contributors to opt in.
+assert_lefthook_installed: true
+min_version: 2.0.4
+glob_matcher: doublestar
+
+pre-commit:
+  parallel: true
+  jobs:
+    # Mirrors the formatting check in .github/workflows/build.yml. Spotless must
+    # inspect every configured Java source, not only the staged file list.
+    - name: spotless
+      glob: "{src/main/java/**/*.java,src/test/java/**/*.java,pom.xml,.mvn/**/*,mvnw,mvnw.cmd}"
+      run: ./mvnw -B com.diffplug.spotless:spotless-maven-plugin:check
+      fail_text: "Spotless failed (or Java 25/Maven setup is unavailable; see CONTRIBUTING.md)."
+
+    # Mirrors .github/workflows/reuse.yml and checks the whole repository.
+    - name: reuse
+      run: reuse lint
+      fail_text: "REUSE/SPDX validation failed (or reuse is missing; see CONTRIBUTING.md)."
+
+    # Scan staged content only. Keep exclusions narrow and reviewed.
+    - name: gitleaks
+      run: gitleaks git --staged --redact --no-banner --exit-code=1
+      fail_text: "Gitleaks found a possible staged secret or failed to run (requires Gitleaks 8.20.0+; see CONTRIBUTING.md)."
+
+commit-msg:
+  jobs:
+    - name: committed
+      skip:
+        - merge
+        - rebase
+      run: committed --commit-file "{1}"
+      fail_text: |
+        Commit message must follow Conventional Commits.
+        Allowed types: feat, fix, build, chore, ci, docs, perf, refactor, revert, style, test
+        See CONTRIBUTING.md and committed.toml.
+
+    - name: lowercase-type
+      skip:
+        - merge
+        - rebase
+      run: >-
+        head -n 1 "{1}" |
+        grep -Eq '^(feat|fix|build|chore|ci|docs|perf|refactor|revert|style|test)(\([^)]*\))?!?: '
+      fail_text: "Commit type must be lowercase; see CONTRIBUTING.md."
+
+pre-push:
+  jobs:
+    # Check formatting without running the full build or test suite.
+    - name: spotless
+      run: ./mvnw -B com.diffplug.spotless:spotless-maven-plugin:check
+      fail_text: "Spotless failed (or Java 25/Maven setup is unavailable; see CONTRIBUTING.md)."
