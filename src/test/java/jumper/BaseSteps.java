@@ -60,6 +60,9 @@ public class BaseSteps {
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
   private String stargateUrl;
 
+  @Value("${jumper.issuer.url}")
+  private String localIssuerUrl;
+
   @Given("I need an upstream server with TLS")
   public void iNeedAnUpstreamServerWithTLS() {
     mockUpstreamServer.secure();
@@ -162,6 +165,11 @@ public class BaseSteps {
   @And("verify adjusted horizon event")
   public void horizonVerifyAdjustedEvent() {
     mockHorizonServer.createVerifyEventType(id);
+  }
+
+  @And("verify received horizon events published for realm {word}")
+  public void horizonVerifyPublisherRealm(String realm) {
+    mockHorizonServer.createVerifyPublisherIssuer(id, localIssuerUrl + "/" + realm);
   }
 
   @And("IDP set to respond with {int} status code")

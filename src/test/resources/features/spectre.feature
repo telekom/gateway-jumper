@@ -104,6 +104,7 @@ Feature: spectre events created
     When consumer calls the listener route
     Then API consumer receives a 200 status code
     And verify 2 horizon events received
+    And verify received horizon events published for realm sit
 
   Scenario: Consumer calls listener route with routing_config and skipped zone, 2 spectre events created
     Given Listener routing_config header set

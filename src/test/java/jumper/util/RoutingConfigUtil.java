@@ -188,7 +188,7 @@ public class RoutingConfigUtil {
   }
 
   private static JumperConfig getProxyRouteJcOnCallback() {
-    JumperConfig jc = getProxyRouteJcLegacyIssuer(REMOTE_ZONE_NAME);
+    JumperConfig jc = getProxyRouteJcLegacyIssuerWithNonDefaultRealm(REMOTE_ZONE_NAME);
     // aim the mesh hop at the /callback stub the listener steps set up
     jc.setRemoteApiUrl(REMOTE_HOST);
     return jc;
