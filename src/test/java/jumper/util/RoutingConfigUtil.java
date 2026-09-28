@@ -69,21 +69,21 @@ public class RoutingConfigUtil {
   public static Consumer<HttpHeaders> getListenerRouteHeaders(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcListener(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcListener());
     };
   }
 
-  public static String getRcListener(String id) {
+  public static String getRcListener() {
     // A listener route with zone failover configured: the zoned proxy entry the control plane
     // sends carries an issuer but no realm, and it is the entry selected while the zone is
     // healthy. The provider entry is the failover fallback.
-    return toJsonBase64(List.of(getProxyRouteJcOnCallback(id), getRealRouteJcOnCallback()));
+    return toJsonBase64(List.of(getProxyRouteJcOnCallback(), getRealRouteJcOnCallback()));
   }
 
   public static Consumer<HttpHeaders> getProxyRouteHeadersLegacyIssuer(BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxyLegacyIssuer(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxyLegacyIssuer());
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
     };
   }
@@ -92,9 +92,7 @@ public class RoutingConfigUtil {
       BaseSteps baseSteps) {
     return httpHeaders -> {
       httpHeaders.setBearerAuth(baseSteps.getAuthHeader());
-      httpHeaders.set(
-          Constants.HEADER_ROUTING_CONFIG,
-          getRcProxyLegacyIssuerWithNonDefaultRealm(baseSteps.getId()));
+      httpHeaders.set(Constants.HEADER_ROUTING_CONFIG, getRcProxyLegacyIssuerWithNonDefaultRealm());
       httpHeaders.set(Constants.HEADER_JUMPER_CONFIG, "e30=");
     };
   }
@@ -132,20 +130,20 @@ public class RoutingConfigUtil {
     return toJsonBase64(List.of(primary, failover));
   }
 
-  public static String getRcProxyLegacyIssuer(String id) {
+  public static String getRcProxyLegacyIssuer() {
     // proxy + proxy, using the legacy issuer trigger as transitional fallback
     return toJsonBase64(
         List.of(
-            getProxyRouteJcLegacyIssuer(REMOTE_ZONE_NAME, id),
-            getProxyRouteJcLegacyIssuer(REMOTE_FAILOVER_ZONE_NAME, id)));
+            getProxyRouteJcLegacyIssuer(REMOTE_ZONE_NAME),
+            getProxyRouteJcLegacyIssuer(REMOTE_FAILOVER_ZONE_NAME)));
   }
 
-  public static String getRcProxyLegacyIssuerWithNonDefaultRealm(String id) {
+  public static String getRcProxyLegacyIssuerWithNonDefaultRealm() {
     // proxy + proxy, using the legacy issuer trigger and realm fallback as transitional fallback
     return toJsonBase64(
         List.of(
-            getProxyRouteJcLegacyIssuerWithNonDefaultRealm(REMOTE_ZONE_NAME, id),
-            getProxyRouteJcLegacyIssuerWithNonDefaultRealm(REMOTE_FAILOVER_ZONE_NAME, id)));
+            getProxyRouteJcLegacyIssuerWithNonDefaultRealm(REMOTE_ZONE_NAME),
+            getProxyRouteJcLegacyIssuerWithNonDefaultRealm(REMOTE_FAILOVER_ZONE_NAME)));
   }
 
   private static JumperConfig getProxyRouteJc(String targetZone) {
@@ -156,21 +154,20 @@ public class RoutingConfigUtil {
     return jc;
   }
 
-  private static JumperConfig getProxyRouteJcLegacyIssuer(String targetZone, String id) {
+  private static JumperConfig getProxyRouteJcLegacyIssuer(String targetZone) {
     JumperConfig jc = new JumperConfig();
     jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/default");
-    jc.setClientId(addIdSuffix("stargate", id));
+    jc.setClientId("stargate");
     jc.setClientSecret("secret");
 
     setProxyRouteTarget(jc, targetZone);
     return jc;
   }
 
-  private static JumperConfig getProxyRouteJcLegacyIssuerWithNonDefaultRealm(
-      String targetZone, String id) {
+  private static JumperConfig getProxyRouteJcLegacyIssuerWithNonDefaultRealm(String targetZone) {
     JumperConfig jc = new JumperConfig();
     jc.setInternalTokenEndpoint("http://localhost:1081/auth/realms/" + NON_DEFAULT_REALM);
-    jc.setClientId(addIdSuffix("stargate", id));
+    jc.setClientId("stargate");
     jc.setClientSecret("secret");
 
     setProxyRouteTarget(jc, targetZone);
@@ -190,8 +187,8 @@ public class RoutingConfigUtil {
     }
   }
 
-  private static JumperConfig getProxyRouteJcOnCallback(String id) {
-    JumperConfig jc = getProxyRouteJcLegacyIssuer(REMOTE_ZONE_NAME, id);
+  private static JumperConfig getProxyRouteJcOnCallback() {
+    JumperConfig jc = getProxyRouteJcLegacyIssuer(REMOTE_ZONE_NAME);
     // aim the mesh hop at the /callback stub the listener steps set up
     jc.setRemoteApiUrl(REMOTE_HOST);
     return jc;
@@ -227,9 +224,5 @@ public class RoutingConfigUtil {
     jc.setEnvName(ENVIRONMENT);
     jc.setAccessTokenForwarding(false);
     return jc;
-  }
-
-  public static String addIdSuffix(String from, String id) {
-    return from + "_" + id;
   }
 }
