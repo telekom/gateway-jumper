@@ -4,11 +4,14 @@
 
 package jumper.config;
 
+import io.micrometer.tracing.Tracer;
+import jumper.exception.LoggingServerExchangeRejectedHandler;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
+import org.springframework.security.web.server.firewall.ServerExchangeRejectedHandler;
 import org.springframework.security.web.server.firewall.StrictServerWebExchangeFirewall;
 import org.springframework.web.server.session.WebSessionManager;
 import reactor.core.publisher.Mono;
@@ -54,6 +57,20 @@ public class SecurityConfiguration {
     firewall.setAllowUrlEncodedPeriod(true);
 
     return firewall;
+  }
+
+  /**
+   * Replaces Spring Security's default exchange rejection handling, which answers {@code 400 Bad
+   * Request} but only logs at {@code DEBUG} and bypasses {@link
+   * jumper.exception.JsonErrorWebExceptionHandler}.
+   *
+   * @param tracer used to attach a rejection event and reason tag to the current span
+   * @return handler that keeps the 400 response but logs at WARN and records the rejection on the
+   *     current observation
+   */
+  @Bean
+  public ServerExchangeRejectedHandler serverExchangeRejectedHandler(Tracer tracer) {
+    return new LoggingServerExchangeRejectedHandler(tracer);
   }
 
   /**
