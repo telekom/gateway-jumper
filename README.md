@@ -181,6 +181,16 @@ For production deployments, refer to the jumper section in the Gateway Helm char
 
 For local development and testing, Jumper uses Spring Boot's configuration mechanism with properties defined in [`application.yml`](src/main/resources/application.yml). The application can be configured through environment variables that are referenced in this configuration file.
 
+The application and Spring management endpoints use the same listener by default. Set
+`JUMPER_MANAGEMENT_PORT` to expose management endpoints such as `/actuator/health` on a separate
+listener. Kubernetes-compatible `/livez` and `/readyz` probes remain available on the main
+application listener whether management endpoints use the same listener or a separate one.
+
+| Environment variable | Purpose | Default |
+| --- | --- | --- |
+| `JUMPER_PORT` | Main application listener port | `8080` |
+| `JUMPER_MANAGEMENT_PORT` | Spring management listener port | Unset; shares the application listener |
+
 For additional standard Spring Boot properties, refer to the [Spring Boot documentation](https://docs.spring.io/spring-boot/appendix/application-properties/index.html).
 
 ## Usage Scenarios

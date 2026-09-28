@@ -34,13 +34,12 @@ ort:
       artifactory:
         backend:
           httpFileStorage:
-            url: "https://artifactory.devops.telekom.de/artifactory/open-source-dtit-ort-generic/ort/scan-results"
+            url: "${ORT_ARTIFACTORY_URL}"
             headers:
-              Authorization: "Bearer ${OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY}"
+              Authorization: "Bearer ${ORT_ARTIFACTORY_TOKEN}"
       # ClearlyDefined is disabled because it only produces 404s...
     storageReaders: ["local", "artifactory"]
     storageWriters: ["artifactory", "local"]
     skipExcluded: true
   advisor:
     skipExcluded: true
-

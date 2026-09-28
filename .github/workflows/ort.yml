@@ -41,6 +41,7 @@ jobs:
           filters: |
             deps:
               - 'pom.xml'
+              - '.ort.yml'
 
   ort-scan:
     name: ORT scan
@@ -52,8 +53,8 @@ jobs:
     steps:
       - name: Use HTTPS for Git cloning
         run: |
-          git config --global url.https://github.com/.insteadOf ssh://git@github.com/
-          git config --global url.https://github.com/.insteadOf git://github.com/
+          git config --global --add url.https://github.com/.insteadOf ssh://git@github.com/
+          git config --global --add url.https://github.com/.insteadOf git://github.com/
       - name: Checkout project
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 #v7.0.1
       - name: Prepare ORT config
@@ -77,7 +78,8 @@ jobs:
         with:
           fail-on: violations
           docker-cli-args: >-
-            -e OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY=${{ secrets.OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY }}
+            -e ORT_ARTIFACTORY_TOKEN=${{ secrets.OSPO_ORT_ARTIFACTORY_CACHE_REPO_KEY }}
+            -e ORT_ARTIFACTORY_URL=${{ secrets.OSPO_ORT_ARTIFACTORY_CACHE_REPO_URL }}
           run: >
             cache-dependencies,
             cache-scan-results,
