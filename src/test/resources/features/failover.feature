@@ -68,12 +68,19 @@ Feature: request containing routing_config properly handled
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization MeshToken
 
-  Scenario: Consumer calls proxy route with non-default realm header, mesh LMS token issuer uses realm
-    Given Proxy routing_config header set with realm header
+  Scenario: Consumer calls proxy route with non-default realm in routing_config, mesh LMS token issuer uses realm
+    Given Proxy routing_config header set with non-default realm
     And API provider set to respond on real path
     When consumer calls the proxy route without base path
     Then API Provider receives default bearer authorization headers
     Then API Provider receives authorization MeshTokenWithNonDefaultRealm
+
+  Scenario: Consumer calls proxy route with realm header, mesh LMS token issuer ignores caller-supplied realm
+    Given Proxy routing_config header set with realm header
+    And API provider set to respond on real path
+    When consumer calls the proxy route without base path
+    Then API Provider receives default bearer authorization headers
+    Then API Provider receives authorization MeshToken
 
   # TODO: remove after CP phase 2 completes and the legacy issuer realm fallback is deleted.
   Scenario: Consumer calls proxy route with legacy issuer header for non-default realm, mesh LMS token issuer uses realm

@@ -59,7 +59,7 @@ public class SpectreResponseFilter
                           // use jumperConfig passed with exchange
                           JumperConfig jumperConfig =
                               ExchangeStateManager.getJumperConfig(exchange).orElse(null);
-                          if (jumperConfig.isListenerMatched()) {
+                          if (Objects.nonNull(jumperConfig) && jumperConfig.isListenerMatched()) {
                             RouteListener listener =
                                 jumperConfig.getRouteListener().get(jumperConfig.getConsumer());
                             // Fire-and-forget: publish event asynchronously without blocking the

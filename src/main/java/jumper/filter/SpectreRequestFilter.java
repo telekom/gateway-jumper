@@ -4,6 +4,7 @@
 
 package jumper.filter;
 
+import java.util.Objects;
 import jumper.model.config.JumperConfig;
 import jumper.model.config.RouteListener;
 import jumper.service.SpectreService;
@@ -43,7 +44,7 @@ public class SpectreRequestFilter
               requestBody);
 
           JumperConfig jc = ExchangeStateManager.getJumperConfig(exchange).orElse(null);
-          if (!jc.isListenerMatched()) {
+          if (Objects.isNull(jc) || !jc.isListenerMatched()) {
             return chain.filter(exchange.mutate().request(request).build());
           }
 

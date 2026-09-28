@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Matcher;
 import jumper.Constants;
 import jumper.config.SpectreConfiguration;
 import jumper.model.config.JumperConfig;
@@ -66,7 +67,15 @@ public class SpectreService {
       Object http,
       RouteListener listener,
       String payload) {
-    return publishEvent(createEvent(jc, exchange, http, listener, payload), jc);
+    // Deferred so that failures while *building* the event or the publish URL surface as an error
+    // signal instead of being thrown into the gateway filter chain, which would fail the request
+    // this event merely observes.
+    return Mono.defer(() -> publishEvent(createEvent(jc, exchange, http, listener, payload), jc))
+        .onErrorResume(
+            throwable -> {
+              log.error("Error publishing Spectre event", throwable);
+              return Mono.empty(); // Don't fail the main request flow
+            });
   }
 
   private Spectre createEvent(
@@ -137,15 +146,13 @@ public class SpectreService {
     String envName = jc.getRealmName();
 
     return publishEventMono(
-            publishEventUrl.replaceFirst(Constants.ENVIRONMENT_PLACEHOLDER, envName),
-            tokenGeneratorService.generateGatewayTokenForPublisher(
-                localIssuerUrl + "/" + envName, envName),
-            event)
-        .onErrorResume(
-            throwable -> {
-              log.error("Error publishing Spectre event", throwable);
-              return Mono.empty(); // Don't fail the main request flow
-            });
+        // quoted: the realm is config-supplied, and an unescaped "$" or "\" in a replacement
+        // string is interpreted by the regex engine instead of inserted literally
+        publishEventUrl.replaceFirst(
+            Constants.ENVIRONMENT_PLACEHOLDER, Matcher.quoteReplacement(envName)),
+        tokenGeneratorService.generateGatewayTokenForPublisher(
+            localIssuerUrl + "/" + envName, envName),
+        event);
   }
 
   private Mono<Void> publishEventMono(String url, String token, Spectre event) {
