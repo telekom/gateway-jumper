@@ -7,7 +7,9 @@ package jumper.util;
 import io.jsonwebtoken.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Objects;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 
@@ -31,16 +33,22 @@ public final class OauthTokenUtil {
   }
 
   static String getTokenWithoutSignature(String token) {
-    String fullyProcessedToken = processToken(token);
+    return getRawTokenWithoutSignature(processToken(token));
+  }
 
-    int firstDot = fullyProcessedToken.indexOf(".");
-    int secondDot = fullyProcessedToken.indexOf(".", firstDot + 1);
+  private static String getRawTokenWithoutSignature(String token) {
+    if (token == null) {
+      throw new IllegalArgumentException("Token not provided, but expected");
+    }
+
+    int firstDot = token.indexOf(".");
+    int secondDot = token.indexOf(".", firstDot + 1);
 
     if (secondDot == -1) {
       throw new IllegalArgumentException("Invalid token format");
     }
 
-    return fullyProcessedToken.substring(0, secondDot + 1);
+    return token.substring(0, secondDot + 1);
   }
 
   public static String getClaimFromToken(String token, String claimName) {
@@ -49,16 +57,39 @@ public final class OauthTokenUtil {
 
   public static Jwt<?, Claims> getAllClaimsFromToken(String token) {
     String tokenWithoutSignature = getTokenWithoutSignature(token);
-
-    int firstDot = tokenWithoutSignature.indexOf('.');
-    String unsecuredToken = UNSECURED_HEADER + tokenWithoutSignature.substring(firstDot);
-
     try {
-      return jwtParser.parseUnsecuredClaims(unsecuredToken);
+      return parseClaimsWithoutSignatureValidation(tokenWithoutSignature);
     } catch (Exception e) {
       log.error("Failed to parse token", e);
       throw e;
     }
+  }
+
+  public static Optional<Date> getExpirationFromAccessToken(String accessToken) {
+    if (accessToken == null || accessToken.isBlank()) {
+      return Optional.empty();
+    }
+
+    try {
+      return Optional.ofNullable(
+          parseClaimsWithoutSignatureValidation(getRawTokenWithoutSignature(accessToken))
+              .getPayload()
+              .getExpiration());
+    } catch (ClaimJwtException error) {
+      return Optional.ofNullable(error.getClaims().getExpiration());
+    } catch (JwtException | IllegalArgumentException error) {
+      log.debug(
+          "Access token has no parseable JWT expiration claim: {}",
+          error.getClass().getSimpleName());
+      return Optional.empty();
+    }
+  }
+
+  private static Jwt<?, Claims> parseClaimsWithoutSignatureValidation(
+      String tokenWithoutSignature) {
+    int firstDot = tokenWithoutSignature.indexOf('.');
+    String unsecuredToken = UNSECURED_HEADER + tokenWithoutSignature.substring(firstDot);
+    return jwtParser.parseUnsecuredClaims(unsecuredToken);
   }
 
   private static @NonNull String processToken(String token) {

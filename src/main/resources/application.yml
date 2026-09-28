@@ -204,9 +204,20 @@ jumper:
         # - TLS_ECDHE_ECDSA_WITH_AES_256_CCM # unsupported by used jvm 1.2
         # - TLS_AES_128_CCM_SHA256 # unsupported by used jvm 1.3
   tokencache:
-    ttlOffset: 10
     maxSize: 10000
     expireAfterWriteMinutes: 30
+  oauth:
+    token-fetch:
+      connect-timeout: ${JUMPER_OAUTH_TOKEN_FETCH_CONNECT_TIMEOUT:${spring.cloud.oauth.connect-timeout:2s}}
+      overall-timeout: ${JUMPER_OAUTH_TOKEN_FETCH_OVERALL_TIMEOUT:10s}
+      request-wait-timeout: ${JUMPER_OAUTH_TOKEN_FETCH_REQUEST_WAIT_TIMEOUT:4s}
+      max-retries: ${JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRIES:1}
+      retry-backoff: ${JUMPER_OAUTH_TOKEN_FETCH_RETRY_BACKOFF:200ms}
+      max-retry-backoff: ${JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRY_BACKOFF:1s}
+      error-body-log-limit: ${JUMPER_OAUTH_TOKEN_FETCH_ERROR_BODY_LOG_LIMIT:8KB}
+      refresh-ahead: ${JUMPER_OAUTH_TOKEN_FETCH_REFRESH_AHEAD:30s}
+      min-serve: ${JUMPER_OAUTH_TOKEN_FETCH_MIN_SERVE:${jumper.tokencache.ttlOffset:10}s}
+      minimum-background-refresh-interval: ${JUMPER_OAUTH_TOKEN_FETCH_MINIMUM_BACKGROUND_REFRESH_INTERVAL:5s}
   warmup:
     enabled: false
     timeout: 15s
