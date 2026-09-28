@@ -177,9 +177,6 @@ public class BaseSteps {
   @And("IDP set to provide {word} token")
   public void idpWillRespondWithAStatusCode(String tokenType) {
     switch (tokenType) {
-      case "internal":
-        mockIrisServer.createExpectationInternalToken(id);
-        break;
       case "external":
         mockIrisServer.createExpectationExternalToken(id);
         break;
@@ -230,11 +227,6 @@ public class BaseSteps {
       default:
         fail("expected tokenType not configured");
     }
-  }
-
-  @And("IDP set to drop connection")
-  public void idpSetToDropConnection() {
-    mockIrisServer.createExpectationDropConnection(id);
   }
 
   @And("external token IDP request set to timeout")
