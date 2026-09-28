@@ -26,16 +26,25 @@ import tools.jackson.databind.json.JsonMapper;
 
 class JumperConfigTest {
 
+  private static final String ISSUER = "http://localhost:1081/auth/realms/default";
+  private static final String NON_DEFAULT_REALM = "sit";
+  private static final String OTHER_REALM = "rv";
+
+  private static final String CONSUMER = "eni--local-team--local-app";
+  private static final String CONSUMER_SCOPE = "consumer_scope";
+  private static final String PROVIDER_SCOPE = "provider_scope";
+
+  private static final String ENTRY_REALM = "entry-realm";
+  private static final String HEADER_REALM = "header-realm";
+  private static final String MESH_REALM = "mesh-realm";
+  private static final String GATEWAY_CLIENT_REALM = "gateway-client-realm";
+
   @BeforeAll
   static void initObjectMapper() {
     // fillProcessingInfo parses the jumper_config header and the JWT header via ObjectMapperUtil,
     // whose static holder is normally populated by Spring. Populate it for this context-less test.
     new ObjectMapperUtil(JsonMapper.builder().build());
   }
-
-  private static final String ISSUER = "http://localhost:1081/auth/realms/default";
-  private static final String NON_DEFAULT_REALM = "sit";
-  private static final String OTHER_REALM = "rv";
 
   static Stream<Arguments> isMeshRouteCases() {
     return Stream.of(
@@ -122,10 +131,6 @@ class JumperConfigTest {
     return MockServerHttpRequest.get("/").build();
   }
 
-  private static final String CONSUMER = "eni--local-team--local-app";
-  private static final String CONSUMER_SCOPE = "consumer_scope";
-  private static final String PROVIDER_SCOPE = "provider_scope";
-
   private JumperConfig jumperConfig(
       OauthCredentials consumerEntry, OauthCredentials providerEntry) {
     HashMap<String, OauthCredentials> oauth = new HashMap<>();
@@ -158,11 +163,6 @@ class JumperConfigTest {
     oc.setTokenRequest("HEADER");
     return oc;
   }
-
-  private static final String ENTRY_REALM = "entry-realm";
-  private static final String HEADER_REALM = "header-realm";
-  private static final String MESH_REALM = "mesh-realm";
-  private static final String GATEWAY_CLIENT_REALM = "gateway-client-realm";
 
   private static JumperConfig configWithMeshIssuer(String realm) {
     JumperConfig jc = new JumperConfig();
