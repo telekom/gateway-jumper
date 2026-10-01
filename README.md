@@ -61,9 +61,9 @@ Once you have that, refer to the [Configuration](#configuration) section to find
 
 ## Contributing
 
-This project has adopted the [Contributor Covenant](https://www.contributor-covenant.org/) in version 2.1 as our code of conduct. Please see the details in our [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). All contributors must abide by the code of conduct.
-
-By participating in this project, you agree to abide by its Code of Conduct at all times.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for build and test prerequisites, optional
+local Git hooks, and the commit message policy. All contributors must follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Releases
 
@@ -81,14 +81,14 @@ Releases are automatic. Every push to a release branch is validated, and if the 
 
 `main` is the default branch and produces stable releases. `next` is the release-candidate line: it exists whenever a change requires validation in a customer-facing environment before it is promoted to stable. Once that version is promoted into `main`, `next` is deleted, and it is recreated from `main` when a future prerelease line is needed.
 
-Versions are calculated from [Conventional Commits](https://www.conventionalcommits.org/). Every accepted type releases something, so a docs-only or dependency-only merge still publishes a patch version.
+Versions follow the default semantic-release rules with the [Conventional Commits](https://www.conventionalcommits.org/) preset. `feat` publishes a minor version; `fix` and `perf` publish a patch. A `!` marker or `BREAKING CHANGE:` footer publishes a major version for any commit type. Recognized reverts publish a patch. Other commits, including non-breaking `docs`, `ci`, and `chore` commits, do not trigger a release.
 
 ### Which branch a change goes to
 
 A change that belongs in both lines goes into `main` first and is forward-ported to `next` afterwards. This ensures that stable always receives
 all features and fixes and nothing stays only on `next`.
 
-Rebase `next` onto `main` after a stable release rather than letting the branches drift. This will publish a release candidate containing the fix.
+Merge `main` into `next` after a stable release rather than letting the branches drift. This will publish a release candidate containing the fix. Merge rather than rebase: `next` is protected and its release candidates are already published, so its history cannot be rewritten.
 
 ### Image tagging strategy
 
@@ -97,6 +97,10 @@ For each released version the pipeline builds an image tagged with that version,
 CI ensures that exact version tags such as `4.12.3` and `5.0.0-rc.1` are immutable. The floating `latest` and `next` tags track the newest stable release and the newest release candidate respectively.
 
 Pull requests build a preview image tagged `pr-<number>-<branch>`. It is built and signed the same way a release is.
+
+Preview and release image scans fail CI on HIGH or CRITICAL OS or library vulnerabilities, except findings with statuses `affected`, `under_investigation`, and `not_affected`. `affected` means no vendor fix is recorded yet, so CI starts blocking that finding once Trivy records a fix. `under_investigation` and `not_affected` findings are excluded because they are not currently confirmed as actionable vulnerabilities. The scans still fail on `end_of_life`, `will_not_fix`, and `fix_deferred` findings. Keep the same `TRIVY_IGNORE_STATUS` list on both scans. Do not replace it with `ignore-unfixed: true`, which also suppresses `end_of_life`, `will_not_fix`, and `fix_deferred` findings.
+
+A failed scan blocks signing and release publication. Image tags are pushed before scanning, so a failed scan can leave an unsigned image in the registry.
 
 Pull requests from forks do not build a preview image, because GitHub withholds registry credentials from them. If you need to deploy such a change, merge it to next and deploy the resulting RC image.
 
@@ -181,7 +185,48 @@ For production deployments, refer to the jumper section in the Gateway Helm char
 
 For local development and testing, Jumper uses Spring Boot's configuration mechanism with properties defined in [`application.yml`](src/main/resources/application.yml). The application can be configured through environment variables that are referenced in this configuration file.
 
+The application and Spring management endpoints use the same listener by default. Set
+`JUMPER_MANAGEMENT_PORT` to expose management endpoints such as `/actuator/health` on a separate
+listener. Kubernetes-compatible `/livez` and `/readyz` probes remain available on the main
+application listener whether management endpoints use the same listener or a separate one.
+
+| Environment variable | Purpose | Default |
+| --- | --- | --- |
+| `JUMPER_PORT` | Main application listener port | `8080` |
+| `JUMPER_MANAGEMENT_PORT` | Spring management listener port | Unset; shares the application listener |
+
 For additional standard Spring Boot properties, refer to the [Spring Boot documentation](https://docs.spring.io/spring-boot/appendix/application-properties/index.html).
+
+### OAuth Token Background Refresh
+
+Jumper refreshes cached OAuth tokens in the background while continuing to serve a token that is
+still safe to forward. This applies to tokens fetched for external authorization.
+The refresh policy can be configured with these environment variables (also documented on
+`OauthTokenFetchProperties`):
+
+| Environment variable | Default | Description |
+|---|---|---|
+| `JUMPER_OAUTH_TOKEN_FETCH_CONNECT_TIMEOUT` | `2s` | Maximum time allowed to establish the token endpoint connection. |
+| `JUMPER_OAUTH_TOKEN_FETCH_OVERALL_TIMEOUT` | `10s` | Maximum duration of one shared token fetch, including retries. |
+| `JUMPER_OAUTH_TOKEN_FETCH_REQUEST_WAIT_TIMEOUT` | `4s` | Maximum time one request waits for a shared token fetch before it fails with 504; the fetch itself continues for other waiters and the cache. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRIES` | `1` | Maximum retries after a retryable connection failure. |
+| `JUMPER_OAUTH_TOKEN_FETCH_RETRY_BACKOFF` | `200ms` | Initial retry backoff. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MAX_RETRY_BACKOFF` | `1s` | Maximum retry backoff. |
+| `JUMPER_OAUTH_TOKEN_FETCH_ERROR_BODY_LOG_LIMIT` | `8KB` | Maximum identity provider error-body bytes retained for debug logging; the complete body is still drained. |
+| `JUMPER_OAUTH_TOKEN_FETCH_REFRESH_AHEAD` | `30s` | Start refreshing this long before token expiry. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MIN_SERVE` | `10s` | Do not serve a cached token with this much lifetime or less remaining. A freshly fetched token with a positive lifetime at or below this threshold is forwarded to the waiting requests but not cached, so each request fetches anew. An already expired fetched token is rejected. |
+| `JUMPER_OAUTH_TOKEN_FETCH_MINIMUM_BACKGROUND_REFRESH_INTERVAL` | `5s` | Minimum interval after a background refresh finishes before the same token key may be refreshed again. |
+
+`refresh-ahead` must exceed `min-serve`, and `request-wait-timeout` must not exceed
+`overall-timeout`. The error-body log limit must be between `1B` and `64KB`. The minimum background
+refresh interval bounds request volume when a token's complete lifetime is shorter than
+`refresh-ahead`; once a token is no longer safe to serve, its foreground replacement ignores this
+interval.
+
+The former `spring.cloud.oauth.connect-timeout` property remains a deprecated fallback for the new
+connect-timeout setting. The former seconds-valued `jumper.tokencache.ttlOffset` property remains a
+deprecated fallback for `min-serve`. If its value is at least `refresh-ahead`, increase
+`JUMPER_OAUTH_TOKEN_FETCH_REFRESH_AHEAD` so it remains greater than `min-serve`.
 
 ## Usage Scenarios
 

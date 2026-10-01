@@ -2,22 +2,27 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# Config  Reference: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+# Config reference:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 
+---
 version: 2
+multi-ecosystem-groups:
+  weekly-dependencies:
+    schedule:
+      interval: "weekly"
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
-    schedule:
-      interval: "weekly"
+    patterns:
+      - "*"
+    multi-ecosystem-group: "weekly-dependencies"
   - package-ecosystem: "maven"
     directory: "/"
-    schedule:
-      interval: "daily"
-    groups:
-      jsonwebtoken:
-        patterns:
-          - "io.jsonwebtoken:*"
+    patterns:
+      - "*"
+    multi-ecosystem-group: "weekly-dependencies"
     ignore:
       # Ignore major version updates to spring-boot-starter-parent
       - dependency-name: "org.springframework.boot:spring-boot-starter-parent"

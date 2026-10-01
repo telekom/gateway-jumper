@@ -19,20 +19,22 @@ SPDX-License-Identifier: Apache-2.0
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.0</version>
+		<version>4.1.1</version>
 	</parent>
 
 	<properties>
 		<java.version>25</java.version>
-		<spring-cloud.version>2025.1.2</spring-cloud.version>
+		<spring-cloud.version>2025.1.3</spring-cloud.version>
+		<!-- Override the Spring Boot managed Jackson versions to get security fixes.
+			Remove these when the Spring Boot parent manages these versions or newer. -->
+		<jackson-bom.version>3.1.7</jackson-bom.version>
+		<jackson-2-bom.version>2.21.7</jackson-2-bom.version>
 
-		<cucumber.version>7.34.4</cucumber.version>
-		<junit-platform.version>1.14.3</junit-platform.version>
+		<cucumber.version>7.34.7</cucumber.version>
 		<wiremock.version>3.13.2</wiremock.version>
-		<wiremock-jetty.version>12.1.11</wiremock-jetty.version>
 		<jsonwebtoken.version>0.13.0</jsonwebtoken.version>
 
-		<jib-maven-plugin.version>3.5.1</jib-maven-plugin.version>
+		<jib-maven-plugin.version>3.5.2</jib-maven-plugin.version>
 		<!--
 			Base image, pinned by digest so that every build - including a rebuild of an
 			older commit - resolves to exactly the same base. The floating tag is kept
@@ -43,46 +45,25 @@ SPDX-License-Identifier: Apache-2.0
 			Do not edit by hand: the .github/workflows/update-base-image.yml workflow
 			raises a pull request whenever the tag resolves to a new digest.
 		-->
-		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot@sha256:9ccf2b8bce700d9f450523e2055afabe4d4ee795e6d69a0647a2dcd6e180e411</jib.base-image>
+		<jib.base-image>gcr.io/distroless/java25-debian13:nonroot@sha256:ca60da1345c0f17b6d019049e6749e15f10fd3c0da86dec938d2b4ec565d0629</jib.base-image>
 	</properties>
 
 	<dependencyManagement>
 		<dependencies>
-			<!--
-			CVE remediation: jjwt-jackson pulls the Jackson 2 (com.fasterxml) JSON
-			backend transitively; the SB4-managed 2.21.4 is exposed to CVE-2026-54515
-			(GHSA-5jmj-h7xm-6q6v). Override the whole Jackson 2 line to 2.22.0 (past
-			the fix). This BOM only governs com.fasterxml.jackson.* and is independent
-			of the app's Jackson 3 (tools.jackson) stack. Imported first so it wins.
-			-->
-			<dependency>
-				<groupId>com.fasterxml.jackson</groupId>
-				<artifactId>jackson-bom</artifactId>
-				<version>2.22.0</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<!--
-			WireMock (wiremock-jetty12) is built and tested against Jetty 12.0.x, but the
-			Spring Boot 4 parent manages the core Jetty modules to 12.1.x while leaving the
-			ee10 servlet modules at 12.0.x. The resulting 12.0/12.1 mix breaks
-			ServletContextHandler. WireMock 3.x (latest 3.13.2) never targets 12.1; only
-			WireMock 4.x (still beta) does. Jumper runs on Netty (Jetty is test-only), so
-			pin all Jetty artifacts to a single 12.0.x line, kept at the latest 12.0.x
-			patch (12.0.36) for CVE-2026-1605/CVE-2026-2332/CVE-2025-11143. These imports
-			come first so they win over the Spring Boot parent BOM.
-			-->
+			<!-- WireMock declares Jetty 12.0.x modules. Reimport both Jetty BOMs at
+			Spring Boot's version because mixing 12.1.x core with 12.0.x EE10 modules
+			prevents WireMock's ServletContextHandler from initializing. -->
 			<dependency>
 				<groupId>org.eclipse.jetty</groupId>
 				<artifactId>jetty-bom</artifactId>
-				<version>${wiremock-jetty.version}</version>
+				<version>${jetty.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.eclipse.jetty.ee10</groupId>
 				<artifactId>jetty-ee10-bom</artifactId>
-				<version>${wiremock-jetty.version}</version>
+				<version>${jetty.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -92,23 +73,6 @@ SPDX-License-Identifier: Apache-2.0
 				<version>${spring-cloud.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.junit</groupId>
-				<artifactId>junit-bom</artifactId>
-				<version>6.1.2</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<!--
-			CVE remediation (runtime): bcprov-jdk18on arrives transitively via
-			spring-cloud-commons at 1.81.1, exposed to CVE-2026-0636
-			(GHSA-c3fc-8qff-9hwx). Force 1.84.
-			-->
-			<dependency>
-				<groupId>org.bouncycastle</groupId>
-				<artifactId>bcprov-jdk18on</artifactId>
-				<version>1.85</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -305,8 +269,7 @@ SPDX-License-Identifier: Apache-2.0
 
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
-			<version>1.21.4</version>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 
@@ -349,7 +312,7 @@ SPDX-License-Identifier: Apache-2.0
 			<plugin>
 				<groupId>com.diffplug.spotless</groupId>
 				<artifactId>spotless-maven-plugin</artifactId>
-				<version>3.8.0</version>
+				<version>3.10.1</version>
 				<executions>
 					<execution>
 						<goals>
@@ -365,7 +328,7 @@ SPDX-License-Identifier: Apache-2.0
 							<include>src/test/java/**/*.java</include>
 						</includes>
             <googleJavaFormat>
-              <version>1.28.0</version>
+              <version>1.30.0</version>
               <reflowLongStrings>true</reflowLongStrings>
             </googleJavaFormat>
           </java>
@@ -374,11 +337,48 @@ SPDX-License-Identifier: Apache-2.0
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.2.5</version>
+        <version>3.5.6</version>
         <configuration>
           <excludedGroups>ignore</excludedGroups>
           <argLine>-XX:+AllowRedefinitionToAddDeleteMethods</argLine>
+          <!-- The suite is split into two executions below. Running -Dtest=SomeClass only
+               matches one of them, so the other must not fail the build for having no match. -->
+          <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
         </configuration>
+        <executions>
+          <!-- Main run: every test shares a single reused JVM (fast; keeps the Spring
+               context cache warm across classes). The two Netty RFC 9112 flag tests are
+               excluded here and handled by the isolated execution below. -->
+          <execution>
+            <id>default-test</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <excludes>
+                <exclude>**/UpstreamHeaderValidationEnabledIntegrationTest.java</exclude>
+                <exclude>**/UpstreamHeaderValidationDisabledIntegrationTest.java</exclude>
+              </excludes>
+            </configuration>
+          </execution>
+          <!-- Netty reads io.netty.handler.codec.http.rfc9112TransferEncoding once per JVM at
+               HttpObjectDecoder class-load. These two tests need opposite values of that flag,
+               so reuseForks=false gives each class its own JVM, isolated from the rest of the
+               suite (which keeps JVM reuse). -->
+          <execution>
+            <id>netty-rfc9112-isolated</id>
+            <goals>
+              <goal>test</goal>
+            </goals>
+            <configuration>
+              <reuseForks>false</reuseForks>
+              <includes>
+                <include>**/UpstreamHeaderValidationEnabledIntegrationTest.java</include>
+                <include>**/UpstreamHeaderValidationDisabledIntegrationTest.java</include>
+              </includes>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>com.google.cloud.tools</groupId>
@@ -387,6 +387,16 @@ SPDX-License-Identifier: Apache-2.0
         <configuration>
           <from>
             <image>${jib.base-image}</image>
+            <platforms>
+              <platform>
+                <architecture>amd64</architecture>
+                <os>linux</os>
+              </platform>
+              <platform>
+                <architecture>arm64</architecture>
+                <os>linux</os>
+              </platform>
+            </platforms>
           </from>
           <to>
             <image>jumper</image>

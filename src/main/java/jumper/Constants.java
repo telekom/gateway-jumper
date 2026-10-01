@@ -67,9 +67,9 @@ public class Constants {
   public static final String PROXY_ROOT_PATH_PREFIX = "/proxy";
   public static final String AUTOEVENT_ROOT_PATH_PREFIX = "/autoevent";
 
-  public static final String ISSUER_SUFFIX = "/protocol/openid-connect/token";
   public static final String LOCALHOST_ISSUER_SERVICE = "http://localhost:8081/api/v1";
   public static final String DEFAULT_REALM = "default";
+  public static final String REALMS_PATH_SEGMENT = "realms/";
   public static final String BEARER = "Bearer";
   public static final String BASIC = "Basic";
 

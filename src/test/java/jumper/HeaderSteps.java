@@ -116,6 +116,19 @@ public class HeaderSteps {
         RoutingConfigUtil.getSecondaryRouteHeadersWithLoadbalancing(baseSteps));
   }
 
+  @Given("Listener routing_config header set")
+  public void listenerRoutingConfigHeaderSet() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(RoutingConfigUtil.getListenerRouteHeaders(baseSteps));
+  }
+
+  @Given("Listener routing_config header set with proxy failover")
+  public void listenerRoutingConfigHeaderSetWithProxyFailover() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getListenerRouteHeadersProxyFailover(baseSteps));
+  }
+
   @Given("Proxy routing_config header set")
   public void proxyRoutingConfigHeaderSet() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
@@ -134,6 +147,13 @@ public class HeaderSteps {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
     baseSteps.setHttpHeadersOfRequest(
         RoutingConfigUtil.getProxyRouteHeadersWithRealmHeader(baseSteps));
+  }
+
+  @Given("Proxy routing_config header set with non-default realm")
+  public void proxyRoutingConfigHeaderSetWithNonDefaultRealm() {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken();
+    baseSteps.setHttpHeadersOfRequest(
+        RoutingConfigUtil.getProxyRouteHeadersWithNonDefaultRealm(baseSteps));
   }
 
   @Given("Proxy routing_config header set with legacy issuer for non-default realm")

@@ -187,7 +187,8 @@ public class JumperConfig {
             HeaderUtil.getLastValueFromHeaderField(request, Constants.HEADER_JUMPER_CONFIG));
     this.setRouteListener(jc.getRouteListener());
     this.setGatewayClient(jc.getGatewayClient());
-    setRealmName(determineRealm(request));
+
+    resolveMissingRealmName();
 
     // check loadBalancing
     if (Objects.nonNull(loadBalancing) && !loadBalancing.getServers().isEmpty()) {
@@ -219,6 +220,56 @@ public class JumperConfig {
         request); // TODO: remove as soon we have completely shifted to json_config
 
     return jc;
+  }
+
+  /**
+   * Fills in the realm for configs assembled from {@code routing_config}, the path taken whenever
+   * zone failover is configured. The realm can be absent there: the control plane emits the {@code
+   * realm} header only for non-failover routes, and a per-entry {@code realm} is omitted when
+   * empty. Without a realm, {@code SpectreService} builds its publish URL from {@code null} and the
+   * request it was only observing fails.
+   *
+   * <p>Deliberately additive: a realm already present in the config blob is never overwritten, so
+   * the legacy-header path in {@link #fillWithLegacyHeaders(ServerHttpRequest)} keeps its existing
+   * precedence and an entry keeps the realm the control plane assigned it.
+   */
+  private void resolveMissingRealmName() {
+    if (StringUtils.isNotBlank(realmName)) {
+      return;
+    }
+
+    setRealmName(determineRealmName());
+  }
+
+  /**
+   * Realm for a {@code routing_config} entry that carries none of its own: the realm embedded in
+   * the entry's own issuer, else {@link Constants#DEFAULT_REALM}.
+   *
+   * <p>Both sources are the routing_config blob itself, and that is deliberate - the realm selects
+   * the Horizon destination and the issuer of gateway-signed tokens, so it must not be sourced from
+   * a channel the caller can write. Two channels are excluded for that reason:
+   *
+   * <ul>
+   *   <li>the inbound {@code realm} header - the control plane's last-mile-security feature is the
+   *       only thing that adds or replaces it, and that feature is skipped for failover routes, so
+   *       on this path a caller-supplied header arrives unsanitised;
+   *   <li>{@code gatewayClient.issuer} - {@code gatewayClient} comes from the {@code jumper_config}
+   *       header, which the control plane emits <em>instead of</em> {@code routing_config} and
+   *       never alongside it, so on this path its only producer is the caller.
+   * </ul>
+   *
+   * <p>Package-private for testing.
+   */
+  String determineRealmName() {
+    if (StringUtils.isNotBlank(internalTokenEndpoint)
+        && internalTokenEndpoint.contains(Constants.REALMS_PATH_SEGMENT)) {
+      return internalTokenEndpoint.replaceFirst(".*" + Constants.REALMS_PATH_SEGMENT, "");
+    }
+
+    log.warn(
+        "no realm resolvable for routing_config entry, falling back to {}",
+        Constants.DEFAULT_REALM);
+    return Constants.DEFAULT_REALM;
   }
 
   public boolean isListenerMatched() {

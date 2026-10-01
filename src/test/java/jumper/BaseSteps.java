@@ -60,6 +60,9 @@ public class BaseSteps {
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
   private String stargateUrl;
 
+  @Value("${jumper.issuer.url}")
+  private String localIssuerUrl;
+
   @Given("I need an upstream server with TLS")
   public void iNeedAnUpstreamServerWithTLS() {
     mockUpstreamServer.secure();
@@ -87,6 +90,11 @@ public class BaseSteps {
   @And("API consumer receives a {int} status code")
   public void apisConsumerReceivesAStatusCode(int arg0) {
     requestExchange.expectStatus().isEqualTo(arg0);
+  }
+
+  @And("response contains Retry-After header")
+  public void responseContainsRetryAfterHeader() {
+    requestExchange.expectHeader().valueEquals("Retry-After", "30");
   }
 
   @And("horizon receives a {int} status code")
@@ -159,6 +167,11 @@ public class BaseSteps {
     mockHorizonServer.createVerifyEventType(id);
   }
 
+  @And("verify received horizon events published for realm {word}")
+  public void horizonVerifyPublisherRealm(String realm) {
+    mockHorizonServer.createVerifyPublisherIssuer(id, localIssuerUrl + "/" + realm);
+  }
+
   @And("IDP set to respond with {int} status code")
   public void idpSetToRespondWithStatusCode(int statusCode) {
     mockIrisServer.setResponse(statusCode);
@@ -172,9 +185,6 @@ public class BaseSteps {
   @And("IDP set to provide {word} token")
   public void idpWillRespondWithAStatusCode(String tokenType) {
     switch (tokenType) {
-      case "internal":
-        mockIrisServer.createExpectationInternalToken(id);
-        break;
       case "external":
         mockIrisServer.createExpectationExternalToken(id);
         break;
@@ -227,11 +237,6 @@ public class BaseSteps {
     }
   }
 
-  @And("IDP set to drop connection")
-  public void idpSetToDropConnection() {
-    mockIrisServer.createExpectationDropConnection(id);
-  }
-
   @And("external token IDP request set to timeout")
   public void idpSetToTimeoutConnection() {
     mockIrisServer.createExpectationWithTimeout(id);
@@ -252,6 +257,11 @@ public class BaseSteps {
     mockIrisServer.createExpectationExternalTokenNoExpiresInMultipleCalls(id, 5);
   }
 
+  @And("IDP set to provide a short-lived token then fail refreshes")
+  public void idpSetToProvideShortLivedTokenThenFailRefreshes() {
+    mockIrisServer.createExpectationShortLivedExternalTokenThenFail(id);
+  }
+
   @And("IDP set to provide alternative token without expires_in allowing multiple calls")
   public void idpSetToProvideAlternativeTokenWithoutExpiresInMultipleCalls() {
     mockIrisServer.createExpectationAlternativeTokenNoExpiresInMultipleCalls(id, 5);
@@ -260,6 +270,16 @@ public class BaseSteps {
   @And("IDP token endpoint was called exactly {int} times")
   public void idpTokenEndpointWasCalledTimes(int expectedCount) {
     mockIrisServer.verifyTokenEndpointCallCount(expectedCount);
+  }
+
+  @And("IDP token endpoint eventually receives exactly {int} calls")
+  public void idpTokenEndpointEventuallyReceivesCalls(int expectedCount) {
+    mockIrisServer.awaitTokenEndpointCallCount(expectedCount);
+  }
+
+  @And("IDP token endpoint call count remains exactly {int}")
+  public void idpTokenEndpointCallCountRemains(int expectedCount) {
+    mockIrisServer.verifyTokenEndpointCallCountRemains(expectedCount);
   }
 
   @When("consumer calls the proxy route")
