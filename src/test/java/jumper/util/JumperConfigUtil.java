@@ -26,6 +26,12 @@ public class JumperConfigUtil {
     return toJsonBase64(jc);
   }
 
+  public static String getJcMesh() {
+    JumperConfig jc = new JumperConfig();
+    jc.setMesh(true);
+    return toJsonBase64(jc);
+  }
+
   public static String getJcConsumerClientIdAudience() {
     JumperConfig jc = new JumperConfig();
     jc.setClaims(defaultClaims(audienceClaim(null, Constants.CLAIM_VALUE_FROM_CONSUMER_CLIENT_ID)));
@@ -330,9 +336,6 @@ public class JumperConfigUtil {
     routeListenerHashMap.put(consumer, rl);
     JumperConfig jc = new JumperConfig();
     jc.setRouteListener(routeListenerHashMap);
-    GatewayClient gc = new GatewayClient();
-    gc.setIssuer("realms/default");
-    jc.setGatewayClient(gc);
     return toJsonBase64(jc);
   }
 

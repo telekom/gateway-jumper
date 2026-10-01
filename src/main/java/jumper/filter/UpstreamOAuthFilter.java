@@ -14,11 +14,13 @@ import jumper.model.config.OauthCredentials;
 import jumper.service.JumperConfigService;
 import jumper.service.TokenCacheService;
 import jumper.service.TokenFetchService;
+import jumper.service.TokenGeneratorService;
 import jumper.util.ExchangeStateManager;
 import jumper.util.HeaderUtil;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
@@ -28,6 +30,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Component
 @Slf4j
@@ -40,17 +43,23 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
       "jumper.external.oauth.config.error";
 
   private final TokenFetchService tokenFetchService;
+  private final TokenGeneratorService tokenGeneratorService;
   private final JumperConfigService jumperConfigService;
   private final TokenCacheService tokenCacheService;
   private final MeterRegistry meterRegistry;
 
+  @Value("${jumper.issuer.url}")
+  private String localIssuerUrl;
+
   public UpstreamOAuthFilter(
       TokenFetchService tokenFetchService,
+      TokenGeneratorService tokenGeneratorService,
       JumperConfigService jumperConfigService,
       TokenCacheService tokenCacheService,
       MeterRegistry meterRegistry) {
     super(Config.class);
     this.tokenFetchService = tokenFetchService;
+    this.tokenGeneratorService = tokenGeneratorService;
     this.jumperConfigService = jumperConfigService;
     this.tokenCacheService = tokenCacheService;
     this.meterRegistry = meterRegistry;
@@ -77,7 +86,7 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
           // Reactive chain: resolve token source (mesh/external/legacy) -> set Bearer token ->
           // build request -> continue filter chain
-          return resolveTokenSource(exchange, jumperConfig, requestBuilder)
+          return resolveTokenSource(exchange, jumperConfig, requestBuilder, readOnlyRequest)
               .map(tokenInfo -> setBearerToken(requestBuilder, tokenInfo))
               .map(ServerHttpRequest.Builder::build)
               .flatMap(
@@ -106,16 +115,34 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
    * For external IdP tokens, stores the token cache key in exchange for 4xx-based eviction.
    */
   private Mono<TokenInfo> resolveTokenSource(
-      ServerWebExchange exchange, JumperConfig jumperConfig, ServerHttpRequest.Builder builder) {
-    if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())) {
-      // Gateway-to-Gateway mesh token fetched from the provider-zone identity provider
-      log.debug("----------------GATEWAY MESH-------------");
-      String tokenEndpoint = jumperConfig.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX;
-      String tokenCacheKey =
-          tokenCacheService.generateTokenCacheKey(
-              tokenEndpoint, jumperConfig.getClientId(), jumperConfig.getClientSecret(), null);
-      exchange.getAttributes().put(Constants.GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY, tokenCacheKey);
-      return tokenFetchService.getInternalMeshAccessToken(jumperConfig);
+      ServerWebExchange exchange,
+      JumperConfig jumperConfig,
+      ServerHttpRequest.Builder builder,
+      ServerHttpRequest request) {
+    if (jumperConfig.isMeshRoute()) {
+      // Gateway-to-Gateway mesh LMS token: self-signed JWT replacing the Iris gateway
+      // client_credentials token. The provider zone validates it against the consumer zone's
+      // StarGate JWKS endpoint.
+      log.debug("----------------GATEWAY MESH LMS-------------");
+      String realmName =
+          Objects.requireNonNullElse(jumperConfig.getRealmName(), Constants.DEFAULT_REALM);
+      return Mono.fromCallable(
+              () -> {
+                String meshLmsToken =
+                    tokenGeneratorService.generateMeshLmsToken(
+                        jumperConfig, request.getMethod().name(), localIssuerUrl + "/" + realmName);
+                TokenInfo tokenInfo = new TokenInfo();
+                tokenInfo.setAccessToken(meshLmsToken);
+                return tokenInfo;
+              })
+          .subscribeOn(Schedulers.parallel())
+          .doOnError(e -> log.error("Failed to generate mesh LMS token", e))
+          .onErrorMap(
+              e -> !(e instanceof ResponseStatusException),
+              e ->
+                  new ResponseStatusException(
+                      HttpStatus.INTERNAL_SERVER_ERROR,
+                      "Failed to generate mesh LMS token: " + e.getMessage()));
 
     } else if (Objects.nonNull(jumperConfig.getExternalTokenEndpoint())) {
       // External OAuth token: Fetch from external identity provider using client credentials

@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import jumper.config.OauthTokenFetchProperties;
 import jumper.model.TokenInfo;
-import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -204,32 +203,6 @@ class TokenFetchServiceTest {
 
     assertThat(idpCallCount.get()).isZero();
     assertThat(cachedToken()).isSameAs(cachedToken);
-  }
-
-  @Test
-  void internalMeshRequest_fetchesFromProviderIdentityProviderAndCachesToken() {
-    // arrange
-    JumperConfig config = new JumperConfig();
-    config.setInternalTokenEndpoint("https://idp.example.com/auth/realms/provider");
-    config.setClientId(CLIENT_ID);
-    config.setClientSecret(CLIENT_SECRET);
-    String meshTokenKey =
-        tokenCacheService.generateTokenCacheKey(
-            "https://idp.example.com/auth/realms/provider/protocol/openid-connect/token",
-            CLIENT_ID,
-            CLIENT_SECRET,
-            null);
-
-    // act
-    TokenInfo fetchedToken = tokenFetchService.getInternalMeshAccessToken(config).block();
-    TokenInfo reusedToken = tokenFetchService.getInternalMeshAccessToken(config).block();
-
-    // assert
-    assertThat(fetchedToken).isNotNull();
-    assertThat(fetchedToken.getAccessToken()).isEqualTo("mocked-access-token");
-    assertThat(reusedToken).isSameAs(fetchedToken);
-    assertThat(tokenCache.get(meshTokenKey, TokenInfo.class)).isSameAs(fetchedToken);
-    assertThat(idpCallCount.get()).isOne();
   }
 
   @Test
