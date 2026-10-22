@@ -31,6 +31,12 @@ public class HeaderSteps {
     baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeaders(baseSteps));
   }
 
+  @Given("ProxyRoute headers are set for a consumer from zone {word}")
+  public void proxyRouteHeadersSetForConsumerFromZone(String originZone) {
+    baseSteps.authHeader = TokenUtil.getConsumerAccessToken(originZone);
+    baseSteps.setHttpHeadersOfRequest(TokenUtil.getProxyRouteHeaders(baseSteps));
+  }
+
   @Given("ProxyRoute headers are set with x-token-exchange")
   public void proxyRouteHeadersSetWithXtokenExchange() {
     baseSteps.authHeader = TokenUtil.getConsumerAccessToken();

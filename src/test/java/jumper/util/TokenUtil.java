@@ -25,11 +25,15 @@ public class TokenUtil {
   }
 
   public static String getConsumerAccessToken() {
+    return getConsumerAccessToken("localZone");
+  }
+
+  public static String getConsumerAccessToken(String originZone) {
     AccessToken consumerAccessToken =
         AccessToken.builder()
             .env("local")
             .clientId("eni--local-team--local-app")
-            .originZone("localZone")
+            .originZone(originZone)
             .originStargate("https://zone.local.de")
             .build();
     return consumerAccessToken.getConsumerAccessToken();
