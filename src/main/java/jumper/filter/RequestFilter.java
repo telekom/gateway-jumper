@@ -6,6 +6,7 @@ package jumper.filter;
 
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.addOriginalRequestUrl;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import java.net.URI;
@@ -41,9 +42,13 @@ import org.springframework.web.server.ServerWebExchange;
 @Setter
 public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Config> {
 
+  private static final String METRIC_SPACEGATE_TOKEN_FORWARDED = "jumper.spacegate.token.forwarded";
+  private static final String UNKNOWN_TAG_VALUE = "unknown";
+
   private final Tracer tracer;
   private final TokenGeneratorService tokenGeneratorService;
   private final JumperConfigService jumperConfigService;
+  private final MeterRegistry meterRegistry;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -60,11 +65,13 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
   public RequestFilter(
       Tracer tracer,
       TokenGeneratorService tokenGeneratorService,
-      JumperConfigService jumperConfigService) {
+      JumperConfigService jumperConfigService,
+      MeterRegistry meterRegistry) {
     super(Config.class);
     this.tracer = tracer;
     this.tokenGeneratorService = tokenGeneratorService;
     this.jumperConfigService = jumperConfigService;
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -217,6 +224,7 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
           log.debug("Routing set to: " + finalApiUri);
           requestMutationBuilder.uri(finalApiUri);
           ServerHttpRequest finalRequest = requestMutationBuilder.build();
+          recordSpacegateTokenForwarding(jumperConfig, finalRequest);
           exchange
               .getAttributes()
               .put(ServerWebExchangeUtils.GATEWAY_REQUEST_URL_ATTR, finalApiUri);
@@ -302,6 +310,28 @@ public class RequestFilter extends AbstractGatewayFilterFactory<RequestFilter.Co
     if (isInternetFacingZone(zone)) {
       HeaderUtil.addHeader(builder, Constants.HEADER_X_SPACEGATE_TOKEN, token);
     }
+  }
+
+  /**
+   * Counts provider requests that carry the {@code X-Spacegate-Token} header, to find the APIs that
+   * still receive it. Mesh hops are skipped: the gateway in the provider zone counts the request
+   * when it forwards it to the provider, after {@code removeHeaders} is applied.
+   */
+  private void recordSpacegateTokenForwarding(
+      JumperConfig jumperConfig, ServerHttpRequest outgoingRequest) {
+    if (Objects.nonNull(jumperConfig.getInternalTokenEndpoint())
+        || !outgoingRequest.getHeaders().containsHeader(Constants.HEADER_X_SPACEGATE_TOKEN)) {
+      return;
+    }
+
+    meterRegistry
+        .counter(
+            METRIC_SPACEGATE_TOKEN_FORWARDED,
+            "api_base_path",
+            Objects.requireNonNullElse(jumperConfig.getApiBasePath(), UNKNOWN_TAG_VALUE),
+            "origin_zone",
+            Objects.requireNonNullElse(jumperConfig.getConsumerOriginZone(), UNKNOWN_TAG_VALUE))
+        .increment();
   }
 
   private void addXtokenExchange(ServerHttpRequest.Builder builder, ServerHttpRequest request) {
