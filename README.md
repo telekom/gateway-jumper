@@ -548,6 +548,26 @@ Jumper enriches the request with additional headers, depending on the situation.
 | X-Origin-Stargate | Shows which Gateway host was originally called |
 | X-Origin-Zone | Shows which Gateway zone was originally called |
 
+#### Header Removal
+
+Providers can list request headers that Jumper must not forward to them. Header names are
+case-insensitive.
+
+**Required Headers:**
+* `jumper_config` - Contains the list of headers to remove with the following format:
+
+```json
+{
+  "removeHeaders": ["<header name>", "<header name>"]
+}
+```
+
+Jumper removes the headers after it has added its own headers, so the list can also remove
+headers that Jumper sets, such as `X-Spacegate-Token`, `X-Origin-*` and `X-Forwarded-*`. This also
+applies to the `Authorization` header of the One Token, Basic Auth and X-Token-Exchange scenarios.
+Tokens that Jumper sets later in the filter chain are always sent: the Mesh LMS token and tokens
+from an external identity provider.
+
 #### And more
 
 * **Tracing**: [B3 Zipkin propagation](https://github.com/openzipkin/b3-propagation) support (requires `spring.zipkin.baseUrl` configuration)
