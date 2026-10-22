@@ -247,14 +247,14 @@ The following describes different scenarios for token handling in Jumper.
 
 #### One Token
 
-The most common scenario where Jumper creates a new OAuth token by combining information from the incoming token and headers.
+For provider-facing Last Mile Security, Jumper creates a Gateway Token from the incoming token and routing headers.
+Jumper replaces the incoming `Authorization` value with `Bearer <Gateway Token>`.
 
 **Required Headers:**
 * `remote_api_url` - Target URL for request forwarding
 * `api_base_path` - Base path of the Kong service in the initial zone. Passed as `requestPath` claim.
 * `realm` - Used to set the correct issuer
 * `environment` - Passed as `env` claim
-* `access_token_forwarding` - Used to determine the scenario. Set to `false` in this case.
 
 **Token Structure (One Token):**
 
@@ -284,7 +284,7 @@ The most common scenario where Jumper creates a new OAuth token by combining inf
 ```
 
 **Outgoing Headers:**
-* `Authorization` - Contains the newly created token
+* `Authorization` - Contains `Bearer <Gateway Token>`
 
 ##### Audience claim
 
@@ -309,43 +309,6 @@ Provider-token audience precedence is:
 1. The configured provider audience.
 2. Audience values from the incoming token.
 3. The `x-pubsub-subscriber-id` fallback for pub/sub calls.
-
-#### Last Mile Security Token (Legacy)
-
-A legacy scenario where Jumper forwards both the original token and a new LMS token (in an `X-Gateway-Token` header).
-
-**Required Headers:**
-* Same as One Token scenario, but with `access_token_forwarding` set to `true`
-
-**Structure of LMS Token:**
-
-```
-{
-  "kid": "<matching certificate available on Issuer service>",
-  "typ": "JWT",
-  "alg": "RS256"
-}
-```
-
-```
-{
-  "sub": "<taken from incoming token>",
-  "clientId": "<taken from incoming token>",
-  "azp": "stargate",
-  "originZone": "aws",
-  "typ": "Bearer",
-  "operation": "<performed operation>",
-  "requestPath": "<taken from header>",
-  "originStargate": "<taken from incoming token>",
-  "iss": "<composed value with issuer address for created token>",
-  "exp": <taken from incoming token>,
-  "iat": <taken from incoming token>
-}
-```
-
-**Outgoing Headers:**
-* `Authorization` - Original incoming token
-* `X-Gateway-Token` - New LMS token
 
 #### Mesh Token
 
