@@ -32,6 +32,7 @@ import jumper.Constants;
 import jumper.config.Config;
 import jumper.model.config.Spectre;
 import jumper.model.config.SpectreKind;
+import jumper.util.OauthTokenUtil;
 import jumper.util.ObjectMapperUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -226,6 +227,17 @@ public class MockHorizonServer {
         "expected an adjusted horizon event of type 'de.telekom.ei.listener.spectre' but recorded"
             + " types were "
             + recordedTypes);
+  }
+
+  public void createVerifyPublisherIssuer(String id, String expectedIssuer) {
+    List<LoggedRequest> recorded = retrieveEventsForTrace(id, 2);
+
+    for (LoggedRequest request : recorded) {
+      String authorization = request.getHeader("Authorization");
+      assertEquals(
+          expectedIssuer,
+          OauthTokenUtil.getAllClaimsFromToken(authorization).getBody().getIssuer());
+    }
   }
 
   public void horizonCallback() {
