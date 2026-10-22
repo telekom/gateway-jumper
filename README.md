@@ -548,6 +548,17 @@ Jumper enriches the request with additional headers, depending on the situation.
 | X-Origin-Stargate | Shows which Gateway host was originally called |
 | X-Origin-Zone | Shows which Gateway zone was originally called |
 
+Jumper adds `X-Spacegate-Token` on mesh hops from an internet-facing zone. The Jumper in the
+provider zone then forwards it to the provider. This is a candidate for deprecation. To find the APIs that still receive the header,
+each provider request that carries it increments the `jumper_spacegate_token_forwarded_total`
+counter, with these tags:
+
+* `api_base_path` - Base path of the API that receives the header
+* `origin_zone` - Zone of the consumer, taken from the incoming token
+
+Mesh hops are not counted. Requests are not counted if the provider removes the header with
+[`removeHeaders`](#header-removal).
+
 #### Header Removal
 
 Providers can list request headers that Jumper must not forward to them. Header names are
