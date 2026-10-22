@@ -8,20 +8,32 @@ import static jumper.config.Config.*;
 import static jumper.util.JumperConfigUtil.addIdSuffix;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.cucumber.java.Before;
 import io.cucumber.java.en.Then;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwt;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Meter;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import jumper.util.OauthTokenUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 
 @RequiredArgsConstructor
 public class VerificationSteps {
+  private static final String METRIC_SPACEGATE_TOKEN_FORWARDED = "jumper.spacegate.token.forwarded";
+
   private final BaseSteps baseSteps;
+  private final Map<Meter.Id, Double> countersAtScenarioStart = new HashMap<>();
+
+  @Autowired private MeterRegistry meterRegistry;
 
   @Value("${jumper.issuer.url}")
   private String localIssuerUrl;
@@ -125,6 +137,61 @@ public class VerificationSteps {
   @Then("API Provider receives no authorization header")
   public void apiProvidersReceivesNoAuthorizationHeader() {
     this.baseSteps.getRequestExchange().expectHeader().doesNotExist("Authorization");
+  }
+
+  @Then("API Provider does not receive header {word}")
+  public void apiProviderReceivesNoHeader(String headerName) {
+    this.baseSteps.getRequestExchange().expectHeader().doesNotExist(headerName);
+  }
+
+  @Then("API Provider receives the consumer token in the X-Spacegate-Token header")
+  public void apiProviderReceivesConsumerTokenInSpacegateTokenHeader() {
+    this.baseSteps
+        .getRequestExchange()
+        .expectHeader()
+        .valueEquals(Constants.HEADER_X_SPACEGATE_TOKEN, "Bearer " + baseSteps.getAuthHeader());
+  }
+
+  @Then(
+      "X-Spacegate-Token forwarding is counted {int} time(s) for base path {word} and origin zone"
+          + " {word}")
+  public void spacegateTokenForwardingIsCounted(int expectedCount, String basePath, String zone) {
+    Counter counter =
+        meterRegistry
+            .find(METRIC_SPACEGATE_TOKEN_FORWARDED)
+            .tag("api_base_path", basePath)
+            .tag("origin_zone", zone)
+            .counter();
+
+    assertNotNull(counter, "no X-Spacegate-Token forwarding counter for " + basePath);
+    assertEquals(expectedCount, countSinceScenarioStart(counter));
+  }
+
+  @Then("X-Spacegate-Token forwarding is not counted for base path {word}")
+  public void spacegateTokenForwardingIsNotCounted(String basePath) {
+    double count =
+        meterRegistry
+            .find(METRIC_SPACEGATE_TOKEN_FORWARDED)
+            .tag("api_base_path", basePath)
+            .counters()
+            .stream()
+            .mapToDouble(this::countSinceScenarioStart)
+            .sum();
+
+    assertEquals(0, count);
+  }
+
+  @Before
+  public void snapshotSpacegateTokenForwardingCounters() {
+    meterRegistry
+        .find(METRIC_SPACEGATE_TOKEN_FORWARDED)
+        .counters()
+        .forEach(counter -> countersAtScenarioStart.put(counter.getId(), counter.count()));
+  }
+
+  // The meter registry outlives a single scenario, so compare against the scenario start.
+  private double countSinceScenarioStart(Counter counter) {
+    return counter.count() - countersAtScenarioStart.getOrDefault(counter.getId(), 0.0);
   }
 
   @Then("API Provider receives authorization {word}")
