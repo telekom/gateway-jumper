@@ -105,8 +105,16 @@ jobs:
           java-version: ${{ vars.JAVA_VERSION || '25' }}
           cache: "maven"
       - name: Verify the image still builds on the new base
+        # Jib cannot write a multi-platform image to a local tar, so build one tar for
+        # each platform that pom.xml declares.
         if: steps.resolve.outputs.changed == 'true'
-        run: mvn -B -U package -DskipTests jib:buildTar
+        run: |
+          mvn -B -U package -DskipTests
+          for platform in linux/amd64 linux/arm64; do
+            mvn -B jib:buildTar \
+              -Djib.from.platforms="${platform}" \
+              -Djib.outputPaths.tar="target/jib-image-${platform#linux/}.tar"
+          done
       - name: Look up this job's URL
         # The verification above is invisible from the pull request, so link to it. The
         # jobs API is the only way to resolve a matrix job's own URL from inside itself.
