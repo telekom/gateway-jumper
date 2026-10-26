@@ -120,6 +120,27 @@ A preview image exists so a change can be tried before it is merged. A release c
 
 If a release run fails, re-run it. If it failed before the image was pushed, the re-run builds normally. If it failed after the image was pushed, the re-run verifies the existing digest's signature and scan, skips the build, and finishes creating the Git tag and GitHub release.
 
+### Building an image for an existing tag
+
+If a Git tag exists without a usable image, dispatch the **Build** workflow from
+`main` with the existing version tag:
+
+```bash
+gh workflow run build.yml --repo telekom/gateway-jumper --ref main -f release_tag=4.17.4
+```
+
+The workflow accepts stable tags such as `4.17.4` and release candidates such as
+`5.0.0-rc.1`. The tag must point to a commit in `main` or `next` history. The
+workflow resolves the tag once, tests that commit, then builds, scans, signs, and
+verifies its versioned image using the configured registry and signing credentials.
+The tagged source must contain the registry-login action used by the build job.
+
+Recovery does not create a GitHub release or update `latest` or `next`. If the
+image already exists, recovery checks its revision label against the resolved
+commit and reuses its digest. It refuses an image from another or unknown commit.
+After the scan passes, recovery signs and verifies that digest, so a retry can
+complete a previous run that stopped before signing.
+
 ## Licensing
 
 This project follows the [REUSE standard for software licensing](https://reuse.software/).
