@@ -47,25 +47,6 @@ public class MockIrisServer {
     }
   }
 
-  public void createExpectationInternalToken(String id) {
-
-    String tokenInfoJson = getTokenInfoJson(CONSUMER_GATEWAY);
-
-    server.stubFor(
-        post(urlPathEqualTo("/auth/realms/default/protocol/openid-connect/token"))
-            .withRequestBody(
-                equalTo(
-                    addIdSuffix("client_id=stargate", id)
-                        + "&client_secret=secret&grant_type=client_credentials"))
-            .willReturn(
-                aResponse()
-                    .withStatus(responseCode)
-                    .withHeader("Content-Type", "application/json; charset=utf-8")
-                    .withHeader("Cache-Control", "no-store")
-                    .withBody(tokenInfoJson)
-                    .withFixedDelay(1000)));
-  }
-
   public void createExpectationExternalToken(String id) {
 
     String tokenInfoJson = getTokenInfoJson(CONSUMER_EXTERNAL_CONFIGURED);
@@ -274,17 +255,6 @@ public class MockIrisServer {
                         \t"error_description": "Invalid client or Invalid client credentials"
                         }\
                         """)));
-  }
-
-  public void createExpectationDropConnection(String id) {
-
-    server.stubFor(
-        post(urlPathEqualTo("/auth/realms/default/protocol/openid-connect/token"))
-            .withRequestBody(
-                equalTo(
-                    addIdSuffix("client_id=stargate", id)
-                        + "&client_secret=secret&grant_type=client_credentials"))
-            .willReturn(aResponse().withFault(Fault.EMPTY_RESPONSE)));
   }
 
   public void createExpectationExternalDropConnection(String id) {

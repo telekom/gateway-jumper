@@ -86,8 +86,22 @@ public class TokenGeneratorService {
     }
   }
 
-  public String generateEnhancedLastMileGatewayToken(
-      JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
+  /**
+   * Core LMS token generation method. Builds a signed JWT from the consumer token claims and
+   * request context. The {@code azp} value distinguishes the token's purpose:
+   *
+   * <ul>
+   *   <li>{@code "stargate"} — Provider-facing OneToken (Last Mile Security towards the upstream)
+   *   <li>{@code "gateway"} — Mesh LMS token (cross-zone gateway-to-gateway authentication)
+   * </ul>
+   */
+  private String generateLmsToken(
+      JumperConfig jc,
+      String azp,
+      String operation,
+      String issuer,
+      String publisherId,
+      String subscriberId) {
 
     String configuredAudience = resolveConfiguredAudience(jc);
 
@@ -102,17 +116,20 @@ public class TokenGeneratorService {
     ClaimsBuilder claims =
         Jwts.claims()
             .add(Constants.TOKEN_CLAIM_TYP, "Bearer")
-            .add(Constants.TOKEN_CLAIM_AZP, "stargate")
+            .add(Constants.TOKEN_CLAIM_AZP, azp)
             .subject(sub)
             .add(Constants.TOKEN_CLAIM_OPERATION, operation)
             .add(Constants.TOKEN_CLAIM_CLIENT_ID, jc.getConsumer())
             .add(Constants.TOKEN_CLAIM_ORIGIN_ZONE, jc.getConsumerOriginZone())
             .add(Constants.TOKEN_CLAIM_ORIGIN_STARGATE, jc.getConsumerOriginStargate());
 
+    // requestPath is not strictly required for mesh LMS validation.
     if (Objects.nonNull(jc.getRequestPath())) {
       claims.add(Constants.TOKEN_CLAIM_REQUEST_PATH, jc.getRequestPath());
     }
 
+    // env is only set on provider LMS tokens, not on mesh LMS tokens, because
+    // consumer-side proxy routes do not inject the `environment` header.
     if (Objects.nonNull(jc.getEnvName())) {
       claims.add(Constants.TOKEN_CLAIM_ACCESS_TOKEN_ENVIRONMENT, jc.getEnvName());
     }
@@ -157,7 +174,17 @@ public class TokenGeneratorService {
    */
   public String generateProviderLmsToken(
       JumperConfig jc, String operation, String issuer, String publisherId, String subscriberId) {
-    return generateEnhancedLastMileGatewayToken(jc, operation, issuer, publisherId, subscriberId);
+    return generateLmsToken(jc, "stargate", operation, issuer, publisherId, subscriberId);
+  }
+
+  /**
+   * Generates a mesh LMS token with {@code azp: "gateway"}.
+   *
+   * <p>Used on proxy routes for cross-zone gateway-to-gateway authentication. The provider zone
+   * validates this token against the consumer zone's StarGate JWKS.
+   */
+  public String generateMeshLmsToken(JumperConfig jc, String operation, String issuer) {
+    return generateLmsToken(jc, "gateway", operation, issuer, null, null);
   }
 
   /**

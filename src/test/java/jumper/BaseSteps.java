@@ -60,6 +60,9 @@ public class BaseSteps {
   @Value("${jumper.stargate.url:https://stargate-integration.test.dhei.telekom.de}")
   private String stargateUrl;
 
+  @Value("${jumper.issuer.url}")
+  private String localIssuerUrl;
+
   @Given("I need an upstream server with TLS")
   public void iNeedAnUpstreamServerWithTLS() {
     mockUpstreamServer.secure();
@@ -164,6 +167,11 @@ public class BaseSteps {
     mockHorizonServer.createVerifyEventType(id);
   }
 
+  @And("verify received horizon events published for realm {word}")
+  public void horizonVerifyPublisherRealm(String realm) {
+    mockHorizonServer.createVerifyPublisherIssuer(id, localIssuerUrl + "/" + realm);
+  }
+
   @And("IDP set to respond with {int} status code")
   public void idpSetToRespondWithStatusCode(int statusCode) {
     mockIrisServer.setResponse(statusCode);
@@ -177,9 +185,6 @@ public class BaseSteps {
   @And("IDP set to provide {word} token")
   public void idpWillRespondWithAStatusCode(String tokenType) {
     switch (tokenType) {
-      case "internal":
-        mockIrisServer.createExpectationInternalToken(id);
-        break;
       case "external":
         mockIrisServer.createExpectationExternalToken(id);
         break;
@@ -230,11 +235,6 @@ public class BaseSteps {
       default:
         fail("expected tokenType not configured");
     }
-  }
-
-  @And("IDP set to drop connection")
-  public void idpSetToDropConnection() {
-    mockIrisServer.createExpectationDropConnection(id);
   }
 
   @And("external token IDP request set to timeout")

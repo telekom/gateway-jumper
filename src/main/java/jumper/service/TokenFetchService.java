@@ -29,7 +29,6 @@ import java.util.function.Supplier;
 import jumper.Constants;
 import jumper.config.OauthTokenFetchProperties;
 import jumper.model.TokenInfo;
-import jumper.model.config.JumperConfig;
 import jumper.model.config.OauthCredentials;
 import jumper.service.TokenCacheService.FetchSelection;
 import jumper.service.TokenFetchMetrics.Mode;
@@ -107,14 +106,6 @@ public class TokenFetchService {
             .expireAfterWrite(tokenFetchProperties.minimumBackgroundRefreshInterval())
             .ticker(ticker)
             .build();
-  }
-
-  public Mono<TokenInfo> getInternalMeshAccessToken(JumperConfig jc) {
-    return getAccessTokenWithClientCredentials(
-        jc.getInternalTokenEndpoint() + Constants.ISSUER_SUFFIX,
-        jc.getClientId(),
-        jc.getClientSecret(),
-        null);
   }
 
   public Mono<TokenInfo> getAccessTokenWithClientCredentials(
