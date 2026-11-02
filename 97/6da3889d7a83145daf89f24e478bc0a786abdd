@@ -1,0 +1,21 @@
+src/main/java/jumper/Constants.java
+  s_5a342cc2c6aabe::t_eb292b1d5978f4 42
+src/test/java/jumper/VerificationSteps.java
+  s_5a342cc2c6aabe::t_935f65039ee69a 227
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "976da3889d7a83145daf89f24e478bc0a786abdd",
+  "prompts": {},
+  "sessions": {
+    "s_5a342cc2c6aabe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11d8d174-065a-4110-b49a-06c925295637",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "moritz.zemke@telekom.de <moritz.zemke@telekom.de>"
+    }
+  }
+}
