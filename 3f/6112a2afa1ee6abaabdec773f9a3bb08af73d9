@@ -1,0 +1,35 @@
+src/main/java/jumper/filter/UpstreamOAuthFilter.java
+  s_5a342cc2c6aabe::t_70f039da8bcea6 179-180
+  s_5a342cc2c6aabe::t_92562e3e02a78b 42-44
+  s_5a342cc2c6aabe::t_170cfea81e3e39 211-243
+  s_5a342cc2c6aabe::t_2ab27c26088473 10
+src/main/java/jumper/Constants.java
+  s_5a342cc2c6aabe::t_7fcfcabe77d23f 13-20,22-30,32-40
+src/test/java/jumper/HeaderSteps.java
+  s_5a342cc2c6aabe::t_73eecd32f1a1d8 53-58
+README.md
+  s_5a342cc2c6aabe::t_58c475e25ff2fd 436-448
+  s_5a342cc2c6aabe::t_629b0740047670 449-456
+src/test/resources/features/spacegateOauthHeaders.feature
+  s_5a342cc2c6aabe::t_b08d49b6c1c039 1-85
+src/test/java/jumper/VerificationSteps.java
+  s_5a342cc2c6aabe::t_58ce134ea21b97 189-219,221-228
+  s_5a342cc2c6aabe::t_5191ab0c59d430 20
+  s_5a342cc2c6aabe::t_7692344dc329a2 33-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3f6112a2afa1ee6abaabdec773f9a3bb08af73d9",
+  "prompts": {},
+  "sessions": {
+    "s_5a342cc2c6aabe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "11d8d174-065a-4110-b49a-06c925295637",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "moritz.zemke@telekom.de <moritz.zemke@telekom.de>"
+    }
+  }
+}
