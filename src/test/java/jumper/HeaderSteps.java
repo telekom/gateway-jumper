@@ -53,7 +53,7 @@ public class HeaderSteps {
   @Given("A header {word} is set to a blank value")
   public void blankHeaderSet(String headerName) {
     baseSteps.setHttpHeadersOfRequest(
-        baseSteps.httpHeadersOfRequest.andThen(httpHeaders -> httpHeaders.set(headerName, " ")));
+        baseSteps.httpHeadersOfRequest.andThen(httpHeaders -> httpHeaders.set(headerName, "")));
   }
 
   @Given("RealRoute headers are set")
