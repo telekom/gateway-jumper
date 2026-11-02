@@ -224,8 +224,7 @@ public class VerificationSteps {
             meterRegistry
                 .find(metric)
                 .counters()
-                .forEach(
-                    counter -> countersAtScenarioStart.put(counter.getId(), counter.count())));
+                .forEach(counter -> countersAtScenarioStart.put(counter.getId(), counter.count())));
   }
 
   // The meter registry outlives a single scenario, so compare against the scenario start.
