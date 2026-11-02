@@ -17,6 +17,7 @@ import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -29,6 +30,10 @@ import org.springframework.http.HttpHeaders;
 @RequiredArgsConstructor
 public class VerificationSteps {
   private static final String METRIC_SPACEGATE_TOKEN_FORWARDED = "jumper.spacegate.token.forwarded";
+  private static final String METRIC_EXTERNAL_OAUTH_SPACEGATE_HEADERS =
+      "jumper.external.oauth.spacegate.headers";
+  private static final List<String> METRICS_COUNTED_PER_SCENARIO =
+      List.of(METRIC_SPACEGATE_TOKEN_FORWARDED, METRIC_EXTERNAL_OAUTH_SPACEGATE_HEADERS);
 
   private final BaseSteps baseSteps;
   private final Map<Meter.Id, Double> countersAtScenarioStart = new HashMap<>();
@@ -181,12 +186,46 @@ public class VerificationSteps {
     assertEquals(0, count);
   }
 
+  @Then(
+      "X-Spacegate OAuth headers {word} are counted {int} time(s) for base path {word} and"
+          + " consumer {word}")
+  public void spacegateOauthHeadersAreCounted(
+      String headers, int expectedCount, String basePath, String consumer) {
+    Counter counter =
+        meterRegistry
+            .find(METRIC_EXTERNAL_OAUTH_SPACEGATE_HEADERS)
+            .tag("api_base_path", basePath)
+            .tag("consumer", consumer)
+            .tag("headers", headers)
+            .counter();
+
+    assertNotNull(counter, "no X-Spacegate OAuth header counter for " + basePath);
+    assertEquals(expectedCount, countSinceScenarioStart(counter));
+  }
+
+  @Then("X-Spacegate OAuth headers are not counted for base path {word}")
+  public void spacegateOauthHeadersAreNotCounted(String basePath) {
+    double count =
+        meterRegistry
+            .find(METRIC_EXTERNAL_OAUTH_SPACEGATE_HEADERS)
+            .tag("api_base_path", basePath)
+            .counters()
+            .stream()
+            .mapToDouble(this::countSinceScenarioStart)
+            .sum();
+
+    assertEquals(0, count);
+  }
+
   @Before
-  public void snapshotSpacegateTokenForwardingCounters() {
-    meterRegistry
-        .find(METRIC_SPACEGATE_TOKEN_FORWARDED)
-        .counters()
-        .forEach(counter -> countersAtScenarioStart.put(counter.getId(), counter.count()));
+  public void snapshotCountersAtScenarioStart() {
+    METRICS_COUNTED_PER_SCENARIO.forEach(
+        metric ->
+            meterRegistry
+                .find(metric)
+                .counters()
+                .forEach(
+                    counter -> countersAtScenarioStart.put(counter.getId(), counter.count())));
   }
 
   // The meter registry outlives a single scenario, so compare against the scenario start.

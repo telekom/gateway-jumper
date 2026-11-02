@@ -10,8 +10,34 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Constants {
 
+  /**
+   * Consumer-provided client ID for the legacy external IdP flow.
+   *
+   * @deprecated planned for removal; usage is tracked by the {@code
+   *     jumper.external.oauth.spacegate.headers} metric. Use per-consumer {@code jumper_config}
+   *     oauth entries instead.
+   */
+  @Deprecated(forRemoval = true)
   public static final String HEADER_X_SPACEGATE_CLIENT_ID = "X-Spacegate-Client-ID";
+
+  /**
+   * Consumer-provided client secret for the legacy external IdP flow.
+   *
+   * @deprecated planned for removal; usage is tracked by the {@code
+   *     jumper.external.oauth.spacegate.headers} metric. Use per-consumer {@code jumper_config}
+   *     oauth entries instead.
+   */
+  @Deprecated(forRemoval = true)
   public static final String HEADER_X_SPACEGATE_CLIENT_SECRET = "X-Spacegate-Client-Secret";
+
+  /**
+   * Consumer-provided scope for the legacy external IdP flow.
+   *
+   * @deprecated planned for removal; usage is tracked by the {@code
+   *     jumper.external.oauth.spacegate.headers} metric. Use per-consumer {@code jumper_config}
+   *     oauth scopes instead.
+   */
+  @Deprecated(forRemoval = true)
   public static final String HEADER_X_SPACEGATE_SCOPE = "X-Spacegate-Scope";
   public static final String HEADER_JUMPER_CONFIG = "jumper_config";
   public static final String HEADER_ROUTING_CONFIG = "routing_config";
