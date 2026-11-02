@@ -7,6 +7,7 @@ package jumper.filter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.StringJoiner;
 import jumper.Constants;
 import jumper.model.TokenInfo;
 import jumper.model.config.JumperConfig;
@@ -38,6 +39,9 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
   private static final String METRIC_EXTERNAL_OAUTH_CONFIG_ERROR =
       "jumper.external.oauth.config.error";
+  private static final String METRIC_EXTERNAL_OAUTH_SPACEGATE_HEADERS =
+      "jumper.external.oauth.spacegate.headers";
+  private static final String UNKNOWN_TAG_VALUE = "unknown";
 
   private final TokenFetchService tokenFetchService;
   private final JumperConfigService jumperConfigService;
@@ -172,6 +176,8 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
 
     Optional<OauthCredentials> oauthCredentials = jc.getOauthCredentials();
 
+    recordSpacegateHeaderUsage(jc);
+
     // Dropped for the whole legacy path, blank ones included: a blank header is ignored as an
     // override below but still has to leave the request. Other paths must pass these on - in a mesh
     // the proxy zone forwards them to the provider zone, which is where they are consumed.
@@ -200,6 +206,39 @@ public class UpstreamOAuthFilter extends AbstractGatewayFilterFactory<UpstreamOA
           "need clientId+clientSecret; to authenticate with clientKey, username+password or"
               + " refreshToken, set oauth.grantType");
     }
+  }
+
+  /**
+   * Counts legacy external IdP requests that carry {@code X-Spacegate-Client-ID}, {@code
+   * X-Spacegate-Client-Secret} or {@code X-Spacegate-Scope}, to find the consumers that still use
+   * them. Only the legacy path reads these headers, so other paths and mesh hops are not counted.
+   * Blank headers are ignored by the legacy path and are not counted either.
+   */
+  private void recordSpacegateHeaderUsage(JumperConfig jc) {
+    StringJoiner headers = new StringJoiner(",");
+    if (StringUtils.isNotBlank(jc.getXSpacegateClientId())) {
+      headers.add("client_id");
+    }
+    if (StringUtils.isNotBlank(jc.getXSpacegateClientSecret())) {
+      headers.add("client_secret");
+    }
+    if (StringUtils.isNotBlank(jc.getXSpacegateScope())) {
+      headers.add("scope");
+    }
+    if (headers.length() == 0) {
+      return;
+    }
+
+    meterRegistry
+        .counter(
+            METRIC_EXTERNAL_OAUTH_SPACEGATE_HEADERS,
+            "api_base_path",
+            StringUtils.defaultIfBlank(jc.getApiBasePath(), UNKNOWN_TAG_VALUE),
+            "consumer",
+            StringUtils.defaultIfBlank(jc.getConsumer(), UNKNOWN_TAG_VALUE),
+            "headers",
+            headers.toString())
+        .increment();
   }
 
   private Mono<TokenInfo> missingClientAuthError(JumperConfig jc, String requirement) {
