@@ -429,6 +429,27 @@ metric with tag `reason="missing_client_auth"`. In the legacy flow, a blank `X-S
 `X-Spacegate-Client-Secret` or `X-Spacegate-Scope` header counts as absent and falls back to the
 configured value instead of overriding it with an empty string.
 
+**Consumer-provided credentials (deprecated):**
+
+> [!WARNING]
+> `X-Spacegate-Client-ID`, `X-Spacegate-Client-Secret` and `X-Spacegate-Scope` are deprecated and
+> planned for removal. Configure credentials and scopes per consumer in `jumper_config` instead.
+
+In the legacy flow, consumers can send `X-Spacegate-Client-ID`, `X-Spacegate-Client-Secret` and
+`X-Spacegate-Scope` to override the configured client ID, client secret and scope. Each header takes
+precedence over the consumer `jumper_config` entry, which takes precedence over the provider headers.
+Jumper removes the headers before forwarding the request to the provider. To find the consumers that
+still send the headers before they are removed, each legacy token request that carries at least one
+non-blank header increments the `jumper_external_oauth_spacegate_headers_total` counter, with these
+tags:
+
+* `api_base_path` - Base path of the API
+* `consumer` - Client ID of the consumer, taken from the incoming token
+* `headers` - The headers that were sent, as a comma-separated list of `client_id`, `client_secret`
+  and `scope`
+
+Mesh hops and configurations with a `grantType` are not counted, because they do not read the headers.
+
 #### Basic Auth Token
 
 Supports legacy systems requiring Basic Authorization (Spacegate only). Authorization can be defined globally for a provider, or on a per consumer basis.
