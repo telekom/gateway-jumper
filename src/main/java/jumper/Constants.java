@@ -39,6 +39,7 @@ public class Constants {
    */
   @Deprecated(forRemoval = true)
   public static final String HEADER_X_SPACEGATE_SCOPE = "X-Spacegate-Scope";
+
   public static final String HEADER_JUMPER_CONFIG = "jumper_config";
   public static final String HEADER_ROUTING_CONFIG = "routing_config";
   public static final String GATEWAY_ATTRIBUTE_TOKEN_CACHE_KEY = "token_cache_key";
