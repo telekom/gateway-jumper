@@ -57,7 +57,7 @@ public class KeyInfoService {
 
   @Scheduled(fixedRateString = "${jumper.security.key-refresh-interval-ms}")
   public void refresh() {
-    log.info("Refreshing KeyInfo from disk");
+    log.debug("Refreshing KeyInfo from disk");
     keyInfoRef.set(loadKeyInfo());
   }
 
